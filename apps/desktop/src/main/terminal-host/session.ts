@@ -12,7 +12,6 @@ import { type ChildProcess, spawn } from "node:child_process";
 import type { Socket } from "node:net";
 import * as path from "node:path";
 import { buildSafeEnv } from "../lib/terminal/env";
-import { WasmHeadlessEmulator } from "../lib/terminal-host/wasm-headless-emulator";
 import type {
 	CreateOrAttachRequest,
 	IpcEvent,
@@ -22,6 +21,7 @@ import type {
 	TerminalExitEvent,
 	TerminalSnapshot,
 } from "../lib/terminal-host/types";
+import { WasmHeadlessEmulator } from "../lib/terminal-host/wasm-headless-emulator";
 import {
 	createFrameHeader,
 	PtySubprocessFrameDecoder,

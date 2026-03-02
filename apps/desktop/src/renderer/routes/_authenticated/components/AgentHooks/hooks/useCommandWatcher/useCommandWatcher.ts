@@ -2,13 +2,13 @@ import { eq } from "@tanstack/db";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo } from "react";
-import { authClient } from "renderer/lib/auth-client";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useCreateWorkspace } from "renderer/react-query/workspaces/useCreateWorkspace";
 import { useDeleteWorkspace } from "renderer/react-query/workspaces/useDeleteWorkspace";
 import { useUpdateWorkspace } from "renderer/react-query/workspaces/useUpdateWorkspace";
 import { navigateToWorkspace } from "renderer/routes/_authenticated/_dashboard/utils/workspace-navigation";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider/CollectionsProvider";
+import { MOCK_ORG_ID } from "shared/constants";
 import { executeTool, type ToolContext } from "./tools";
 
 /** Tracks command IDs that have been or are being processed to prevent duplicate execution. */
@@ -16,12 +16,11 @@ const handledCommands = new Set<string>();
 
 export function useCommandWatcher() {
 	const { data: deviceInfo } = electronTrpc.auth.getDeviceInfo.useQuery();
-	const { data: session } = authClient.useSession();
 	const collections = useCollections();
 	const navigate = useNavigate();
 
-	const organizationId = session?.session?.activeOrganizationId;
-	const shouldWatch = !!deviceInfo && !!organizationId;
+	const organizationId = MOCK_ORG_ID;
+	const shouldWatch = !!deviceInfo;
 
 	const createWorktree = useCreateWorkspace({ skipNavigation: true });
 	const setActive = electronTrpc.workspaces.setActive.useMutation();
@@ -181,7 +180,6 @@ export function useCommandWatcher() {
 	}, [
 		shouldWatch,
 		deviceInfo?.deviceId,
-		organizationId,
 		pendingCommands,
 		processCommand,
 		collections.agentCommands,

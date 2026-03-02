@@ -1,4 +1,3 @@
-import { snakeCamelMapper } from "@electric-sql/client";
 import type {
 	SelectAgentCommand,
 	SelectDevicePresence,
@@ -12,18 +11,9 @@ import type {
 	SelectTaskStatus,
 	SelectUser,
 } from "@superset/db/schema";
-import type { AppRouter } from "@superset/trpc";
-import { electricCollectionOptions } from "@tanstack/electric-db-collection";
 import type { Collection } from "@tanstack/react-db";
-import { createCollection } from "@tanstack/react-db";
-import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
-import { env } from "renderer/env.renderer";
-import { getAuthToken } from "renderer/lib/auth-client";
-import superjson from "superjson";
+import { createCollection, localOnlyCollectionOptions } from "@tanstack/react-db";
 import { z } from "zod";
-
-const columnMapper = snakeCamelMapper();
-const electricUrl = `${env.NEXT_PUBLIC_ELECTRIC_URL}/v1/shape`;
 
 const apiKeyDisplaySchema = z.object({
 	id: z.string(),
@@ -52,247 +42,87 @@ interface OrgCollections {
 // Per-org collections cache
 const collectionsCache = new Map<string, OrgCollections>();
 
-// Singleton API client with dynamic auth headers
-const apiClient = createTRPCProxyClient<AppRouter>({
-	links: [
-		httpBatchLink({
-			url: `${env.NEXT_PUBLIC_API_URL}/api/trpc`,
-			headers: () => {
-				const token = getAuthToken();
-				return token ? { Authorization: `Bearer ${token}` } : {};
-			},
-			transformer: superjson,
-		}),
-	],
-});
-
-const electricHeaders = {
-	Authorization: () => {
-		const token = getAuthToken();
-		return token ? `Bearer ${token}` : "";
-	},
-};
-
 const organizationsCollection = createCollection(
-	electricCollectionOptions<SelectOrganization>({
+	localOnlyCollectionOptions<SelectOrganization>({
 		id: "organizations",
-		shapeOptions: {
-			url: electricUrl,
-			params: { table: "auth.organizations" },
-			headers: electricHeaders,
-			columnMapper,
-		},
 		getKey: (item) => item.id,
 	}),
 );
 
 function createOrgCollections(organizationId: string): OrgCollections {
 	const tasks = createCollection(
-		electricCollectionOptions<SelectTask>({
+		localOnlyCollectionOptions<SelectTask>({
 			id: `tasks-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "tasks",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
 			getKey: (item) => item.id,
-			onInsert: async ({ transaction }) => {
-				const item = transaction.mutations[0].modified;
-				const result = await apiClient.task.create.mutate(item);
-				return { txid: result.txid };
-			},
-			onUpdate: async ({ transaction }) => {
-				const { original, changes } = transaction.mutations[0];
-				const result = await apiClient.task.update.mutate({
-					...changes,
-					id: original.id,
-				});
-				return { txid: result.txid };
-			},
-			onDelete: async ({ transaction }) => {
-				const item = transaction.mutations[0].original;
-				const result = await apiClient.task.delete.mutate(item.id);
-				return { txid: result.txid };
-			},
 		}),
 	);
 
 	const taskStatuses = createCollection(
-		electricCollectionOptions<SelectTaskStatus>({
+		localOnlyCollectionOptions<SelectTaskStatus>({
 			id: `task_statuses-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "task_statuses",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const projects = createCollection(
-		electricCollectionOptions<SelectProject>({
+		localOnlyCollectionOptions<SelectProject>({
 			id: `projects-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "projects",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const members = createCollection(
-		electricCollectionOptions<SelectMember>({
+		localOnlyCollectionOptions<SelectMember>({
 			id: `members-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "auth.members",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const users = createCollection(
-		electricCollectionOptions<SelectUser>({
+		localOnlyCollectionOptions<SelectUser>({
 			id: `users-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "auth.users",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const invitations = createCollection(
-		electricCollectionOptions<SelectInvitation>({
+		localOnlyCollectionOptions<SelectInvitation>({
 			id: `invitations-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "auth.invitations",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const agentCommands = createCollection(
-		electricCollectionOptions<SelectAgentCommand>({
+		localOnlyCollectionOptions<SelectAgentCommand>({
 			id: `agent_commands-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "agent_commands",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
 			getKey: (item) => item.id,
-			onUpdate: async ({ transaction }) => {
-				const { original, changes } = transaction.mutations[0];
-				if (!changes.status) {
-					return { txid: Date.now() };
-				}
-				const result = await apiClient.agent.updateCommand.mutate({
-					id: original.id,
-					status: changes.status,
-					claimedBy: changes.claimedBy ?? undefined,
-					claimedAt: changes.claimedAt ?? undefined,
-					result: changes.result ?? undefined,
-					error: changes.error ?? undefined,
-					executedAt: changes.executedAt ?? undefined,
-				});
-				return { txid: Number(result.txid) };
-			},
 		}),
 	);
 
 	const devicePresence = createCollection(
-		electricCollectionOptions<SelectDevicePresence>({
+		localOnlyCollectionOptions<SelectDevicePresence>({
 			id: `device_presence-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "device_presence",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const integrationConnections = createCollection(
-		electricCollectionOptions<SelectIntegrationConnection>({
+		localOnlyCollectionOptions<SelectIntegrationConnection>({
 			id: `integration_connections-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "integration_connections",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const subscriptions = createCollection(
-		electricCollectionOptions<SelectSubscription>({
+		localOnlyCollectionOptions<SelectSubscription>({
 			id: `subscriptions-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "subscriptions",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const apiKeys = createCollection(
-		electricCollectionOptions<ApiKeyDisplay>({
+		localOnlyCollectionOptions<ApiKeyDisplay>({
 			id: `apikeys-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "auth.apikeys",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
 			getKey: (item) => item.id,
 		}),
 	);
@@ -313,28 +143,17 @@ function createOrgCollections(organizationId: string): OrgCollections {
 }
 
 /**
- * Preload collections for an organization by starting Electric sync.
- * Collections are lazy — they don't fetch data until subscribed or preloaded.
- * Call this eagerly so data is ready when the user switches orgs.
+ * Preload collections (no-op for local-only collections).
  */
 export async function preloadCollections(
-	organizationId: string,
-): Promise<void> {
-	const { organizations, ...orgCollections } = getCollections(organizationId);
-	await Promise.allSettled(
-		Object.values(orgCollections).map((c) =>
-			(c as Collection<object>).preload(),
-		),
-	);
-}
+	_organizationId: string,
+): Promise<void> {}
 
 /**
  * Get collections for an organization, creating them if needed.
- * Collections are cached per org for instant switching.
- * Auth token is read dynamically via getAuthToken() - no need to pass it.
+ * Collections are cached per org.
  */
 export function getCollections(organizationId: string) {
-	// Get or create org-specific collections
 	if (!collectionsCache.has(organizationId)) {
 		collectionsCache.set(organizationId, createOrgCollections(organizationId));
 	}

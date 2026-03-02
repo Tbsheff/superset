@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import type { Terminal as XTerm } from "@xterm/xterm";
 
 // Mock localStorage for Node.js test environment
 const mockStorage = new Map<string, string>();
@@ -31,7 +30,7 @@ mock.module("renderer/lib/trpc-client", () => ({
 }));
 
 // Import after mocks are set up
-const { getDefaultTerminalBg, getDefaultTerminalTheme, setupKeyboardHandler } =
+const { getDefaultTerminalBg, getDefaultTerminalTheme, createKeyboardHandler } =
 	await import("./helpers");
 
 describe("getDefaultTerminalTheme", () => {
@@ -55,9 +54,10 @@ describe("getDefaultTerminalTheme", () => {
 
 		const theme = getDefaultTerminalTheme();
 
-		expect(theme.background).toBe("#272822");
-		expect(theme.foreground).toBe("#f8f8f2");
-		expect(theme.cursor).toBe("#f8f8f0");
+		// GhosttyTheme uses ThemeColor objects { r, g, b } under .colors
+		expect(theme.colors.background).toEqual({ r: 39, g: 40, b: 34 });
+		expect(theme.colors.foreground).toEqual({ r: 248, g: 248, b: 242 });
+		expect(theme.colors.cursor).toEqual({ r: 248, g: 248, b: 240 });
 	});
 
 	it("should fall back to theme-id lookup when no cached terminal", () => {
@@ -65,15 +65,15 @@ describe("getDefaultTerminalTheme", () => {
 
 		const theme = getDefaultTerminalTheme();
 
-		// Light theme has white background
-		expect(theme.background).toBe("#ffffff");
+		// Light theme has white-ish background
+		expect(theme.colors.background).toEqual({ r: 255, g: 255, b: 255 });
 	});
 
 	it("should fall back to default dark theme when localStorage is empty", () => {
 		const theme = getDefaultTerminalTheme();
 
 		// Default theme is dark
-		expect(theme.background).toBe("#1a1a1a");
+		expect(theme.colors.background).toEqual({ r: 26, g: 26, b: 26 });
 	});
 
 	it("should handle invalid JSON in cached terminal gracefully", () => {
@@ -82,7 +82,7 @@ describe("getDefaultTerminalTheme", () => {
 		const theme = getDefaultTerminalTheme();
 
 		// Should fall back to default
-		expect(theme.background).toBe("#1a1a1a");
+		expect(theme.colors.background).toEqual({ r: 26, g: 26, b: 26 });
 	});
 });
 
@@ -109,7 +109,7 @@ describe("getDefaultTerminalBg", () => {
 	});
 });
 
-describe("setupKeyboardHandler", () => {
+describe("createKeyboardHandler", () => {
 	const originalNavigator = globalThis.navigator;
 
 	afterEach(() => {
@@ -121,21 +121,10 @@ describe("setupKeyboardHandler", () => {
 		// @ts-expect-error - mocking navigator for tests
 		globalThis.navigator = { platform: "MacIntel" };
 
-		const captured: { handler: ((event: KeyboardEvent) => boolean) | null } = {
-			handler: null,
-		};
-		const xterm = {
-			attachCustomKeyEventHandler: (
-				next: (event: KeyboardEvent) => boolean,
-			) => {
-				captured.handler = next;
-			},
-		};
-
 		const onWrite = mock(() => {});
-		setupKeyboardHandler(xterm as unknown as XTerm, { onWrite });
+		const handler = createKeyboardHandler({ onWrite });
 
-		captured.handler?.({
+		handler({
 			type: "keydown",
 			key: "ArrowLeft",
 			altKey: true,
@@ -143,7 +132,7 @@ describe("setupKeyboardHandler", () => {
 			ctrlKey: false,
 			shiftKey: false,
 		} as KeyboardEvent);
-		captured.handler?.({
+		handler({
 			type: "keydown",
 			key: "ArrowRight",
 			altKey: true,
@@ -160,21 +149,10 @@ describe("setupKeyboardHandler", () => {
 		// @ts-expect-error - mocking navigator for tests
 		globalThis.navigator = { platform: "Win32" };
 
-		const captured: { handler: ((event: KeyboardEvent) => boolean) | null } = {
-			handler: null,
-		};
-		const xterm = {
-			attachCustomKeyEventHandler: (
-				next: (event: KeyboardEvent) => boolean,
-			) => {
-				captured.handler = next;
-			},
-		};
-
 		const onWrite = mock(() => {});
-		setupKeyboardHandler(xterm as unknown as XTerm, { onWrite });
+		const handler = createKeyboardHandler({ onWrite });
 
-		captured.handler?.({
+		handler({
 			type: "keydown",
 			key: "ArrowLeft",
 			altKey: false,
@@ -182,7 +160,7 @@ describe("setupKeyboardHandler", () => {
 			ctrlKey: true,
 			shiftKey: false,
 		} as KeyboardEvent);
-		captured.handler?.({
+		handler({
 			type: "keydown",
 			key: "ArrowRight",
 			altKey: false,

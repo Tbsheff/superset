@@ -1,7 +1,7 @@
-import type { ITheme } from "@xterm/xterm";
 import type { MutableRefObject } from "react";
 import { useRef } from "react";
 import { useTerminalCallbacksStore } from "renderer/stores/tabs/terminal-callbacks";
+import type { GhosttyTheme } from "restty";
 
 type RegisterCallback = (paneId: string, callback: () => void) => void;
 type RegisterGetSelectionCallback = (
@@ -18,7 +18,7 @@ export interface UseTerminalRefsOptions {
 	paneId: string;
 	tabId: string;
 	focusedPaneId: string | undefined;
-	terminalTheme: ITheme | null;
+	terminalTheme: GhosttyTheme | null;
 	paneInitialCommands?: string[];
 	paneInitialCwd?: string;
 	clearPaneInitialData: (paneId: string) => void;
@@ -31,7 +31,7 @@ export interface UseTerminalRefsOptions {
 export interface UseTerminalRefsReturn {
 	isFocused: boolean;
 	isFocusedRef: MutableRefObject<boolean>;
-	initialThemeRef: MutableRefObject<ITheme | null>;
+	initialThemeRef: MutableRefObject<GhosttyTheme | null>;
 	paneInitialCommandsRef: MutableRefObject<string[] | undefined>;
 	paneInitialCwdRef: MutableRefObject<string | undefined>;
 	clearPaneInitialDataRef: MutableRefObject<(paneId: string) => void>;

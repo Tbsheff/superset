@@ -1,36 +1,48 @@
-import type { ITheme } from "@xterm/xterm";
+import type { GhosttyTheme } from "restty";
+import type { ThemeColor } from "restty/internal";
 import type { TerminalColors } from "shared/themes/types";
 
-/**
- * Convert theme terminal colors to xterm.js ITheme format
- */
-export function toXtermTheme(colors: TerminalColors): ITheme {
+function hexToThemeColor(hex: string): ThemeColor {
+	const r = parseInt(hex.slice(1, 3), 16);
+	const g = parseInt(hex.slice(3, 5), 16);
+	const b = parseInt(hex.slice(5, 7), 16);
+	return { r, g, b };
+}
+
+export function toResttyTheme(colors: TerminalColors): GhosttyTheme {
 	return {
-		background: colors.background,
-		foreground: colors.foreground,
-		cursor: colors.cursor,
-		cursorAccent: colors.cursorAccent,
-		selectionBackground: colors.selectionBackground,
-		selectionForeground: colors.selectionForeground,
-
-		// Standard ANSI colors
-		black: colors.black,
-		red: colors.red,
-		green: colors.green,
-		yellow: colors.yellow,
-		blue: colors.blue,
-		magenta: colors.magenta,
-		cyan: colors.cyan,
-		white: colors.white,
-
-		// Bright ANSI colors
-		brightBlack: colors.brightBlack,
-		brightRed: colors.brightRed,
-		brightGreen: colors.brightGreen,
-		brightYellow: colors.brightYellow,
-		brightBlue: colors.brightBlue,
-		brightMagenta: colors.brightMagenta,
-		brightCyan: colors.brightCyan,
-		brightWhite: colors.brightWhite,
+		colors: {
+			background: hexToThemeColor(colors.background),
+			foreground: hexToThemeColor(colors.foreground),
+			cursor: hexToThemeColor(colors.cursor),
+			cursorText: colors.cursorAccent
+				? hexToThemeColor(colors.cursorAccent)
+				: undefined,
+			selectionBackground: colors.selectionBackground
+				? hexToThemeColor(colors.selectionBackground)
+				: undefined,
+			selectionForeground: colors.selectionForeground
+				? hexToThemeColor(colors.selectionForeground)
+				: undefined,
+			palette: [
+				hexToThemeColor(colors.black), // 0
+				hexToThemeColor(colors.red), // 1
+				hexToThemeColor(colors.green), // 2
+				hexToThemeColor(colors.yellow), // 3
+				hexToThemeColor(colors.blue), // 4
+				hexToThemeColor(colors.magenta), // 5
+				hexToThemeColor(colors.cyan), // 6
+				hexToThemeColor(colors.white), // 7
+				hexToThemeColor(colors.brightBlack), // 8
+				hexToThemeColor(colors.brightRed), // 9
+				hexToThemeColor(colors.brightGreen), // 10
+				hexToThemeColor(colors.brightYellow), // 11
+				hexToThemeColor(colors.brightBlue), // 12
+				hexToThemeColor(colors.brightMagenta), // 13
+				hexToThemeColor(colors.brightCyan), // 14
+				hexToThemeColor(colors.brightWhite), // 15
+			],
+		},
+		raw: {},
 	};
 }

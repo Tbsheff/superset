@@ -1,13 +1,13 @@
 import { toast } from "@superset/ui/sonner";
-import type { Terminal as XTerm } from "@xterm/xterm";
 import { useCallback, useRef } from "react";
 import { useTabsStore } from "renderer/stores/tabs/store";
 import { DEBUG_TERMINAL } from "../config";
+import type { ResttyAdapter } from "../restty/ResttyAdapter";
 import type { TerminalExitReason, TerminalStreamEvent } from "../types";
 
 export interface UseTerminalStreamOptions {
 	paneId: string;
-	xtermRef: React.MutableRefObject<XTerm | null>;
+	adapterRef: React.MutableRefObject<ResttyAdapter | null>;
 	isStreamReadyRef: React.MutableRefObject<boolean>;
 	isExitedRef: React.MutableRefObject<boolean>;
 	wasKilledByUserRef: React.MutableRefObject<boolean>;
@@ -21,12 +21,12 @@ export interface UseTerminalStreamOptions {
 export interface UseTerminalStreamReturn {
 	handleTerminalExit: (
 		exitCode: number,
-		xterm: XTerm,
+		adapter: ResttyAdapter,
 		reason?: TerminalExitReason,
 	) => void;
 	handleStreamError: (
 		event: Extract<TerminalStreamEvent, { type: "error" }>,
-		xterm: XTerm,
+		adapter: ResttyAdapter,
 	) => void;
 	handleStreamData: (event: TerminalStreamEvent) => void;
 }
@@ -36,7 +36,7 @@ export interface UseTerminalStreamReturn {
  */
 export function useTerminalStream({
 	paneId,
-	xtermRef,
+	adapterRef,
 	isStreamReadyRef,
 	isExitedRef,
 	wasKilledByUserRef,
@@ -56,7 +56,7 @@ export function useTerminalStream({
 	updateCwdRef.current = updateCwdFromData;
 
 	const handleTerminalExit = useCallback(
-		(exitCode: number, xterm: XTerm, reason?: TerminalExitReason) => {
+		(exitCode: number, adapter: ResttyAdapter, reason?: TerminalExitReason) => {
 			isExitedRef.current = true;
 			isStreamReadyRef.current = false;
 
@@ -65,11 +65,11 @@ export function useTerminalStream({
 			setExitStatus(wasKilledByUser ? "killed" : "exited");
 
 			if (wasKilledByUser) {
-				xterm.writeln("\r\n\r\n[Session killed]");
-				xterm.writeln("[Restart to start a new session]");
+				adapter.writeln("\r\n\r\n[Session killed]");
+				adapter.writeln("[Restart to start a new session]");
 			} else {
-				xterm.writeln(`\r\n\r\n[Process exited with code ${exitCode}]`);
-				xterm.writeln("[Press any key to restart]");
+				adapter.writeln(`\r\n\r\n[Process exited with code ${exitCode}]`);
+				adapter.writeln("[Press any key to restart]");
 			}
 
 			// Clear transient pane status on terminal exit
@@ -92,7 +92,10 @@ export function useTerminalStream({
 	);
 
 	const handleStreamError = useCallback(
-		(event: Extract<TerminalStreamEvent, { type: "error" }>, xterm: XTerm) => {
+		(
+			event: Extract<TerminalStreamEvent, { type: "error" }>,
+			adapter: ResttyAdapter,
+		) => {
 			const message = event.code
 				? `${event.code}: ${event.error}`
 				: event.error;
@@ -110,14 +113,14 @@ export function useTerminalStream({
 				event.code === "WRITE_FAILED" &&
 				event.error?.includes("PTY not spawned")
 			) {
-				xterm.writeln(`\r\n[Terminal] ${message}`);
+				adapter.writeln(`\r\n[Terminal] ${message}`);
 				return;
 			}
 
 			toast.error("Terminal error", { description: message });
 
 			if (event.code === "WRITE_QUEUE_FULL" || event.code === "WRITE_FAILED") {
-				xterm.writeln(`\r\n[Terminal] ${message}`);
+				adapter.writeln(`\r\n[Terminal] ${message}`);
 			} else {
 				setConnectionError(message);
 			}
@@ -127,11 +130,11 @@ export function useTerminalStream({
 
 	const handleStreamData = useCallback(
 		(event: TerminalStreamEvent) => {
-			const xterm = xtermRef.current;
+			const adapter = adapterRef.current;
 
 			// Queue ALL events until terminal is ready, preserving order
 			// flushPendingEvents will process them in sequence after restore
-			if (!xterm || !isStreamReadyRef.current) {
+			if (!adapter || !isStreamReadyRef.current) {
 				if (DEBUG_TERMINAL && event.type === "data") {
 					console.log(
 						`[Terminal] Queuing event (not ready): ${paneId}, type=${event.type}, bytes=${event.data.length}`,
@@ -150,21 +153,21 @@ export function useTerminalStream({
 					);
 				}
 				updateModesRef.current(event.data);
-				xterm.write(event.data);
+				adapter.write(event.data);
 				updateCwdRef.current(event.data);
 			} else if (event.type === "exit") {
-				handleTerminalExit(event.exitCode, xterm, event.reason);
+				handleTerminalExit(event.exitCode, adapter, event.reason);
 			} else if (event.type === "disconnect") {
 				setConnectionError(
 					event.reason || "Connection to terminal daemon lost",
 				);
 			} else if (event.type === "error") {
-				handleStreamError(event, xterm);
+				handleStreamError(event, adapter);
 			}
 		},
 		[
 			paneId,
-			xtermRef,
+			adapterRef,
 			isStreamReadyRef,
 			pendingEventsRef,
 			handleTerminalExit,

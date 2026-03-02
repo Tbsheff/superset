@@ -1,4 +1,4 @@
-import type { ITheme } from "@xterm/xterm";
+import type { GhosttyTheme } from "restty";
 import {
 	builtInThemes,
 	DEFAULT_THEME_ID,
@@ -13,7 +13,7 @@ import {
 	applyUIColors,
 	type MonacoTheme,
 	toMonacoTheme,
-	toXtermTheme,
+	toResttyTheme,
 	updateThemeClass,
 } from "./utils";
 
@@ -30,8 +30,8 @@ interface ThemeState {
 	/** The currently active theme object (resolved from system preference if needed) */
 	activeTheme: Theme | null;
 
-	/** Terminal theme in xterm.js format (derived from activeTheme) */
-	terminalTheme: ITheme | null;
+	/** Terminal theme in restty/Ghostty format (derived from activeTheme) */
+	terminalTheme: GhosttyTheme | null;
 
 	/** Monaco editor theme (derived from activeTheme) */
 	monacoTheme: MonacoTheme | null;
@@ -105,7 +105,7 @@ function syncThemeToLocalStorage(theme: Theme): void {
  * Apply a theme to the UI and terminal
  */
 function applyTheme(theme: Theme): {
-	terminalTheme: ITheme;
+	terminalTheme: GhosttyTheme;
 	monacoTheme: MonacoTheme;
 } {
 	// Apply UI colors to CSS variables
@@ -118,7 +118,7 @@ function applyTheme(theme: Theme): {
 
 	// Convert to editor-specific formats
 	return {
-		terminalTheme: toXtermTheme(getTerminalColors(theme)),
+		terminalTheme: toResttyTheme(getTerminalColors(theme)),
 		monacoTheme: toMonacoTheme(theme),
 	};
 }

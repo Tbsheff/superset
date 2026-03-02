@@ -110,6 +110,7 @@ export default defineConfig({
 			alias: {
 				// @xterm/headless 6.0.0 has a packaging bug: `module` field points to
 				// non-existent `lib/xterm.mjs`. Force Vite to use the CJS entry instead.
+				// TODO(Phase 2): Remove this alias when @xterm/headless is replaced by WASM VT
 				"@xterm/headless": "@xterm/headless/lib-headless/xterm-headless.js",
 			},
 		},
@@ -224,6 +225,7 @@ export default defineConfig({
 
 		optimizeDeps: {
 			include: ["monaco-editor"],
+			exclude: ["restty"],
 		},
 
 		publicDir: resolve(resources, "public"),

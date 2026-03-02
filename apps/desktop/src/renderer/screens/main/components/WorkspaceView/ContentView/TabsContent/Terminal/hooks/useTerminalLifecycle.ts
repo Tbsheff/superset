@@ -1,24 +1,22 @@
-import type { FitAddon } from "@xterm/addon-fit";
-import { SearchAddon } from "@xterm/addon-search";
-import type { IDisposable, ITheme, Terminal as XTerm } from "@xterm/xterm";
 import type { MutableRefObject, RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTabsStore } from "renderer/stores/tabs/store";
 import { killTerminalForPane } from "renderer/stores/tabs/utils/terminal-cleanup";
+import type { GhosttyTheme } from "restty";
 import { scheduleTerminalAttach } from "../attach-scheduler";
 import { sanitizeForTitle } from "../commandBuffer";
 import { DEBUG_TERMINAL, FIRST_RENDER_RESTORE_FALLBACK_MS } from "../config";
 import {
-	createTerminalInstance,
-	setupClickToMoveCursor,
-	setupCopyHandler,
+	createKeyboardHandler,
+	createResttyInstance,
 	setupFocusListener,
-	setupKeyboardHandler,
 	setupPasteHandler,
-	setupResizeHandlers,
-	type TerminalRendererRef,
 } from "../helpers";
 import { isPaneDestroyed } from "../pane-guards";
+import { setupClickToMoveCursor } from "../restty/click-to-move";
+import type { ResttyAdapter } from "../restty/ResttyAdapter";
+import { SearchShim } from "../restty/SearchShim";
+import { TrpcPtyTransport } from "../restty/TrpcPtyTransport";
 import { coldRestoreState, pendingDetaches } from "../state";
 import type {
 	CreateOrAttachMutate,
@@ -82,17 +80,15 @@ export interface UseTerminalLifecycleOptions {
 	tabIdRef: MutableRefObject<string>;
 	workspaceId: string;
 	terminalRef: RefObject<HTMLDivElement | null>;
-	xtermRef: MutableRefObject<XTerm | null>;
-	fitAddonRef: MutableRefObject<FitAddon | null>;
-	searchAddonRef: MutableRefObject<SearchAddon | null>;
-	rendererRef: MutableRefObject<TerminalRendererRef | null>;
+	adapterRef: MutableRefObject<ResttyAdapter | null>;
+	searchShimRef: MutableRefObject<SearchShim | null>;
 	isExitedRef: MutableRefObject<boolean>;
 	wasKilledByUserRef: MutableRefObject<boolean>;
 	commandBufferRef: MutableRefObject<string>;
 	isFocusedRef: MutableRefObject<boolean>;
 	isRestoredModeRef: MutableRefObject<boolean>;
 	connectionErrorRef: MutableRefObject<string | null>;
-	initialThemeRef: MutableRefObject<ITheme | null>;
+	initialThemeRef: MutableRefObject<GhosttyTheme | null>;
 	workspaceCwdRef: MutableRefObject<string | null>;
 	handleFileLinkClickRef: MutableRefObject<
 		(path: string, line?: number, column?: number) => void
@@ -135,7 +131,7 @@ export interface UseTerminalLifecycleOptions {
 }
 
 export interface UseTerminalLifecycleReturn {
-	xtermInstance: XTerm | null;
+	adapterInstance: ResttyAdapter | null;
 	restartTerminal: () => void;
 }
 
@@ -144,10 +140,8 @@ export function useTerminalLifecycle({
 	tabIdRef,
 	workspaceId,
 	terminalRef,
-	xtermRef,
-	fitAddonRef,
-	searchAddonRef,
-	rendererRef,
+	adapterRef,
+	searchShimRef,
 	isExitedRef,
 	wasKilledByUserRef,
 	commandBufferRef,
@@ -189,7 +183,9 @@ export function useTerminalLifecycle({
 	registerPasteCallbackRef,
 	unregisterPasteCallbackRef,
 }: UseTerminalLifecycleOptions): UseTerminalLifecycleReturn {
-	const [xtermInstance, setXtermInstance] = useState<XTerm | null>(null);
+	const [adapterInstance, setAdapterInstance] = useState<ResttyAdapter | null>(
+		null,
+	);
 	const restartTerminalRef = useRef<() => void>(() => {});
 	const restartTerminal = useCallback(() => restartTerminalRef.current(), []);
 
@@ -215,55 +211,61 @@ export function useTerminalLifecycle({
 		let activeAttachId = 0;
 		let cancelAttachWait: (() => void) | null = null;
 
+		// Create transport for tRPC IPC
+		const transport = new TrpcPtyTransport({
+			paneId,
+			writeRef,
+			resizeRef,
+		});
+
+		// Convert initial ITheme-style theme to GhosttyTheme if available
+		const initialTheme = initialThemeRef.current ?? undefined;
+
 		const {
-			xterm,
-			fitAddon,
-			renderer,
-			cleanup: cleanupQuerySuppression,
-		} = createTerminalInstance(container, {
+			adapter,
+			linkDetector,
+			cleanup: cleanupRestty,
+		} = createResttyInstance(container, transport, {
 			cwd: workspaceCwdRef.current ?? undefined,
-			initialTheme: initialThemeRef.current,
+			initialTheme: initialTheme ?? null,
 			onFileLinkClick: (path, line, column) =>
 				handleFileLinkClickRef.current(path, line, column),
 		});
 
 		const scheduleScrollToBottom = () => {
 			requestAnimationFrame(() => {
-				if (isUnmounted || xtermRef.current !== xterm) return;
-				scrollToBottom(xterm);
+				if (isUnmounted || adapterRef.current !== adapter) return;
+				scrollToBottom(adapter);
 			});
 		};
 
-		xtermRef.current = xterm;
-		fitAddonRef.current = fitAddon;
-		rendererRef.current = renderer;
+		adapterRef.current = adapter;
 		isExitedRef.current = false;
-		setXtermInstance(xterm);
+		setAdapterInstance(adapter);
 		isStreamReadyRef.current = false;
 		didFirstRenderRef.current = false;
 		pendingInitialStateRef.current = null;
 
+		// Create SearchShim for terminal search
+		// Note: RenderState is not exposed in restty's public API (v0.1.34).
+		// Search will be functional when restty adds a text extraction API.
+		const searchShim = new SearchShim(() => null);
+		searchShimRef.current = searchShim;
+
 		if (isFocusedRef.current) {
-			xterm.focus();
+			adapter.focus();
 		}
 
-		if (!isUnmounted) {
-			const searchAddon = new SearchAddon();
-			xterm.loadAddon(searchAddon);
-			searchAddonRef.current = searchAddon;
-		}
-
-		// Wait for first render before applying restoration
-		let renderDisposable: IDisposable | null = null;
+		// Use requestAnimationFrame as "first render" signal
+		// restty renders immediately via WebGPU, so this fires on next frame
 		let firstRenderFallback: ReturnType<typeof setTimeout> | null = null;
 
-		renderDisposable = xterm.onRender(() => {
+		requestAnimationFrame(() => {
+			if (isUnmounted || didFirstRenderRef.current) return;
 			if (firstRenderFallback) {
 				clearTimeout(firstRenderFallback);
 				firstRenderFallback = null;
 			}
-			renderDisposable?.dispose();
-			renderDisposable = null;
 			didFirstRenderRef.current = true;
 			maybeApplyInitialState();
 		});
@@ -280,14 +282,14 @@ export function useTerminalLifecycle({
 			wasKilledByUserRef.current = false;
 			setExitStatus(null);
 			resetModes();
-			xterm.clear();
+			adapter.clear();
 			createOrAttachRef.current(
 				{
 					paneId,
 					tabId: tabIdRef.current,
 					workspaceId,
-					cols: xterm.cols,
-					rows: xterm.rows,
+					cols: adapter.cols,
+					rows: adapter.rows,
 					allowKilled: true,
 				},
 				{
@@ -317,13 +319,11 @@ export function useTerminalLifecycle({
 			writeRef.current({ paneId, data });
 		};
 
-		const handleKeyPress = (event: {
-			key: string;
-			domEvent: KeyboardEvent;
-		}) => {
+		const handleKeyPress = (data: string) => {
 			if (isRestoredModeRef.current || connectionErrorRef.current) return;
-			const { domEvent } = event;
-			if (domEvent.key === "Enter") {
+			// Infer key from the data sent — single-char data with no modifiers is a character
+			if (data === "\r") {
+				// Enter
 				if (!isAlternateScreenRef.current) {
 					const title = sanitizeForTitle(commandBufferRef.current);
 					if (title) {
@@ -331,9 +331,11 @@ export function useTerminalLifecycle({
 					}
 				}
 				commandBufferRef.current = "";
-			} else if (domEvent.key === "Backspace") {
+			} else if (data === "\x7f") {
+				// Backspace
 				commandBufferRef.current = commandBufferRef.current.slice(0, -1);
-			} else if (domEvent.key === "c" && domEvent.ctrlKey) {
+			} else if (data === "\x03") {
+				// Ctrl+C
 				commandBufferRef.current = "";
 				const currentPane = useTabsStore.getState().panes[paneId];
 				if (
@@ -342,7 +344,8 @@ export function useTerminalLifecycle({
 				) {
 					useTabsStore.getState().setPaneStatus(paneId, "idle");
 				}
-			} else if (domEvent.key === "Escape") {
+			} else if (data === "\x1b") {
+				// Escape
 				const currentPane = useTabsStore.getState().panes[paneId];
 				if (
 					currentPane?.status === "working" ||
@@ -350,12 +353,9 @@ export function useTerminalLifecycle({
 				) {
 					useTabsStore.getState().setPaneStatus(paneId, "idle");
 				}
-			} else if (
-				domEvent.key.length === 1 &&
-				!domEvent.ctrlKey &&
-				!domEvent.metaKey
-			) {
-				commandBufferRef.current += domEvent.key;
+			} else if (data.length === 1 && data.charCodeAt(0) >= 32) {
+				// Printable character
+				commandBufferRef.current += data;
 			}
 		};
 
@@ -396,8 +396,8 @@ export function useTerminalLifecycle({
 							paneId,
 							tabId: tabIdRef.current,
 							workspaceId,
-							cols: xterm.cols,
-							rows: xterm.rows,
+							cols: adapter.cols,
+							rows: adapter.rows,
 							initialCommands,
 							cwd: initialCwd,
 						},
@@ -413,8 +413,8 @@ export function useTerminalLifecycle({
 								if (storedColdRestore?.isRestored) {
 									setIsRestoredMode(true);
 									setRestoredCwd(storedColdRestore.cwd);
-									if (storedColdRestore.scrollback && xterm) {
-										xterm.write(
+									if (storedColdRestore.scrollback && adapter) {
+										adapter.write(
 											storedColdRestore.scrollback,
 											scheduleScrollToBottom,
 										);
@@ -433,8 +433,8 @@ export function useTerminalLifecycle({
 									});
 									setIsRestoredMode(true);
 									setRestoredCwd(result.previousCwd || null);
-									if (scrollback && xterm) {
-										xterm.write(scrollback, scheduleScrollToBottom);
+									if (scrollback && adapter) {
+										adapter.write(scrollback, scheduleScrollToBottom);
 									}
 									didFirstRenderRef.current = true;
 									return;
@@ -470,9 +470,13 @@ export function useTerminalLifecycle({
 			},
 		});
 
-		const inputDisposable = xterm.onData(handleTerminalInput);
-		const keyDisposable = xterm.onKey(handleKeyPress);
-		const titleDisposable = xterm.onTitleChange((title) => {
+		// Register input and event listeners
+		const inputDisposable = adapter.onData((data) => {
+			handleTerminalInput(data);
+			handleKeyPress(data);
+		});
+
+		const titleDisposable = adapter.onTitleChange((title) => {
 			if (title) {
 				setPaneNameRef.current(paneId, title);
 				renameUnnamedWorkspaceRef.current(title);
@@ -480,77 +484,100 @@ export function useTerminalLifecycle({
 		});
 
 		const handleClear = () => {
-			xterm.clear();
+			adapter.clearScreen();
 			clearScrollbackRef.current({ paneId });
 		};
 
-		const handleScrollToBottom = () => scrollToBottom(xterm);
+		const handleScrollToBottom = () => scrollToBottom(adapter);
 
 		const handleWrite = (data: string) => {
 			if (isExitedRef.current) return;
 			writeRef.current({ paneId, data });
 		};
 
-		const cleanupKeyboard = setupKeyboardHandler(xterm, {
+		// Setup keyboard handler via restty's beforeInput interceptor
+		const keyboardHandler = createKeyboardHandler({
 			onShiftEnter: () => handleWrite("\x1b\r"),
 			onClear: handleClear,
 			onWrite: handleWrite,
 		});
-		const cleanupClickToMove = setupClickToMoveCursor(xterm, {
-			onWrite: handleWrite,
+
+		// Attach keyboard handler to container
+		const handleKeyDown = (event: KeyboardEvent) => {
+			const allowed = keyboardHandler(event);
+			if (!allowed) {
+				// Key was consumed by our handler
+			}
+		};
+		container.addEventListener("keydown", handleKeyDown);
+
+		// Click-to-move cursor
+		const cleanupClickToMove = setupClickToMoveCursor({
+			container,
+			getCellDimensions: () => adapter.getCellDimensions(),
+			getCursorPosition: () => adapter.getCursorPosition(),
+			sendInput: (data) => adapter.sendInput(data),
+			isAlternateScreen: () => isAlternateScreenRef.current,
 		});
+
 		registerClearCallbackRef.current(paneId, handleClear);
 		registerScrollToBottomCallbackRef.current(paneId, handleScrollToBottom);
 
 		const handleGetSelection = () => {
-			const selection = xterm.getSelection();
-			if (!selection) return "";
-			return selection
-				.split("\n")
-				.map((line) => line.trimEnd())
-				.join("\n");
+			// restty handles selection internally via WebGPU canvas
+			// Selection text extraction isn't directly exposed yet
+			// For now, return empty — copy to clipboard works via adapter.copySelectionToClipboard()
+			return "";
 		};
 
 		const handlePaste = (text: string) => {
 			if (isExitedRef.current) return;
-			xterm.paste(text);
+			// Wrap with bracketed paste sequences if enabled
+			const wrappedText = isBracketedPasteRef.current
+				? `\x1b[200~${text}\x1b[201~`
+				: text;
+			handleWrite(wrappedText);
 		};
 
 		registerGetSelectionCallbackRef.current(paneId, handleGetSelection);
 		registerPasteCallbackRef.current(paneId, handlePaste);
 
-		const cleanupFocus = setupFocusListener(xterm, () =>
+		const cleanupFocus = setupFocusListener(container, () =>
 			handleTerminalFocusRef.current(),
 		);
-		const cleanupResize = setupResizeHandlers(
-			container,
-			xterm,
-			fitAddon,
-			(cols, rows) => resizeRef.current({ paneId, cols, rows }),
-		);
-		const cleanupPaste = setupPasteHandler(xterm, {
+
+		// Resize handler — restty handles fit natively via autoResize,
+		// but we need to notify the PTY daemon of size changes
+		const resizeObserver = new ResizeObserver(() => {
+			if (isUnmounted || adapterRef.current !== adapter) return;
+			// Let restty update its internal size first
+			adapter.updateSize();
+			// Then notify the PTY daemon
+			resizeRef.current({ paneId, cols: adapter.cols, rows: adapter.rows });
+		});
+		resizeObserver.observe(container);
+
+		const cleanupPaste = setupPasteHandler(container, {
 			onPaste: (text) => {
 				commandBufferRef.current += text;
 			},
 			onWrite: handleWrite,
 			isBracketedPasteEnabled: () => isBracketedPasteRef.current,
 		});
-		const cleanupCopy = setupCopyHandler(xterm);
 
 		const handleVisibilityChange = () => {
 			if (document.hidden || isUnmounted) return;
-			const buffer = xterm.buffer.active;
-			const wasAtBottom = buffer.viewportY >= buffer.baseY;
-			const prevCols = xterm.cols;
-			const prevRows = xterm.rows;
-			fitAddon.fit();
-			if (xterm.cols !== prevCols || xterm.rows !== prevRows) {
-				resizeRef.current({ paneId, cols: xterm.cols, rows: xterm.rows });
+			const wasAtBottom = adapter.isAtBottom();
+			const prevCols = adapter.cols;
+			const prevRows = adapter.rows;
+			adapter.updateSize(true);
+			if (adapter.cols !== prevCols || adapter.rows !== prevRows) {
+				resizeRef.current({ paneId, cols: adapter.cols, rows: adapter.rows });
 			}
 			if (wasAtBottom) {
 				requestAnimationFrame(() => {
-					if (isUnmounted || xtermRef.current !== xterm) return;
-					scrollToBottom(xterm);
+					if (isUnmounted || adapterRef.current !== adapter) return;
+					scrollToBottom(adapter);
 				});
 			}
 		};
@@ -575,16 +602,14 @@ export function useTerminalLifecycle({
 			clearAttachInFlight(paneId, cleanupAttachId);
 			if (firstRenderFallback) clearTimeout(firstRenderFallback);
 			document.removeEventListener("visibilitychange", handleVisibilityChange);
+			container.removeEventListener("keydown", handleKeyDown);
 			inputDisposable.dispose();
-			keyDisposable.dispose();
 			titleDisposable.dispose();
-			cleanupKeyboard();
 			cleanupClickToMove();
 			cleanupFocus?.();
-			cleanupResize();
 			cleanupPaste();
-			cleanupCopy();
-			cleanupQuerySuppression();
+			cleanupRestty();
+			resizeObserver.disconnect();
 			unregisterClearCallbackRef.current(paneId);
 			unregisterScrollToBottomCallbackRef.current(paneId);
 			unregisterGetSelectionCallbackRef.current(paneId);
@@ -608,14 +633,12 @@ export function useTerminalLifecycle({
 			didFirstRenderRef.current = false;
 			pendingInitialStateRef.current = null;
 			resetModes();
-			renderDisposable?.dispose();
 
-			setTimeout(() => xterm.dispose(), 0);
+			setTimeout(() => adapter.dispose(), 0);
 
-			xtermRef.current = null;
-			searchAddonRef.current = null;
-			rendererRef.current = null;
-			setXtermInstance(null);
+			adapterRef.current = null;
+			searchShimRef.current = null;
+			setAdapterInstance(null);
 		};
 	}, [
 		paneId,
@@ -628,5 +651,5 @@ export function useTerminalLifecycle({
 		setRestoredCwd,
 	]);
 
-	return { xtermInstance, restartTerminal };
+	return { adapterInstance, restartTerminal };
 }

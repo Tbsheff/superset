@@ -1,5 +1,3 @@
-import type { SerializeAddon } from "@xterm/addon-serialize";
-import type { Terminal as HeadlessTerminal } from "@xterm/headless";
 import type * as pty from "node-pty";
 import type { DataBatcher } from "../data-batcher";
 import type { PtyWriteQueue } from "./pty-write-queue";
@@ -12,8 +10,6 @@ export interface TerminalSession {
 	cols: number;
 	rows: number;
 	lastActive: number;
-	headless: HeadlessTerminal;
-	serializer: SerializeAddon;
 	isAlive: boolean;
 	wasRecovered: boolean;
 	dataBatcher: DataBatcher;

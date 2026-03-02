@@ -170,8 +170,6 @@
         "@trpc/server": "^11.7.1",
         "@types/express": "^5.0.5",
         "@vercel/blob": "^2.0.0",
-        "@xterm/addon-serialize": "0.15.0-beta.148",
-        "@xterm/headless": "6.1.0-beta.148",
         "better-auth": "1.4.18",
         "better-sqlite3": "12.6.2",
         "bindings": "^1.5.0",
@@ -2465,12 +2463,6 @@
     "@webgpu/types": ["@webgpu/types@0.1.69", "", {}, "sha512-RPmm6kgRbI8e98zSD3RVACvnuktIja5+yLgDAkTmxLr90BEwdTXRQWNLF3ETTTyH/8mKhznZuN5AveXYFEsMGQ=="],
 
     "@xmldom/xmldom": ["@xmldom/xmldom@0.8.11", "", {}, "sha512-cQzWCtO6C8TQiYl1ruKNn2U6Ao4o4WBBcbL61yJl84x+j5sOWWFU9X7DpND8XZG3daDppSsigMdfAIl2upQBRw=="],
-
-    "@xterm/addon-serialize": ["@xterm/addon-serialize@0.15.0-beta.148", "", { "peerDependencies": { "@xterm/xterm": "^6.1.0-beta.148" } }, "sha512-EHOkxG3NTmjN7lDNDgqD+dFjz0DQu05n3hlDRBTOOkSojwnixZFbuWrIFeaEj8HNucHFyaDwzsSW4+q47X3XgQ=="],
-
-    "@xterm/headless": ["@xterm/headless@6.1.0-beta.148", "", {}, "sha512-QVJAUl89M9A6yam2OHosRonUndgOnxOY/3qo+cxfjgFSEr8odepmY9LDDsqsk2kfnNAICLkSGZ3QSdrOvSyuPQ=="],
-
-    "@xterm/xterm": ["@xterm/xterm@6.1.0-beta.148", "", {}, "sha512-SGeds5I5qeb6UgJUDC0Nktkw+DtgXmh5w/bS2iJffZEKYDfLRvBfhEe6hpSXDTy5F37DAmXCzNBaX+YfJ3gzPA=="],
 
     "@xtuc/ieee754": ["@xtuc/ieee754@1.2.0", "", {}, "sha512-DX8nKgqcGwsc0eJSqYt5lwP4DH5FlHnmuWWBRy7X0NcaGR0ZtuyeESgMwTYVEtxmsNGY+qit4QYT/MIYTOTPeA=="],
 

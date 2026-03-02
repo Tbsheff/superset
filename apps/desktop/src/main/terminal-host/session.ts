@@ -12,7 +12,7 @@ import { type ChildProcess, spawn } from "node:child_process";
 import type { Socket } from "node:net";
 import * as path from "node:path";
 import { buildSafeEnv } from "../lib/terminal/env";
-import { HeadlessEmulator } from "../lib/terminal-host/headless-emulator";
+import { WasmHeadlessEmulator } from "../lib/terminal-host/wasm-headless-emulator";
 import type {
 	CreateOrAttachRequest,
 	IpcEvent,
@@ -84,7 +84,7 @@ export class Session {
 
 	private subprocess: ChildProcess | null = null;
 	private subprocessReady = false;
-	private emulator: HeadlessEmulator;
+	private emulator: WasmHeadlessEmulator;
 	private attachedClients: Map<Socket, AttachedClient> = new Map();
 	private clientSocketsWaitingForDrain: Set<Socket> = new Set();
 	private subprocessStdoutPaused = false;
@@ -132,8 +132,8 @@ export class Session {
 			this.ptyReadyResolve = resolve;
 		});
 
-		// Create headless emulator
-		this.emulator = new HeadlessEmulator({
+		// Create WASM-based headless emulator (replaces @xterm/headless)
+		this.emulator = new WasmHeadlessEmulator({
 			cols: options.cols,
 			rows: options.rows,
 			scrollback: options.scrollbackLines ?? 10000,

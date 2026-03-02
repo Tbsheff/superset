@@ -45,6 +45,7 @@ import {
 	type TerminalExitEvent,
 	type WriteRequest,
 } from "../lib/terminal-host/types";
+import { loadWasmVt } from "../lib/terminal-host/wasm-vt";
 import { TerminalHost } from "./terminal-host";
 
 // =============================================================================
@@ -828,6 +829,12 @@ async function main() {
 	setupSignalHandlers();
 
 	try {
+		// Load WASM VT module before accepting connections.
+		// All WasmHeadlessEmulator instances share this singleton.
+		log("info", "Loading libghostty-vt WASM module...");
+		await loadWasmVt();
+		log("info", "WASM VT module loaded");
+
 		await startServer();
 	} catch (error) {
 		log("error", "Failed to start server", { error });

@@ -9,39 +9,47 @@ function hexToThemeColor(hex: string): ThemeColor {
 	return { r, g, b };
 }
 
-export function toResttyTheme(colors: TerminalColors): GhosttyTheme {
+function maybeHex(hex: string | undefined): ThemeColor | undefined {
+	return hex ? hexToThemeColor(hex) : undefined;
+}
+
+export function toResttyTheme(colors: Partial<TerminalColors>): GhosttyTheme {
+	const bg = colors.background
+		? hexToThemeColor(colors.background)
+		: { r: 26, g: 26, b: 26 };
+	const fg = colors.foreground
+		? hexToThemeColor(colors.foreground)
+		: { r: 212, g: 212, b: 212 };
+
+	// Build palette from available colors, filtering undefined entries
+	const paletteEntries = [
+		maybeHex(colors.black),
+		maybeHex(colors.red),
+		maybeHex(colors.green),
+		maybeHex(colors.yellow),
+		maybeHex(colors.blue),
+		maybeHex(colors.magenta),
+		maybeHex(colors.cyan),
+		maybeHex(colors.white),
+		maybeHex(colors.brightBlack),
+		maybeHex(colors.brightRed),
+		maybeHex(colors.brightGreen),
+		maybeHex(colors.brightYellow),
+		maybeHex(colors.brightBlue),
+		maybeHex(colors.brightMagenta),
+		maybeHex(colors.brightCyan),
+		maybeHex(colors.brightWhite),
+	];
+
 	return {
 		colors: {
-			background: hexToThemeColor(colors.background),
-			foreground: hexToThemeColor(colors.foreground),
-			cursor: hexToThemeColor(colors.cursor),
-			cursorText: colors.cursorAccent
-				? hexToThemeColor(colors.cursorAccent)
-				: undefined,
-			selectionBackground: colors.selectionBackground
-				? hexToThemeColor(colors.selectionBackground)
-				: undefined,
-			selectionForeground: colors.selectionForeground
-				? hexToThemeColor(colors.selectionForeground)
-				: undefined,
-			palette: [
-				hexToThemeColor(colors.black), // 0
-				hexToThemeColor(colors.red), // 1
-				hexToThemeColor(colors.green), // 2
-				hexToThemeColor(colors.yellow), // 3
-				hexToThemeColor(colors.blue), // 4
-				hexToThemeColor(colors.magenta), // 5
-				hexToThemeColor(colors.cyan), // 6
-				hexToThemeColor(colors.white), // 7
-				hexToThemeColor(colors.brightBlack), // 8
-				hexToThemeColor(colors.brightRed), // 9
-				hexToThemeColor(colors.brightGreen), // 10
-				hexToThemeColor(colors.brightYellow), // 11
-				hexToThemeColor(colors.brightBlue), // 12
-				hexToThemeColor(colors.brightMagenta), // 13
-				hexToThemeColor(colors.brightCyan), // 14
-				hexToThemeColor(colors.brightWhite), // 15
-			],
+			background: bg,
+			foreground: fg,
+			cursor: maybeHex(colors.cursor),
+			cursorText: maybeHex(colors.cursorAccent),
+			selectionBackground: maybeHex(colors.selectionBackground),
+			selectionForeground: maybeHex(colors.selectionForeground),
+			palette: paletteEntries.filter((c): c is ThemeColor => c !== undefined),
 		},
 		raw: {},
 	};

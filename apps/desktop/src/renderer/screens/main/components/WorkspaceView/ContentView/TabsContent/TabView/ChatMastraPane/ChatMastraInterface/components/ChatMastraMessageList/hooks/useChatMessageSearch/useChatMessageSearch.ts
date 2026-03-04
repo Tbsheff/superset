@@ -3,14 +3,12 @@ import { useEffect } from "react";
 import { useTextSearch } from "renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/TabView/hooks";
 import { useAppHotkey } from "renderer/stores/hotkeys";
 
-interface UseMarkdownSearchOptions {
+interface UseChatMessageSearchOptions {
 	containerRef: RefObject<HTMLDivElement | null>;
 	isFocused: boolean;
-	isRenderedMode: boolean;
-	filePath: string;
 }
 
-interface UseMarkdownSearchReturn {
+interface UseChatMessageSearchReturn {
 	isSearchOpen: boolean;
 	query: string;
 	caseSensitive: boolean;
@@ -23,41 +21,23 @@ interface UseMarkdownSearchReturn {
 	closeSearch: () => void;
 }
 
-export function useMarkdownSearch({
+export function useChatMessageSearch({
 	containerRef,
 	isFocused,
-	isRenderedMode,
-	filePath,
-}: UseMarkdownSearchOptions): UseMarkdownSearchReturn {
+}: UseChatMessageSearchOptions): UseChatMessageSearchReturn {
 	const textSearch = useTextSearch({
 		containerRef,
-		highlightPrefix: "markdown-search",
+		highlightPrefix: "chat-search",
 	});
 
-	// Close search when pane loses focus or exits rendered mode
 	useEffect(() => {
-		if (!isFocused || !isRenderedMode) {
-			if (textSearch.isSearchOpen) {
-				textSearch.closeSearch();
-			}
-		}
-	}, [
-		isFocused,
-		isRenderedMode,
-		textSearch.closeSearch,
-		textSearch.isSearchOpen,
-	]);
-
-	// Reset search when file changes so stale Range objects don't linger
-	// biome-ignore lint/correctness/useExhaustiveDependencies: Reset on file change only
-	useEffect(() => {
-		if (textSearch.isSearchOpen) {
+		if (!isFocused && textSearch.isSearchOpen) {
 			textSearch.closeSearch();
 		}
-	}, [filePath]);
+	}, [isFocused, textSearch.closeSearch, textSearch.isSearchOpen]);
 
 	useAppHotkey(
-		"FIND_IN_FILE_VIEWER",
+		"FIND_IN_CHAT",
 		() => {
 			if (textSearch.isSearchOpen) {
 				textSearch.closeSearch();
@@ -65,7 +45,8 @@ export function useMarkdownSearch({
 			}
 			textSearch.setIsSearchOpen(true);
 		},
-		{ enabled: isFocused && isRenderedMode, preventDefault: true },
+		{ enabled: isFocused, preventDefault: true },
+		[textSearch.closeSearch, textSearch.isSearchOpen],
 	);
 
 	return {

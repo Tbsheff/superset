@@ -7,7 +7,6 @@ interface ReportChatMastraErrorInput {
 	workspaceId?: string;
 	paneId?: string;
 	cwd?: string;
-	organizationId?: string | null;
 }
 
 function errorDetails(error: unknown): { name: string; message: string } {
@@ -31,6 +30,5 @@ export function reportChatMastraError(input: ReportChatMastraErrorInput): void {
 		workspace_id: input.workspaceId ?? null,
 		pane_id: input.paneId ?? null,
 		cwd: input.cwd ?? null,
-		organization_id: input.organizationId ?? null,
 	});
 }

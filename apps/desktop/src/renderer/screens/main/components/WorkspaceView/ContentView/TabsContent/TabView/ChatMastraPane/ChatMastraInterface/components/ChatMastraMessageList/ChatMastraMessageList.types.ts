@@ -70,7 +70,6 @@ export interface ChatMastraMessageListProps {
 	interruptedMessage: InterruptedMessagePreview | null;
 	workspaceId: string;
 	sessionId: string | null;
-	organizationId: string | null;
 	workspaceCwd?: string;
 	activeTools: MastraActiveTools | undefined;
 	toolInputBuffers: MastraToolInputBuffers | undefined;

@@ -53,14 +53,12 @@ function sortSecrets(secrets: Secret[], order: SortOrder): Secret[] {
 
 interface EnvironmentVariablesListProps {
 	cloudProjectId: string;
-	organizationId: string;
 	onAdd: () => void;
 	onEdit: (secret: Secret) => void;
 }
 
 export function EnvironmentVariablesList({
 	cloudProjectId,
-	organizationId,
 	onAdd,
 	onEdit,
 }: EnvironmentVariablesListProps) {
@@ -73,7 +71,6 @@ export function EnvironmentVariablesList({
 		try {
 			const result = await apiTrpcClient.project.secrets.getDecrypted.query({
 				projectId: cloudProjectId,
-				organizationId,
 			});
 			setSecrets(result);
 		} catch (err) {
@@ -81,7 +78,7 @@ export function EnvironmentVariablesList({
 		} finally {
 			setIsLoading(false);
 		}
-	}, [cloudProjectId, organizationId]);
+	}, [cloudProjectId]);
 
 	useEffect(() => {
 		fetchSecrets();
@@ -151,7 +148,6 @@ export function EnvironmentVariablesList({
 						<SecretRow
 							key={secret.id}
 							secret={secret}
-							organizationId={organizationId}
 							onEdit={() => onEdit(secret)}
 							onDeleted={fetchSecrets}
 						/>

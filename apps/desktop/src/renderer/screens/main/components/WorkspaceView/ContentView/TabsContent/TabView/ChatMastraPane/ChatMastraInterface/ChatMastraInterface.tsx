@@ -184,7 +184,6 @@ export function ChatMastraInterface({
 	sessionId,
 	initialLaunchConfig,
 	workspaceId,
-	organizationId,
 	cwd,
 	isFocused,
 	isSessionReady,
@@ -239,11 +238,10 @@ export function ChatMastraInterface({
 			posthog.capture(event, {
 				workspace_id: workspaceId,
 				session_id: sessionId,
-				organization_id: organizationId,
 				...properties,
 			});
 		},
-		[organizationId, sessionId, workspaceId],
+		[sessionId, workspaceId],
 	);
 
 	const { data: slashCommands = [] } =
@@ -955,7 +953,6 @@ export function ChatMastraInterface({
 					interruptedMessage={interruptedMessage}
 					workspaceId={workspaceId}
 					sessionId={sessionId}
-					organizationId={organizationId}
 					workspaceCwd={cwd}
 					activeTools={activeTools}
 					toolInputBuffers={toolInputBuffers}

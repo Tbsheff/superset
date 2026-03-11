@@ -14,7 +14,6 @@ export interface ChatMastraInterfaceProps {
 	sessionId: string | null;
 	initialLaunchConfig: ChatMastraLaunchConfig | null;
 	workspaceId: string;
-	organizationId: string | null;
 	cwd: string;
 	isFocused: boolean;
 	isSessionReady: boolean;

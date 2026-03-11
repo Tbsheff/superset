@@ -4,7 +4,7 @@ import { useLiveQuery } from "@tanstack/react-db";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { env } from "renderer/env.renderer";
 import { apiTrpcClient } from "renderer/lib/api-trpc-client";
-import { authClient, getAuthToken } from "renderer/lib/auth-client";
+import { getAuthToken } from "renderer/lib/auth-client";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { posthog } from "renderer/lib/posthog";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
@@ -32,7 +32,6 @@ interface UseChatMastraPaneControllerOptions {
 interface UseChatMastraPaneControllerReturn {
 	sessionId: string | null;
 	launchConfig: ChatMastraLaunchConfig | null;
-	organizationId: string | null;
 	workspacePath: string;
 	isSessionInitializing: boolean;
 	hasCurrentSessionRecord: boolean;
@@ -77,7 +76,6 @@ async function getHttpErrorDetail(response: Response): Promise<string> {
 
 async function createSessionRecord(input: {
 	sessionId: string;
-	organizationId: string;
 	workspaceId: string;
 }): Promise<void> {
 	const token = getAuthToken();
@@ -88,7 +86,6 @@ async function createSessionRecord(input: {
 			...(token ? { Authorization: `Bearer ${token}` } : {}),
 		},
 		body: JSON.stringify({
-			organizationId: input.organizationId,
 			workspaceId: input.workspaceId,
 		}),
 	});
@@ -97,7 +94,6 @@ async function createSessionRecord(input: {
 		const detail = await getHttpErrorDetail(response);
 		console.warn("[chat-sessions] create session failed", {
 			sessionId: input.sessionId,
-			organizationId: input.organizationId,
 			workspaceId: input.workspaceId,
 			detail,
 		});
@@ -132,8 +128,6 @@ export function useChatMastraPaneController({
 	const sessionId = pane?.chatMastra?.sessionId ?? null;
 	const launchConfig = pane?.chatMastra?.launchConfig ?? null;
 	const needsLegacySessionBootstrap = sessionId === null;
-	const { data: session } = authClient.useSession();
-	const organizationId = session?.session?.activeOrganizationId ?? null;
 	const collections = useCollections();
 	const legacySessionBootstrapRef = useRef(false);
 	const ensuredRef = useRef<string | null>(null);
@@ -157,7 +151,7 @@ export function useChatMastraPaneController({
 
 	useEffect(() => {
 		if (existsRemotely) return;
-		if (!workspace?.project || !organizationId) return;
+		if (!workspace?.project) return;
 		if (ensuredRef.current === workspaceId) return;
 
 		const project = workspace.project;
@@ -168,7 +162,6 @@ export function useChatMastraPaneController({
 
 		apiTrpcClient.workspace.ensure
 			.mutate({
-				organizationId,
 				project: {
 					name: project.name,
 					slug: repoName.toLowerCase(),
@@ -194,11 +187,10 @@ export function useChatMastraPaneController({
 					error,
 					workspaceId,
 					paneId,
-					organizationId,
 				});
 				ensuredRef.current = null;
 			});
-	}, [existsRemotely, organizationId, paneId, workspace, workspaceId]);
+	}, [existsRemotely, paneId, workspace, workspaceId]);
 
 	const { data: allSessionsData } = useLiveQuery(
 		(q) =>
@@ -239,7 +231,6 @@ export function useChatMastraPaneController({
 			createSessionRecord: async (scope) => {
 				await createSessionRecord({
 					sessionId: scope.sessionId,
-					organizationId: scope.organizationId,
 					workspaceId: scope.workspaceId,
 				});
 			},
@@ -250,7 +241,6 @@ export function useChatMastraPaneController({
 					sessionId: scope.sessionId,
 					workspaceId: scope.workspaceId,
 					paneId,
-					organizationId: scope.organizationId,
 				});
 			},
 			onRetryExhausted: () => {
@@ -266,21 +256,20 @@ export function useChatMastraPaneController({
 	}, []);
 
 	useEffect(() => {
-		const scope = `${organizationId ?? "none"}:${workspaceId}:${sessionId ?? "none"}`;
+		const scope = `${workspaceId}:${sessionId ?? "none"}`;
 		if (sessionInitScopeRef.current === scope) return;
 		sessionInitScopeRef.current = scope;
 		sessionInitRunnerRef.current?.resetScope(scope);
-	}, [organizationId, sessionId, workspaceId]);
+	}, [sessionId, workspaceId]);
 
 	const currentSessionInitScope = useMemo(() => {
-		if (!sessionId || !organizationId) return null;
+		if (!sessionId) return null;
 		return {
-			scopeKey: `${organizationId}:${workspaceId}:${sessionId}`,
-			organizationId,
+			scopeKey: `${workspaceId}:${sessionId}`,
 			workspaceId,
 			sessionId,
 		};
-	}, [organizationId, sessionId, workspaceId]);
+	}, [sessionId, workspaceId]);
 
 	const handleSelectSession = useCallback(
 		(nextSessionId: string) => {
@@ -288,31 +277,26 @@ export function useChatMastraPaneController({
 			posthog.capture("chat_session_opened", {
 				workspace_id: workspaceId,
 				session_id: nextSessionId,
-				organization_id: organizationId,
 			});
 		},
-		[organizationId, paneId, switchChatMastraSession, workspaceId],
+		[paneId, switchChatMastraSession, workspaceId],
 	);
 
 	const createAndActivateSession = useCallback(
 		async ({
-			targetOrganizationId,
 			newSessionId,
 		}: {
-			targetOrganizationId: string;
 			newSessionId: string;
 		}): Promise<StartFreshSessionResult> => {
 			try {
 				await createSessionRecord({
 					sessionId: newSessionId,
-					organizationId: targetOrganizationId,
 					workspaceId,
 				});
 				switchChatMastraSession(paneId, newSessionId);
 				posthog.capture("chat_session_created", {
 					workspace_id: workspaceId,
 					session_id: newSessionId,
-					organization_id: targetOrganizationId,
 				});
 				return { created: true, sessionId: newSessionId };
 			} catch (error) {
@@ -322,7 +306,6 @@ export function useChatMastraPaneController({
 					sessionId: newSessionId,
 					workspaceId,
 					paneId,
-					organizationId: targetOrganizationId,
 				});
 				return {
 					created: false,
@@ -337,28 +320,19 @@ export function useChatMastraPaneController({
 	);
 
 	const handleNewChat = useCallback(async () => {
-		if (!organizationId) return;
 		const createResult = await createAndActivateSession({
-			targetOrganizationId: organizationId,
 			newSessionId: crypto.randomUUID(),
 		});
 		if (!createResult.created) {
 			toast.error("Failed to create session");
 		}
-	}, [createAndActivateSession, organizationId]);
+	}, [createAndActivateSession]);
 
 	const handleStartFreshSession = useCallback(async () => {
-		if (!organizationId) {
-			return {
-				created: false,
-				errorMessage: "No active organization selected",
-			};
-		}
 		return createAndActivateSession({
-			targetOrganizationId: organizationId,
 			newSessionId: crypto.randomUUID(),
 		});
-	}, [createAndActivateSession, organizationId]);
+	}, [createAndActivateSession]);
 
 	const handleDeleteSession = useCallback(
 		async (sessionIdToDelete: string) => {
@@ -367,7 +341,6 @@ export function useChatMastraPaneController({
 				posthog.capture("chat_session_deleted", {
 					workspace_id: workspaceId,
 					session_id: sessionIdToDelete,
-					organization_id: organizationId,
 				});
 				if (sessionIdToDelete === sessionId) {
 					switchChatMastraSession(paneId, null);
@@ -379,12 +352,11 @@ export function useChatMastraPaneController({
 					sessionId: sessionIdToDelete,
 					workspaceId,
 					paneId,
-					organizationId,
 				});
 				throw error;
 			}
 		},
-		[organizationId, paneId, sessionId, switchChatMastraSession, workspaceId],
+		[paneId, sessionId, switchChatMastraSession, workspaceId],
 	);
 
 	const runSessionInit = useCallback(
@@ -420,7 +392,6 @@ export function useChatMastraPaneController({
 	useEffect(() => {
 		// Legacy fallback for panes created before session IDs were seeded at pane creation.
 		if (!needsLegacySessionBootstrap) return;
-		if (!organizationId) return;
 		if (legacySessionBootstrapRef.current) return;
 		legacySessionBootstrapRef.current = true;
 
@@ -429,7 +400,7 @@ export function useChatMastraPaneController({
 			.finally(() => {
 				legacySessionBootstrapRef.current = false;
 			});
-	}, [handleNewChat, needsLegacySessionBootstrap, organizationId]);
+	}, [handleNewChat, needsLegacySessionBootstrap]);
 
 	const sessionItems = useMemo(
 		() => sessions.map((item) => toSessionSelectorItem(item)),
@@ -443,7 +414,6 @@ export function useChatMastraPaneController({
 	return {
 		sessionId,
 		launchConfig,
-		organizationId,
 		workspacePath: workspace?.worktreePath ?? "",
 		isSessionInitializing,
 		hasCurrentSessionRecord,

@@ -29,14 +29,12 @@ interface SecretRowProps {
 		updatedAt: Date;
 		createdBy: { id: string; name: string; image: string | null } | null;
 	};
-	organizationId: string;
 	onEdit: () => void;
 	onDeleted: () => void;
 }
 
 export function SecretRow({
 	secret,
-	organizationId,
 	onEdit,
 	onDeleted,
 }: SecretRowProps) {
@@ -51,7 +49,6 @@ export function SecretRow({
 		try {
 			await apiTrpcClient.project.secrets.delete.mutate({
 				id: secret.id,
-				organizationId,
 			});
 			onDeleted();
 		} catch (err) {
@@ -59,7 +56,7 @@ export function SecretRow({
 		} finally {
 			setIsDeleting(false);
 		}
-	}, [secret.id, secret.key, organizationId, onDeleted]);
+	}, [secret.id, secret.key, onDeleted]);
 
 	const handleCopy = useCallback(async () => {
 		await navigator.clipboard.writeText(secret.value);

@@ -8,7 +8,6 @@ interface ToolPreviewMessageProps {
 	previewToolParts: ToolPart[];
 	workspaceId: string;
 	sessionId: string | null;
-	organizationId: string | null;
 	workspaceCwd?: string;
 	pendingPlanApproval: MastraPendingPlanApproval;
 	pendingPlanToolCallId: string | null;
@@ -23,7 +22,6 @@ export function ToolPreviewMessage({
 	previewToolParts,
 	workspaceId,
 	sessionId,
-	organizationId,
 	workspaceCwd,
 	pendingPlanApproval,
 	pendingPlanToolCallId,
@@ -44,7 +42,6 @@ export function ToolPreviewMessage({
 									part={part}
 									workspaceId={workspaceId}
 									sessionId={sessionId}
-									organizationId={organizationId}
 									workspaceCwd={workspaceCwd}
 								/>
 								{pendingPlanApproval &&

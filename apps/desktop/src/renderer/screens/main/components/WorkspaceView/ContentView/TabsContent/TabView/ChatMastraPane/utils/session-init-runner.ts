@@ -1,6 +1,5 @@
 export interface SessionInitScope {
 	scopeKey: string;
-	organizationId: string;
 	workspaceId: string;
 	sessionId: string;
 }

@@ -26,7 +26,6 @@ interface AssistantMessageProps {
 	isStreaming: boolean;
 	workspaceId: string;
 	sessionId?: string | null;
-	organizationId?: string | null;
 	workspaceCwd?: string;
 	previewToolParts?: ToolPart[];
 	footer?: ReactNode;
@@ -106,7 +105,6 @@ export function AssistantMessage({
 	isStreaming,
 	workspaceId,
 	sessionId,
-	organizationId,
 	workspaceCwd,
 	previewToolParts = [],
 	footer,
@@ -262,7 +260,7 @@ export function AssistantMessage({
 					})}
 					workspaceId={workspaceId}
 					sessionId={sessionId}
-					organizationId={organizationId}
+	
 					workspaceCwd={workspaceCwd}
 				/>,
 			);
@@ -285,7 +283,7 @@ export function AssistantMessage({
 					part={toToolPartFromResult(part)}
 					workspaceId={workspaceId}
 					sessionId={sessionId}
-					organizationId={organizationId}
+	
 					workspaceCwd={workspaceCwd}
 				/>,
 			);
@@ -314,7 +312,7 @@ export function AssistantMessage({
 				part={previewPart}
 				workspaceId={workspaceId}
 				sessionId={sessionId}
-				organizationId={organizationId}
+
 				workspaceCwd={workspaceCwd}
 			/>,
 		);

@@ -1,12 +1,4 @@
-import type { auth } from "@superset/auth/server";
-import {
-	apiKeyClient,
-	customSessionClient,
-	jwtClient,
-	organizationClient,
-} from "better-auth/client/plugins";
-import { createAuthClient } from "better-auth/react";
-import { env } from "renderer/env.renderer";
+// Auth removed — single-user local mode. Stubs for compatibility.
 
 let authToken: string | null = null;
 
@@ -28,33 +20,32 @@ export function getJwt(): string | null {
 	return jwt;
 }
 
-/**
- * Better Auth client for Electron desktop app.
- *
- * Bearer authentication configured via onRequest hook.
- * Server has bearer() plugin enabled to accept bearer tokens.
- */
-export const authClient = createAuthClient({
-	baseURL: env.NEXT_PUBLIC_API_URL,
-	plugins: [
-		organizationClient(),
-		customSessionClient<typeof auth>(),
-		apiKeyClient(),
-		jwtClient(),
-	],
-	fetchOptions: {
-		credentials: "include",
-		onRequest: async (context) => {
-			const token = getAuthToken();
-			if (token) {
-				context.headers.set("Authorization", `Bearer ${token}`);
-			}
-		},
-		onResponse: async (context) => {
-			const token = context.response.headers.get("set-auth-jwt");
-			if (token) {
-				setJwt(token);
-			}
-		},
+// Stub session hook — always returns a static local user
+const LOCAL_SESSION = {
+	user: {
+		id: "00000000-0000-0000-0000-000000000001",
+		name: "Local User",
+		email: "local@localhost",
+		emailVerified: true,
+		image: null,
+		createdAt: new Date(),
+		updatedAt: new Date(),
 	},
-});
+	session: {
+		id: "local-session",
+	},
+};
+
+export const authClient = {
+	useSession: () => ({
+		data: LOCAL_SESSION,
+		isPending: false,
+		isRefetching: false,
+		refetch: async () => LOCAL_SESSION,
+		error: null,
+	}),
+	organization: {
+		setActive: async (_opts: Record<string, unknown>) => {},
+	},
+	signOut: async () => {},
+};

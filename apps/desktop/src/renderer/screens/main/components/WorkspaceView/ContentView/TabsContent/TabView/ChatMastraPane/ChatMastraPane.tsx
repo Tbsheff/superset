@@ -72,7 +72,6 @@ export function ChatMastraPane({
 	const {
 		sessionId,
 		launchConfig,
-		organizationId,
 		workspacePath,
 		isSessionInitializing,
 		hasCurrentSessionRecord,
@@ -211,7 +210,6 @@ export function ChatMastraPane({
 								sessionId={sessionId}
 								initialLaunchConfig={launchConfig}
 								workspaceId={workspaceId}
-								organizationId={organizationId}
 								cwd={workspacePath}
 								isFocused={isFocused}
 								isSessionReady={hasCurrentSessionRecord}

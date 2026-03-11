@@ -38,7 +38,6 @@ interface AddSecretSheetProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	projectId: string;
-	organizationId: string;
 	onSaved: () => void;
 }
 
@@ -60,7 +59,6 @@ export function AddSecretSheet({
 	open,
 	onOpenChange,
 	projectId,
-	organizationId,
 	onSaved,
 }: AddSecretSheetProps) {
 	const [entries, setEntries] = useState<SecretEntry[]>([createEmptyEntry()]);
@@ -204,7 +202,6 @@ export function AddSecretSheet({
 			for (const entry of validEntries) {
 				await apiTrpcClient.project.secrets.upsert.mutate({
 					projectId,
-					organizationId,
 					key: entry.key.trim(),
 					value: entry.value.trim(),
 					sensitive,

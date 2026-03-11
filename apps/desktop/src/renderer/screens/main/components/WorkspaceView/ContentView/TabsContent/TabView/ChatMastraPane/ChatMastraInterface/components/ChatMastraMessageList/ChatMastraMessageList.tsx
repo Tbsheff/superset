@@ -42,7 +42,6 @@ export function ChatMastraMessageList({
 	interruptedMessage,
 	workspaceId,
 	sessionId,
-	organizationId,
 	workspaceCwd,
 	activeTools,
 	toolInputBuffers,
@@ -209,7 +208,7 @@ export function ChatMastraMessageList({
 									message={message}
 									workspaceId={workspaceId}
 									sessionId={sessionId}
-									organizationId={organizationId}
+	
 									workspaceCwd={workspaceCwd}
 									isStreaming={false}
 									previewToolParts={[]}
@@ -224,7 +223,7 @@ export function ChatMastraMessageList({
 							message={interruptedPreview}
 							workspaceId={workspaceId}
 							sessionId={sessionId}
-							organizationId={organizationId}
+	
 							workspaceCwd={workspaceCwd}
 							isStreaming={false}
 							previewToolParts={[]}
@@ -238,7 +237,7 @@ export function ChatMastraMessageList({
 							message={currentMessage}
 							workspaceId={workspaceId}
 							sessionId={sessionId}
-							organizationId={organizationId}
+	
 							workspaceCwd={workspaceCwd}
 							isStreaming
 							previewToolParts={previewToolParts}
@@ -251,7 +250,7 @@ export function ChatMastraMessageList({
 							previewToolParts={previewToolParts}
 							workspaceId={workspaceId}
 							sessionId={sessionId}
-							organizationId={organizationId}
+	
 							workspaceCwd={workspaceCwd}
 							pendingPlanApproval={pendingPlanApproval}
 							pendingPlanToolCallId={pendingPlanToolCallId}

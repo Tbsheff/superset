@@ -9,14 +9,13 @@ interface HostServiceProcess {
 	status: HostServiceStatus;
 	restartCount: number;
 	lastCrash?: number;
-	organizationId: string;
 }
 
 const MAX_RESTART_DELAY = 30_000;
 const BASE_RESTART_DELAY = 1_000;
 
 class HostServiceManager {
-	private instances = new Map<string, HostServiceProcess>();
+	private instance: HostServiceProcess | null = null;
 	private scriptPath = path.join(__dirname, "host-service.js");
 	private authToken: string | null = null;
 	private cloudApiUrl: string | null = null;
@@ -29,46 +28,41 @@ class HostServiceManager {
 		this.cloudApiUrl = url;
 	}
 
-	async start(organizationId: string): Promise<number> {
-		const existing = this.instances.get(organizationId);
-		if (existing?.status === "running" && existing.port !== null) {
-			return existing.port;
+	async start(): Promise<number> {
+		if (this.instance?.status === "running" && this.instance.port !== null) {
+			return this.instance.port;
 		}
-		if (existing?.status === "starting") {
-			return this.waitForPort(organizationId);
+		if (this.instance?.status === "starting") {
+			return this.waitForPort();
 		}
 
-		return this.spawn(organizationId);
+		return this.spawn();
 	}
 
-	stop(organizationId: string): void {
-		const instance = this.instances.get(organizationId);
-		if (!instance) return;
+	stop(): void {
+		if (!this.instance) return;
 
-		instance.status = "crashed"; // prevent restart
-		instance.process.kill("SIGTERM");
-		this.instances.delete(organizationId);
+		this.instance.status = "crashed"; // prevent restart
+		this.instance.process.kill("SIGTERM");
+		this.instance = null;
 	}
 
 	stopAll(): void {
-		for (const [id] of this.instances) {
-			this.stop(id);
-		}
+		this.stop();
 	}
 
-	getPort(organizationId: string): number | null {
-		return this.instances.get(organizationId)?.port ?? null;
+	getPort(): number | null {
+		return this.instance?.port ?? null;
 	}
 
-	getStatus(organizationId: string): HostServiceStatus | null {
-		return this.instances.get(organizationId)?.status ?? null;
+	getStatus(): HostServiceStatus | null {
+		return this.instance?.status ?? null;
 	}
 
-	private async spawn(organizationId: string): Promise<number> {
+	private async spawn(): Promise<number> {
 		const env: Record<string, string | undefined> = {
 			...process.env,
 			ELECTRON_RUN_AS_NODE: "1",
-			ORGANIZATION_ID: organizationId,
 		};
 		if (this.authToken) {
 			env.AUTH_TOKEN = this.authToken;
@@ -87,37 +81,35 @@ class HostServiceManager {
 			port: null,
 			status: "starting",
 			restartCount: 0,
-			organizationId,
 		};
 
-		this.instances.set(organizationId, instance);
+		this.instance = instance;
 
 		child.stderr?.on("data", (data: Buffer) => {
 			console.error(
-				`[host-service:${organizationId}] ${data.toString().trim()}`,
+				`[host-service] ${data.toString().trim()}`,
 			);
 		});
 
 		child.on("exit", (code) => {
-			console.log(`[host-service:${organizationId}] exited with code ${code}`);
-			const current = this.instances.get(organizationId);
+			console.log(`[host-service] exited with code ${code}`);
 			if (
-				current &&
-				current.process === child &&
-				current.status !== "crashed"
+				this.instance &&
+				this.instance.process === child &&
+				this.instance.status !== "crashed"
 			) {
-				current.status = "crashed";
-				current.lastCrash = Date.now();
-				this.scheduleRestart(organizationId);
+				this.instance.status = "crashed";
+				this.instance.lastCrash = Date.now();
+				this.scheduleRestart();
 			}
 		});
 
-		return this.waitForPort(organizationId);
+		return this.waitForPort();
 	}
 
-	private waitForPort(organizationId: string): Promise<number> {
+	private waitForPort(): Promise<number> {
 		return new Promise((resolve, reject) => {
-			const instance = this.instances.get(organizationId);
+			const instance = this.instance;
 			if (!instance) {
 				reject(new Error("Instance not found"));
 				return;
@@ -142,7 +134,7 @@ class HostServiceManager {
 					instance.port = parsed.port;
 					instance.status = "running";
 					console.log(
-						`[host-service:${organizationId}] listening on port ${parsed.port}`,
+						`[host-service] listening on port ${parsed.port}`,
 					);
 					resolve(parsed.port);
 				} catch {
@@ -160,8 +152,8 @@ class HostServiceManager {
 		});
 	}
 
-	private scheduleRestart(organizationId: string): void {
-		const instance = this.instances.get(organizationId);
+	private scheduleRestart(): void {
+		const instance = this.instance;
 		if (!instance) return;
 
 		const delay = Math.min(
@@ -171,16 +163,15 @@ class HostServiceManager {
 		instance.restartCount++;
 
 		console.log(
-			`[host-service:${organizationId}] restarting in ${delay}ms (attempt ${instance.restartCount})`,
+			`[host-service] restarting in ${delay}ms (attempt ${instance.restartCount})`,
 		);
 
 		setTimeout(() => {
-			const current = this.instances.get(organizationId);
-			if (current?.status === "crashed") {
-				this.instances.delete(organizationId);
-				this.spawn(organizationId).catch((err) => {
+			if (this.instance?.status === "crashed") {
+				this.instance = null;
+				this.spawn().catch((err) => {
 					console.error(
-						`[host-service:${organizationId}] restart failed:`,
+						"[host-service] restart failed:",
 						err,
 					);
 				});

@@ -3,7 +3,6 @@ import { useLiveQuery } from "@tanstack/react-db";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { HiOutlineCloud } from "react-icons/hi2";
 import { apiTrpcClient } from "renderer/lib/api-trpc-client";
-import { authClient } from "renderer/lib/auth-client";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 import { SettingsSection } from "../../../../components/ProjectSettings";
@@ -70,8 +69,6 @@ export function SecretsSettings({ projectId }: SecretsSettingsProps) {
 		return cloudProjects.find((c) => c.id === project.neonProjectId);
 	}, [project?.neonProjectId, cloudProjects]);
 
-	const { data: session } = authClient.useSession();
-	const organizationId = session?.session?.activeOrganizationId;
 	const [isCreatingCloud, setIsCreatingCloud] = useState(false);
 	const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
 	const [editingSecret, setEditingSecret] = useState<EditingSecret | null>(
@@ -80,14 +77,13 @@ export function SecretsSettings({ projectId }: SecretsSettingsProps) {
 	const [refreshKey, setRefreshKey] = useState(0);
 
 	const handleCreateCloudProject = useCallback(async () => {
-		if (!project || !organizationId || !project.githubOwner) return;
+		if (!project || !project.githubOwner) return;
 		const repoName = project.mainRepoPath.split("/").pop();
 		if (!repoName) return;
 
 		setIsCreatingCloud(true);
 		try {
 			const cloudProject = await apiTrpcClient.project.create.mutate({
-				organizationId,
 				name: project.name,
 				slug: repoName.toLowerCase(),
 				repoOwner: project.githubOwner,
@@ -103,7 +99,7 @@ export function SecretsSettings({ projectId }: SecretsSettingsProps) {
 		} finally {
 			setIsCreatingCloud(false);
 		}
-	}, [project, organizationId, linkToNeon, projectId]);
+	}, [project, linkToNeon, projectId]);
 
 	const handleSaved = () => {
 		setRefreshKey((k) => k + 1);
@@ -122,11 +118,10 @@ export function SecretsSettings({ projectId }: SecretsSettingsProps) {
 			</div>
 
 			<div className="space-y-6">
-				{isConnected && organizationId && project.neonProjectId ? (
+				{isConnected && project.neonProjectId ? (
 					<EnvironmentVariablesList
 						key={refreshKey}
 						cloudProjectId={project.neonProjectId}
-						organizationId={organizationId}
 						onAdd={() => setIsAddSheetOpen(true)}
 						onEdit={setEditingSecret}
 					/>
@@ -157,24 +152,20 @@ export function SecretsSettings({ projectId }: SecretsSettingsProps) {
 				)}
 			</div>
 
-			{organizationId && (
-				<AddSecretSheet
-					open={isAddSheetOpen}
-					onOpenChange={setIsAddSheetOpen}
-					projectId={project.neonProjectId ?? ""}
-					organizationId={organizationId}
-					onSaved={handleSaved}
-				/>
-			)}
+			<AddSecretSheet
+				open={isAddSheetOpen}
+				onOpenChange={setIsAddSheetOpen}
+				projectId={project.neonProjectId ?? ""}
+				onSaved={handleSaved}
+			/>
 
-			{organizationId && editingSecret && (
+			{editingSecret && (
 				<EditSecretDialog
 					open={!!editingSecret}
 					onOpenChange={(open) => {
 						if (!open) setEditingSecret(null);
 					}}
 					projectId={project.neonProjectId ?? ""}
-					organizationId={organizationId}
 					secret={editingSecret}
 					onSaved={handleSaved}
 				/>

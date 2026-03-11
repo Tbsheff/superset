@@ -45,7 +45,6 @@ export type StartFreshSessionResult = {
 
 export interface ChatInterfaceProps {
 	sessionId: string | null;
-	organizationId: string | null;
 	deviceId: string | null;
 	workspaceId: string;
 	cwd: string;

@@ -170,7 +170,6 @@ function createBaseProps(
 		interruptedMessage: null,
 		workspaceId: "workspace-1",
 		sessionId: "session-1",
-		organizationId: "org-1",
 		workspaceCwd: "/repo",
 		activeTools: undefined,
 		toolInputBuffers: undefined,

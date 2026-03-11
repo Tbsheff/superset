@@ -49,7 +49,6 @@ interface MastraToolCallBlockProps {
 	workspaceId?: string;
 	workspaceCwd?: string;
 	sessionId?: string | null;
-	organizationId?: string | null;
 	onAnswer?: (
 		toolCallId: string,
 		answers: Record<string, string>,
@@ -67,7 +66,6 @@ export function MastraToolCallBlock({
 	workspaceId,
 	workspaceCwd,
 	sessionId,
-	organizationId,
 	onAnswer,
 }: MastraToolCallBlockProps) {
 	const args = getArgs(part);
@@ -102,7 +100,7 @@ export function MastraToolCallBlock({
 			posthog.capture("chat_file_opened_from_tool", {
 				workspace_id: workspaceId,
 				session_id: sessionId ?? null,
-				organization_id: organizationId ?? null,
+	
 				tool_name: toolName,
 				open_target: "view",
 			});
@@ -110,7 +108,6 @@ export function MastraToolCallBlock({
 		[
 			addFileViewerPane,
 			normalizeFilePath,
-			organizationId,
 			sessionId,
 			toolName,
 			workspaceId,
@@ -168,7 +165,7 @@ export function MastraToolCallBlock({
 			posthog.capture("chat_file_opened_from_tool", {
 				workspace_id: workspaceId,
 				session_id: sessionId ?? null,
-				organization_id: organizationId ?? null,
+	
 				tool_name: toolName,
 				open_target: "diff",
 			});
@@ -177,7 +174,6 @@ export function MastraToolCallBlock({
 			addFileViewerPane,
 			getDiffPaneTargetForFile,
 			normalizeFilePath,
-			organizationId,
 			sessionId,
 			toolName,
 			workspaceId,

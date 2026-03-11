@@ -22,14 +22,12 @@ async function flushMicrotasks() {
 describe("createSessionInitRunner", () => {
 	it("ignores stale async failures after scope switch", async () => {
 		const scopeA: SessionInitScope = {
-			scopeKey: "org-1:ws-1:session-a",
-			organizationId: "org-1",
+			scopeKey: "ws-1:session-a",
 			workspaceId: "ws-1",
 			sessionId: "session-a",
 		};
 		const scopeB: SessionInitScope = {
-			scopeKey: "org-1:ws-1:session-b",
-			organizationId: "org-1",
+			scopeKey: "ws-1:session-b",
 			workspaceId: "ws-1",
 			sessionId: "session-b",
 		};
@@ -77,8 +75,7 @@ describe("createSessionInitRunner", () => {
 
 	it("stops after max retries and reports exhaustion once", async () => {
 		const scope: SessionInitScope = {
-			scopeKey: "org-1:ws-1:session-a",
-			organizationId: "org-1",
+			scopeKey: "ws-1:session-a",
 			workspaceId: "ws-1",
 			sessionId: "session-a",
 		};
@@ -123,8 +120,7 @@ describe("createSessionInitRunner", () => {
 
 	it("does not schedule retries for manual ensure attempts", async () => {
 		const scope: SessionInitScope = {
-			scopeKey: "org-1:ws-1:session-a",
-			organizationId: "org-1",
+			scopeKey: "ws-1:session-a",
 			workspaceId: "ws-1",
 			sessionId: "session-a",
 		};

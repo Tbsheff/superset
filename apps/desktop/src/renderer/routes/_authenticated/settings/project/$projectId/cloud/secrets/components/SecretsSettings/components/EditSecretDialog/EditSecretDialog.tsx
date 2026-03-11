@@ -16,7 +16,6 @@ interface EditSecretDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	projectId: string;
-	organizationId: string;
 	secret: {
 		id: string;
 		key: string;
@@ -30,7 +29,6 @@ export function EditSecretDialog({
 	open,
 	onOpenChange,
 	projectId,
-	organizationId,
 	secret,
 	onSaved,
 }: EditSecretDialogProps) {
@@ -51,7 +49,6 @@ export function EditSecretDialog({
 		try {
 			await apiTrpcClient.project.secrets.upsert.mutate({
 				projectId,
-				organizationId,
 				key: secret.key,
 				value: value.trim(),
 				sensitive: secret.sensitive,

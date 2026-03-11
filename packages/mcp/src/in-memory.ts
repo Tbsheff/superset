@@ -9,7 +9,7 @@ export async function createInMemoryMcpClient({
 	source,
 	onToolCall,
 }: {
-	organizationId: string;
+	organizationId?: string;
 	userId: string;
 	source?: McpContext["source"];
 	onToolCall?: McpServerOptions["onToolCall"];

@@ -2,7 +2,6 @@ import { createHmac } from "node:crypto";
 import { auth } from "@superset/auth/server";
 import { db } from "@superset/db/client";
 import { integrationConnections, usersSlackUsers } from "@superset/db/schema";
-import { findOrgMembership } from "@superset/db/utils";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { env } from "@/env";
@@ -69,31 +68,17 @@ export async function GET(request: Request) {
 		);
 	}
 
-	const membership = await findOrgMembership({
-		userId: session.user.id,
-		organizationId: connection.organizationId,
-	});
-
-	if (!membership) {
-		return new Response(
-			"You are not a member of the organization connected to this Slack workspace.",
-			{ status: 403 },
-		);
-	}
-
 	await db
 		.insert(usersSlackUsers)
 		.values({
 			slackUserId: payload.slackUserId,
 			teamId: payload.teamId,
 			userId: session.user.id,
-			organizationId: connection.organizationId,
 		})
 		.onConflictDoUpdate({
 			target: [usersSlackUsers.slackUserId, usersSlackUsers.teamId],
 			set: {
 				userId: session.user.id,
-				organizationId: connection.organizationId,
 			},
 		});
 

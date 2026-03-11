@@ -110,7 +110,6 @@ interface RunSlackAgentParams {
 	prompt: string;
 	channelId: string;
 	threadTs: string;
-	organizationId: string;
 	userId: string;
 	slackToken: string;
 	model?: string;
@@ -476,7 +475,6 @@ export async function runSlackAgent(
 				threadTs: params.threadTs,
 			}),
 			createSupersetMcpClient({
-				organizationId: params.organizationId,
 				userId: params.userId,
 			}),
 		]);
@@ -511,7 +509,6 @@ export async function runSlackAgent(
 Current context:
 - Slack Channel: ${params.channelId}
 - Thread: ${params.threadTs}
-- Organization ID: ${params.organizationId}
 
 ${agentContext}`;
 

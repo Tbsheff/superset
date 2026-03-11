@@ -51,10 +51,7 @@ export async function processLinkShared({
 		}
 
 		const task = await db.query.tasks.findFirst({
-			where: and(
-				eq(tasks.organizationId, connection.organizationId),
-				eq(tasks.slug, taskSlug),
-			),
+			where: eq(tasks.slug, taskSlug),
 			with: {
 				status: true,
 				assignee: true,

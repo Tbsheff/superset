@@ -17,9 +17,15 @@ import { mapPriorityFromLinear } from "@superset/trpc/integrations/linear";
 import { and, eq, sql } from "drizzle-orm";
 import { env } from "@/env";
 
-const webhookClient = new LinearWebhookClient(env.LINEAR_WEBHOOK_SECRET);
-
 export async function POST(request: Request) {
+	if (!env.LINEAR_WEBHOOK_SECRET) {
+		return Response.json(
+			{ error: "Linear webhook not configured" },
+			{ status: 503 },
+		);
+	}
+
+	const webhookClient = new LinearWebhookClient(env.LINEAR_WEBHOOK_SECRET);
 	const body = await request.text();
 	const signature = request.headers.get(LINEAR_WEBHOOK_SIGNATURE_HEADER);
 

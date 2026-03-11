@@ -12,6 +12,13 @@ import { githubApp } from "../octokit";
  * GitHub redirects here after the user installs/configures the app.
  */
 export async function GET(request: Request) {
+	if (!githubApp) {
+		return Response.json(
+			{ error: "GitHub App not configured" },
+			{ status: 503 },
+		);
+	}
+
 	const url = new URL(request.url);
 	const installationId = url.searchParams.get("installation_id");
 	const setupAction = url.searchParams.get("setup_action");

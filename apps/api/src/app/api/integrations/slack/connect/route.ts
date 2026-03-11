@@ -22,6 +22,13 @@ const SLACK_SCOPES = [
 ].join(",");
 
 export async function GET(request: Request) {
+	if (!env.SLACK_CLIENT_ID) {
+		return Response.json(
+			{ error: "Slack integration not configured" },
+			{ status: 503 },
+		);
+	}
+
 	const url = new URL(request.url);
 	const organizationId = url.searchParams.get("organizationId");
 	if (!organizationId) {

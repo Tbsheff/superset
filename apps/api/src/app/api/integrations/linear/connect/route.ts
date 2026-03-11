@@ -5,6 +5,13 @@ import { env } from "@/env";
 import { createSignedState } from "@/lib/oauth-state";
 
 export async function GET(request: Request) {
+	if (!env.LINEAR_CLIENT_ID) {
+		return Response.json(
+			{ error: "Linear integration not configured" },
+			{ status: 503 },
+		);
+	}
+
 	const session = await auth.api.getSession({
 		headers: request.headers,
 	});

@@ -15,6 +15,13 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
+	if (!githubApp) {
+		return Response.json(
+			{ error: "GitHub App not configured" },
+			{ status: 503 },
+		);
+	}
+
 	if (env.NODE_ENV !== "development") {
 		return Response.json(
 			{ error: "This endpoint is only available in development" },

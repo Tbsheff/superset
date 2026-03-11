@@ -18,6 +18,11 @@ export function verifySlackSignature({
 		return false;
 	}
 
+	if (!env.SLACK_SIGNING_SECRET) {
+		console.error("[slack/verify-signature] SLACK_SIGNING_SECRET not configured");
+		return false;
+	}
+
 	const sigBase = `v0:${timestamp}:${body}`;
 	const mySignature = `v0=${createHmac("sha256", env.SLACK_SIGNING_SECRET).update(sigBase).digest("hex")}`;
 

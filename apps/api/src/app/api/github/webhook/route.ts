@@ -5,6 +5,13 @@ import { eq, sql } from "drizzle-orm";
 import { webhooks } from "./webhooks";
 
 export async function POST(request: Request) {
+	if (!webhooks) {
+		return Response.json(
+			{ error: "GitHub webhook not configured" },
+			{ status: 503 },
+		);
+	}
+
 	const body = await request.text();
 	const signature = request.headers.get("x-hub-signature-256");
 	const eventType = request.headers.get("x-github-event");

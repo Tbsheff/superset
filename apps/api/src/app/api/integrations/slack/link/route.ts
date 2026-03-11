@@ -8,6 +8,13 @@ import { headers } from "next/headers";
 import { env } from "@/env";
 
 export async function GET(request: Request) {
+	if (!env.SLACK_SIGNING_SECRET) {
+		return Response.json(
+			{ error: "Slack integration not configured" },
+			{ status: 503 },
+		);
+	}
+
 	const url = new URL(request.url);
 	const token = url.searchParams.get("token");
 	const sig = url.searchParams.get("sig");

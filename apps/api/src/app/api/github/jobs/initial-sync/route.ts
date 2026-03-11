@@ -15,6 +15,13 @@ const payloadSchema = z.object({
 });
 
 export async function POST(request: Request) {
+	if (!githubApp) {
+		return Response.json(
+			{ error: "GitHub App not configured" },
+			{ status: 503 },
+		);
+	}
+
 	const body = await request.text();
 
 	let bodyData: unknown;
@@ -47,6 +54,10 @@ export async function performGitHubInitialSync(
 	installationDbId: string,
 	organizationId: string,
 ) {
+	if (!githubApp) {
+		throw new Error("GitHub App not configured");
+	}
+
 	const [installation] = await db
 		.select()
 		.from(githubInstallations)

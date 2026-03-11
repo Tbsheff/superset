@@ -10,7 +10,11 @@ import { and, eq } from "drizzle-orm";
 
 import { env } from "@/env";
 
-export const webhooks = new Webhooks({ secret: env.GH_WEBHOOK_SECRET });
+export const webhooks = env.GH_WEBHOOK_SECRET
+	? new Webhooks({ secret: env.GH_WEBHOOK_SECRET })
+	: null;
+
+if (webhooks) {
 
 webhooks.on(
 	"installation.deleted",
@@ -411,3 +415,5 @@ webhooks.on(
 		}
 	},
 );
+
+} // end if (webhooks)

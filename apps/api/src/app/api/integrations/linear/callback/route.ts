@@ -8,6 +8,13 @@ import { verifySignedState } from "@/lib/oauth-state";
 import { performLinearInitialSync } from "../jobs/initial-sync/route";
 
 export async function GET(request: Request) {
+	if (!env.LINEAR_CLIENT_ID || !env.LINEAR_CLIENT_SECRET) {
+		return Response.json(
+			{ error: "Linear integration not configured" },
+			{ status: 503 },
+		);
+	}
+
 	const url = new URL(request.url);
 	const code = url.searchParams.get("code");
 	const state = url.searchParams.get("state");

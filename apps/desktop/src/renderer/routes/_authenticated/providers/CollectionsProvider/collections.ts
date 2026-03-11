@@ -1,4 +1,3 @@
-import { snakeCamelMapper } from "@electric-sql/client";
 import type {
 	SelectAgentCommand,
 	SelectChatSession,
@@ -18,7 +17,6 @@ import type {
 	SelectWorkspace,
 } from "@superset/db/schema";
 import type { AppRouter } from "@superset/trpc";
-import { electricCollectionOptions } from "@tanstack/electric-db-collection";
 import type { Collection } from "@tanstack/react-db";
 import { createCollection } from "@tanstack/react-db";
 import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
@@ -26,10 +24,6 @@ import { env } from "renderer/env.renderer";
 import { getAuthToken, getJwt } from "renderer/lib/auth-client";
 import superjson from "superjson";
 import { z } from "zod";
-
-const columnMapper = snakeCamelMapper();
-
-const electricUrl = `${env.NEXT_PUBLIC_ELECTRIC_URL}/v1/shape`;
 
 const apiKeyDisplaySchema = z.object({
 	id: z.string(),
@@ -47,22 +41,22 @@ type IntegrationConnectionDisplay = Omit<
 >;
 
 interface OrgCollections {
-	tasks: Collection<SelectTask>;
-	taskStatuses: Collection<SelectTaskStatus>;
-	projects: Collection<SelectProject>;
-	workspaces: Collection<SelectWorkspace>;
-	members: Collection<SelectMember>;
-	users: Collection<SelectUser>;
-	invitations: Collection<SelectInvitation>;
-	agentCommands: Collection<SelectAgentCommand>;
-	devicePresence: Collection<SelectDevicePresence>;
-	integrationConnections: Collection<IntegrationConnectionDisplay>;
-	subscriptions: Collection<SelectSubscription>;
-	apiKeys: Collection<ApiKeyDisplay>;
-	chatSessions: Collection<SelectChatSession>;
-	sessionHosts: Collection<SelectSessionHost>;
-	githubRepositories: Collection<SelectGithubRepository>;
-	githubPullRequests: Collection<SelectGithubPullRequest>;
+	tasks: Collection<SelectTask, string>;
+	taskStatuses: Collection<SelectTaskStatus, string>;
+	projects: Collection<SelectProject, string>;
+	workspaces: Collection<SelectWorkspace, string>;
+	members: Collection<SelectMember, string>;
+	users: Collection<SelectUser, string>;
+	invitations: Collection<SelectInvitation, string>;
+	agentCommands: Collection<SelectAgentCommand, string>;
+	devicePresence: Collection<SelectDevicePresence, string>;
+	integrationConnections: Collection<IntegrationConnectionDisplay, string>;
+	subscriptions: Collection<SelectSubscription, string>;
+	apiKeys: Collection<ApiKeyDisplay, string>;
+	chatSessions: Collection<SelectChatSession, string>;
+	sessionHosts: Collection<SelectSessionHost, string>;
+	githubRepositories: Collection<SelectGithubRepository, string>;
+	githubPullRequests: Collection<SelectGithubPullRequest, string>;
 }
 
 // Per-org collections cache
@@ -82,39 +76,155 @@ const apiClient = createTRPCProxyClient<AppRouter>({
 	],
 });
 
-const electricHeaders = {
-	Authorization: () => {
-		const token = getJwt();
-		return token ? `Bearer ${token}` : "";
-	},
-};
+// ---------------------------------------------------------------------------
+// Fetch-based sync — replaces Electric SQL
+// ---------------------------------------------------------------------------
+
+const DATA_URL = `${env.NEXT_PUBLIC_API_URL}/api/electric/v1/shape`;
+const POLL_INTERVAL = 5_000; // 5 seconds
+
+/** Convert snake_case keys to camelCase */
+function snakeToCamel(str: string): string {
+	return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
+/** Convert a snake_case row from the API to camelCase for the app */
+function mapRow<T>(row: Record<string, unknown>): T {
+	const result: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(row)) {
+		result[snakeToCamel(key)] = value;
+	}
+	return result as T;
+}
+
+/** Fetch rows from the local data API */
+async function fetchRows<T>(
+	table: string,
+	organizationId?: string,
+): Promise<T[]> {
+	const params = new URLSearchParams({ table });
+	if (organizationId) params.set("organizationId", organizationId);
+
+	const headers: Record<string, string> = {};
+	const token = getJwt();
+	if (token) headers.Authorization = `Bearer ${token}`;
+
+	const response = await fetch(`${DATA_URL}?${params}`, { headers });
+	if (!response.ok) return [];
+
+	const raw: Record<string, unknown>[] = await response.json();
+	return raw.map(mapRow<T>);
+}
+
+/**
+ * Create collection options with a fetch-based sync.
+ * Loads data from the local API on mount and polls for updates.
+ */
+function fetchCollectionOptions<T extends object>(config: {
+	id: string;
+	table: string;
+	organizationId?: string;
+	getKey: (item: T) => string;
+	onInsert?: (params: {
+		transaction: { mutations: Array<{ modified: T }> };
+	}) => Promise<{ txid: number } | void>;
+	onUpdate?: (params: {
+		transaction: {
+			mutations: Array<{ original: T; changes: Partial<T> }>;
+		};
+	}) => Promise<{ txid: number } | void>;
+	onDelete?: (params: {
+		transaction: { mutations: Array<{ original: T }> };
+	}) => Promise<{ txid: number } | void>;
+}) {
+	return {
+		id: config.id,
+		getKey: config.getKey,
+		onInsert: config.onInsert,
+		onUpdate: config.onUpdate,
+		onDelete: config.onDelete,
+		sync: {
+			rowUpdateMode: "full" as const,
+			sync: ({
+				begin,
+				write,
+				commit,
+				markReady,
+			}: {
+				begin: () => void;
+				write: (msg: {
+					key: string;
+					value: T;
+					type: "insert" | "update" | "delete";
+				}) => void;
+				commit: () => void;
+				markReady: () => void;
+			}) => {
+				let stopped = false;
+				let timer: ReturnType<typeof setTimeout> | null = null;
+
+				async function load() {
+					try {
+						const rows = await fetchRows<T>(
+							config.table,
+							config.organizationId,
+						);
+						if (stopped) return;
+						begin();
+						for (const row of rows) {
+							write({
+								key: config.getKey(row),
+								value: row,
+								type: "insert",
+							});
+						}
+						commit();
+						markReady();
+					} catch (err) {
+						console.error(`[collections] Sync failed for ${config.id}:`, err);
+						// Still mark ready so the UI doesn't hang on loading state
+						markReady();
+					}
+				}
+
+				function poll() {
+					if (stopped) return;
+					timer = setTimeout(async () => {
+						await load();
+						poll();
+					}, POLL_INTERVAL);
+				}
+
+				// Initial load
+				void load().then(poll);
+
+				return () => {
+					stopped = true;
+					if (timer) clearTimeout(timer);
+				};
+			},
+		},
+	};
+}
+
+// ---------------------------------------------------------------------------
+// Collection factories
+// ---------------------------------------------------------------------------
 
 const organizationsCollection = createCollection(
-	electricCollectionOptions<SelectOrganization>({
+	fetchCollectionOptions<SelectOrganization>({
 		id: "organizations",
-		shapeOptions: {
-			url: electricUrl,
-			params: { table: "auth.organizations" },
-			headers: electricHeaders,
-			columnMapper,
-		},
+		table: "auth.organizations",
 		getKey: (item) => item.id,
 	}),
 );
 
 function createOrgCollections(organizationId: string): OrgCollections {
 	const tasks = createCollection(
-		electricCollectionOptions<SelectTask>({
+		fetchCollectionOptions<SelectTask>({
 			id: `tasks-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "tasks",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
+			table: "tasks",
+			organizationId,
 			getKey: (item) => item.id,
 			onInsert: async ({ transaction }) => {
 				const item = transaction.mutations[0].modified;
@@ -138,113 +248,64 @@ function createOrgCollections(organizationId: string): OrgCollections {
 	);
 
 	const taskStatuses = createCollection(
-		electricCollectionOptions<SelectTaskStatus>({
+		fetchCollectionOptions<SelectTaskStatus>({
 			id: `task_statuses-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "task_statuses",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
+			table: "task_statuses",
+			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const projects = createCollection(
-		electricCollectionOptions<SelectProject>({
+		fetchCollectionOptions<SelectProject>({
 			id: `projects-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "projects",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
+			table: "projects",
+			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const workspaces = createCollection(
-		electricCollectionOptions<SelectWorkspace>({
+		fetchCollectionOptions<SelectWorkspace>({
 			id: `workspaces-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "workspaces",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
+			table: "workspaces",
+			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const members = createCollection(
-		electricCollectionOptions<SelectMember>({
+		fetchCollectionOptions<SelectMember>({
 			id: `members-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "auth.members",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
+			table: "auth.members",
+			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const users = createCollection(
-		electricCollectionOptions<SelectUser>({
+		fetchCollectionOptions<SelectUser>({
 			id: `users-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "auth.users",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
+			table: "auth.users",
+			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const invitations = createCollection(
-		electricCollectionOptions<SelectInvitation>({
+		fetchCollectionOptions<SelectInvitation>({
 			id: `invitations-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "auth.invitations",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
+			table: "auth.invitations",
+			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const agentCommands = createCollection(
-		electricCollectionOptions<SelectAgentCommand>({
+		fetchCollectionOptions<SelectAgentCommand>({
 			id: `agent_commands-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "agent_commands",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
+			table: "agent_commands",
+			organizationId,
 			getKey: (item) => item.id,
 			onUpdate: async ({ transaction }) => {
 				const { original, changes } = transaction.mutations[0];
@@ -258,129 +319,73 @@ function createOrgCollections(organizationId: string): OrgCollections {
 	);
 
 	const devicePresence = createCollection(
-		electricCollectionOptions<SelectDevicePresence>({
+		fetchCollectionOptions<SelectDevicePresence>({
 			id: `device_presence-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "device_presence",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
+			table: "device_presence",
+			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const integrationConnections = createCollection(
-		electricCollectionOptions<IntegrationConnectionDisplay>({
+		fetchCollectionOptions<IntegrationConnectionDisplay>({
 			id: `integration_connections-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "integration_connections",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
+			table: "integration_connections",
+			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const subscriptions = createCollection(
-		electricCollectionOptions<SelectSubscription>({
+		fetchCollectionOptions<SelectSubscription>({
 			id: `subscriptions-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "subscriptions",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
+			table: "subscriptions",
+			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const apiKeys = createCollection(
-		electricCollectionOptions<ApiKeyDisplay>({
+		fetchCollectionOptions<ApiKeyDisplay>({
 			id: `apikeys-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "auth.apikeys",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
+			table: "auth.apikeys",
+			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const chatSessions = createCollection(
-		electricCollectionOptions<SelectChatSession>({
+		fetchCollectionOptions<SelectChatSession>({
 			id: `chat_sessions-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "chat_sessions",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
+			table: "chat_sessions",
+			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const sessionHosts = createCollection(
-		electricCollectionOptions<SelectSessionHost>({
+		fetchCollectionOptions<SelectSessionHost>({
 			id: `session_hosts-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "session_hosts",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
+			table: "session_hosts",
+			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const githubRepositories = createCollection(
-		electricCollectionOptions<SelectGithubRepository>({
+		fetchCollectionOptions<SelectGithubRepository>({
 			id: `github_repositories-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "github_repositories",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
+			table: "github_repositories",
+			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const githubPullRequests = createCollection(
-		electricCollectionOptions<SelectGithubPullRequest>({
+		fetchCollectionOptions<SelectGithubPullRequest>({
 			id: `github_pull_requests-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: {
-					table: "github_pull_requests",
-					organizationId,
-				},
-				headers: electricHeaders,
-				columnMapper,
-			},
+			table: "github_pull_requests",
+			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
@@ -406,9 +411,8 @@ function createOrgCollections(organizationId: string): OrgCollections {
 }
 
 /**
- * Preload collections for an organization by starting Electric sync.
+ * Preload collections for an organization by starting sync.
  * Collections are lazy — they don't fetch data until subscribed or preloaded.
- * Call this eagerly so data is ready when the user switches orgs.
  */
 export async function preloadCollections(
 	organizationId: string,
@@ -434,10 +438,8 @@ export async function preloadCollections(
 /**
  * Get collections for an organization, creating them if needed.
  * Collections are cached per org for instant switching.
- * Auth token is read dynamically via getAuthToken() - no need to pass it.
  */
 export function getCollections(organizationId: string) {
-	// Get or create org-specific collections
 	if (!collectionsCache.has(organizationId)) {
 		collectionsCache.set(organizationId, createOrgCollections(organizationId));
 	}

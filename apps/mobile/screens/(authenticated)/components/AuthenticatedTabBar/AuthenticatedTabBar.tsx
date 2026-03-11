@@ -23,7 +23,7 @@ const COLLAPSE_ANIMATION_MS = 400;
 
 export function AuthenticatedTabBar() {
 	const router = useRouter();
-	const { activeOrganization } = useOrganizations();
+	const { organizationName } = useOrganizations();
 	const { switchTab, getTrigger } = useTabTrigger({ name: "(home)" });
 	const [isExpanded, setIsExpanded] = useState(false);
 	const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -58,7 +58,7 @@ export function AuthenticatedTabBar() {
 				tabs={TABS}
 				menuActions={MENU_ACTIONS}
 				selectedTab={activeTab}
-				organizationName={activeOrganization?.name ?? "Organization"}
+				organizationName={organizationName}
 				onTabSelect={(tab: string) => {
 					switchTab(tab, { resetOnFocus: false });
 				}}

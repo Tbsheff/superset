@@ -1,23 +1,12 @@
 import type { ReactNode } from "react";
 import { createContext, useContext, useMemo } from "react";
-import { useSession } from "@/lib/auth/client";
 import { getCollections } from "@/lib/collections/collections";
 
 type Collections = ReturnType<typeof getCollections>;
 const CollectionsContext = createContext<Collections | null>(null);
 
 export function CollectionsProvider({ children }: { children: ReactNode }) {
-	const { data: session } = useSession();
-	const activeOrganizationId = session?.session?.activeOrganizationId;
-
-	const collections = useMemo(() => {
-		if (!activeOrganizationId) return null;
-		return getCollections(activeOrganizationId);
-	}, [activeOrganizationId]);
-
-	if (!activeOrganizationId) {
-		return null;
-	}
+	const collections = useMemo(() => getCollections(), []);
 
 	return (
 		<CollectionsContext.Provider value={collections}>
@@ -33,7 +22,7 @@ export function useCollections(): Collections {
 	}
 	if (!context) {
 		throw new Error(
-			"Collections not available - user must be signed in with an active organization",
+			"Collections not available - user must be signed in",
 		);
 	}
 	return context;

@@ -1,30 +1,12 @@
 import { useCallback, useState } from "react";
-import {
-	RefreshControl,
-	ScrollView,
-	useWindowDimensions,
-	View,
-} from "react-native";
+import { RefreshControl, ScrollView, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { useOrganizations } from "@/screens/(authenticated)/hooks/useOrganizations";
 import { OrganizationHeaderButton } from "./components/OrganizationHeaderButton";
-import { OrganizationSwitcherSheet } from "./components/OrganizationSwitcherSheet";
 
 export function WorkspacesScreen() {
 	const [refreshing, setRefreshing] = useState(false);
-	const [sheetOpen, setSheetOpen] = useState(false);
-	const { width } = useWindowDimensions();
-	const {
-		organizations,
-		activeOrganization,
-		activeOrganizationId,
-		switchOrganization,
-	} = useOrganizations();
-
-	const handleSwitchOrganization = (organizationId: string) => {
-		setSheetOpen(false);
-		switchOrganization(organizationId);
-	};
+	const { organizationName } = useOrganizations();
 
 	const onRefresh = useCallback(async () => {
 		setRefreshing(true);
@@ -34,9 +16,7 @@ export function WorkspacesScreen() {
 	return (
 		<>
 			<OrganizationHeaderButton
-				name={activeOrganization?.name}
-				logo={activeOrganization?.logo}
-				onPress={() => setSheetOpen(true)}
+				name={organizationName}
 			/>
 			<ScrollView
 				className="flex-1 bg-background"
@@ -53,14 +33,6 @@ export function WorkspacesScreen() {
 					</View>
 				</View>
 			</ScrollView>
-			<OrganizationSwitcherSheet
-				isPresented={sheetOpen}
-				onIsPresentedChange={setSheetOpen}
-				organizations={organizations}
-				activeOrganizationId={activeOrganizationId}
-				onSwitchOrganization={handleSwitchOrganization}
-				width={width}
-			/>
 		</>
 	);
 }

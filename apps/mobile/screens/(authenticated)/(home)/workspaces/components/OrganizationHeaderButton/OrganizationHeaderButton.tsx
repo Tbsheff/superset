@@ -1,29 +1,21 @@
 import { Stack } from "expo-router";
-import { ChevronsUpDown } from "lucide-react-native";
-import { Pressable } from "react-native";
+import { View } from "react-native";
 import { Text } from "@/components/ui/text";
-import { OrganizationAvatar } from "../OrganizationSwitcherSheet/components/OrganizationAvatar";
 
 export function OrganizationHeaderButton({
 	name,
-	logo,
-	onPress,
 }: {
 	name?: string;
-	logo?: string | null;
-	onPress: () => void;
 }) {
 	return (
 		<>
 			<Stack.Toolbar placement="left">
 				<Stack.Toolbar.View hidesSharedBackground>
-					<Pressable onPress={onPress} className="flex-row items-center gap-2">
-						<OrganizationAvatar name={name} logo={logo} size={28} />
+					<View className="flex-row items-center gap-2">
 						<Text className="text-xl font-semibold text-foreground">
-							{name ?? "Organization"}
+							{name ?? "Superset"}
 						</Text>
-						<ChevronsUpDown size={14} color="hsl(240 5% 64.9%)" />
-					</Pressable>
+					</View>
 				</Stack.Toolbar.View>
 			</Stack.Toolbar>
 			<Stack.Toolbar placement="right">

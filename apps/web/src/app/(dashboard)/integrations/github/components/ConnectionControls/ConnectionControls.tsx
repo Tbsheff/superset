@@ -19,12 +19,12 @@ import { env } from "@/env";
 import { useTRPC } from "@/trpc/react";
 
 interface ConnectionControlsProps {
-	organizationId: string;
+	installationId?: string;
 	isConnected: boolean;
 }
 
 export function ConnectionControls({
-	organizationId,
+	installationId,
 	isConnected,
 }: ConnectionControlsProps) {
 	const trpc = useTRPC();
@@ -35,9 +35,7 @@ export function ConnectionControls({
 		trpc.integration.github.disconnect.mutationOptions({
 			onSuccess: () => {
 				queryClient.invalidateQueries({
-					queryKey: trpc.integration.github.getInstallation.queryKey({
-						organizationId,
-					}),
+					queryKey: trpc.integration.github.getInstallation.queryKey(),
 				});
 				router.refresh();
 			},
@@ -45,11 +43,12 @@ export function ConnectionControls({
 	);
 
 	const handleConnect = () => {
-		window.location.href = `${env.NEXT_PUBLIC_API_URL}/api/github/install?organizationId=${organizationId}`;
+		window.location.href = `${env.NEXT_PUBLIC_API_URL}/api/github/install`;
 	};
 
 	const handleDisconnect = () => {
-		disconnectMutation.mutate({ organizationId });
+		if (!installationId) return;
+		disconnectMutation.mutate({ installationId });
 	};
 
 	if (isConnected) {
@@ -65,9 +64,8 @@ export function ConnectionControls({
 					<AlertDialogHeader>
 						<AlertDialogTitle>Disconnect GitHub?</AlertDialogTitle>
 						<AlertDialogDescription>
-							This will disconnect GitHub from your organization. The GitHub App
-							will remain installed but will no longer sync data. You can
-							reconnect at any time.
+							This will disconnect GitHub. The GitHub App will remain installed
+							but will no longer sync data. You can reconnect at any time.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>

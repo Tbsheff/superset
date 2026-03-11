@@ -16,21 +16,7 @@ import { TeamSelector } from "./components/TeamSelector";
 
 export default async function LinearIntegrationPage() {
 	const trpc = await api();
-	const organization = await trpc.user.myOrganization.query();
-
-	if (!organization) {
-		return (
-			<div className="flex flex-col items-center justify-center py-16">
-				<p className="text-muted-foreground">
-					You need to be part of an organization to use integrations.
-				</p>
-			</div>
-		);
-	}
-
-	const connection = await trpc.integration.linear.getConnection.query({
-		organizationId: organization.id,
-	});
+	const connection = await trpc.integration.linear.getConnection.query();
 	const isConnected = !!connection;
 
 	return (
@@ -76,10 +62,7 @@ export default async function LinearIntegrationPage() {
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
-					<ConnectionControls
-						organizationId={organization.id}
-						isConnected={isConnected}
-					/>
+					<ConnectionControls isConnected={isConnected} />
 				</CardContent>
 			</Card>
 
@@ -94,7 +77,7 @@ export default async function LinearIntegrationPage() {
 					<CardContent className="space-y-4">
 						<div className="space-y-2">
 							<p className="text-sm font-medium">Default team for new tasks</p>
-							<TeamSelector organizationId={organization.id} />
+							<TeamSelector />
 							<p className="text-sm text-muted-foreground">
 								Tasks created in Superset will be synced to this Linear team.
 							</p>

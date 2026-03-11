@@ -19,14 +19,10 @@ import { env } from "@/env";
 import { useTRPC } from "@/trpc/react";
 
 interface ConnectionControlsProps {
-	organizationId: string;
 	isConnected: boolean;
 }
 
-export function ConnectionControls({
-	organizationId,
-	isConnected,
-}: ConnectionControlsProps) {
+export function ConnectionControls({ isConnected }: ConnectionControlsProps) {
 	const trpc = useTRPC();
 	const router = useRouter();
 	const queryClient = useQueryClient();
@@ -35,9 +31,7 @@ export function ConnectionControls({
 		trpc.integration.slack.disconnect.mutationOptions({
 			onSuccess: () => {
 				queryClient.invalidateQueries({
-					queryKey: trpc.integration.slack.getConnection.queryKey({
-						organizationId,
-					}),
+					queryKey: trpc.integration.slack.getConnection.queryKey(),
 				});
 				router.refresh();
 			},
@@ -45,11 +39,11 @@ export function ConnectionControls({
 	);
 
 	const handleConnect = () => {
-		window.location.href = `${env.NEXT_PUBLIC_API_URL}/api/integrations/slack/connect?organizationId=${organizationId}`;
+		window.location.href = `${env.NEXT_PUBLIC_API_URL}/api/integrations/slack/connect`;
 	};
 
 	const handleDisconnect = () => {
-		disconnectMutation.mutate({ organizationId });
+		disconnectMutation.mutate();
 	};
 
 	if (isConnected) {
@@ -65,8 +59,8 @@ export function ConnectionControls({
 					<AlertDialogHeader>
 						<AlertDialogTitle>Disconnect Slack?</AlertDialogTitle>
 						<AlertDialogDescription>
-							This will remove the connection between your organization and
-							Slack. You can reconnect at any time.
+							This will remove the connection to Slack. You can reconnect at any
+							time.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>

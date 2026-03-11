@@ -14,30 +14,22 @@ import { CheckCircle2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTRPC } from "@/trpc/react";
 
-interface TeamSelectorProps {
-	organizationId: string;
-}
-
-export function TeamSelector({ organizationId }: TeamSelectorProps) {
+export function TeamSelector() {
 	const trpc = useTRPC();
 	const queryClient = useQueryClient();
 	const [showSuccess, setShowSuccess] = useState(false);
 
-	const teamsQuery = useQuery(
-		trpc.integration.linear.getTeams.queryOptions({ organizationId }),
-	);
+	const teamsQuery = useQuery(trpc.integration.linear.getTeams.queryOptions());
 
 	const connectionQuery = useQuery(
-		trpc.integration.linear.getConnection.queryOptions({ organizationId }),
+		trpc.integration.linear.getConnection.queryOptions(),
 	);
 
 	const updateMutation = useMutation(
 		trpc.integration.linear.updateConfig.mutationOptions({
 			onSuccess: () => {
 				queryClient.invalidateQueries({
-					queryKey: trpc.integration.linear.getConnection.queryKey({
-						organizationId,
-					}),
+					queryKey: trpc.integration.linear.getConnection.queryKey(),
 				});
 				setShowSuccess(true);
 			},
@@ -55,7 +47,7 @@ export function TeamSelector({ organizationId }: TeamSelectorProps) {
 	}, [showSuccess]);
 
 	const handleChange = (teamId: string) => {
-		updateMutation.mutate({ organizationId, newTasksTeamId: teamId });
+		updateMutation.mutate({ newTasksTeamId: teamId });
 	};
 
 	if (teamsQuery.isLoading || connectionQuery.isLoading) {

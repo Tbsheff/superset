@@ -7,11 +7,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { GitBranch, Lock, RefreshCw, Unlock } from "lucide-react";
 import { useTRPC } from "@/trpc/react";
 
-interface RepositoryListProps {
-	organizationId: string;
-}
-
-export function RepositoryList({ organizationId }: RepositoryListProps) {
+export function RepositoryList() {
 	const trpc = useTRPC();
 
 	const {
@@ -19,11 +15,7 @@ export function RepositoryList({ organizationId }: RepositoryListProps) {
 		isLoading,
 		isError,
 		refetch,
-	} = useQuery(
-		trpc.integration.github.listRepositories.queryOptions({
-			organizationId,
-		}),
-	);
+	} = useQuery(trpc.integration.github.listRepositories.queryOptions());
 
 	const syncMutation = useMutation(
 		trpc.integration.github.triggerSync.mutationOptions({
@@ -43,7 +35,7 @@ export function RepositoryList({ organizationId }: RepositoryListProps) {
 	);
 
 	const handleSync = () => {
-		syncMutation.mutate({ organizationId });
+		syncMutation.mutate({});
 	};
 
 	const isSyncing = syncMutation.isPending;

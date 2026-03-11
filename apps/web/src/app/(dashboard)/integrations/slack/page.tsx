@@ -15,21 +15,7 @@ import { ErrorHandler } from "./components/ErrorHandler";
 
 export default async function SlackIntegrationPage() {
 	const trpc = await api();
-	const organization = await trpc.user.myOrganization.query();
-
-	if (!organization) {
-		return (
-			<div className="flex flex-col items-center justify-center py-16">
-				<p className="text-muted-foreground">
-					You need to be part of an organization to use integrations.
-				</p>
-			</div>
-		);
-	}
-
-	const connection = await trpc.integration.slack.getConnection.query({
-		organizationId: organization.id,
-	});
+	const connection = await trpc.integration.slack.getConnection.query();
 	const isConnected = !!connection;
 
 	return (
@@ -75,10 +61,7 @@ export default async function SlackIntegrationPage() {
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
-					<ConnectionControls
-						organizationId={organization.id}
-						isConnected={isConnected}
-					/>
+					<ConnectionControls isConnected={isConnected} />
 					{connection && (
 						<div className="mt-4 text-sm text-muted-foreground">
 							Connected to{" "}

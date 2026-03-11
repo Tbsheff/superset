@@ -1,53 +1,30 @@
 "use client";
 
 import { authClient } from "@superset/auth/client";
-import { Avatar, AvatarFallback, AvatarImage } from "@superset/ui/avatar";
+import { Avatar, AvatarFallback } from "@superset/ui/avatar";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
-	DropdownMenuSub,
-	DropdownMenuSubContent,
-	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "@superset/ui/dropdown-menu";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronDown, LogOut } from "lucide-react";
+import { ChevronDown, LogOut } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { useTRPC } from "@/trpc/react";
-
 export function Header() {
 	const { data: session } = authClient.useSession();
 	const router = useRouter();
-	const trpc = useTRPC();
-	const queryClient = useQueryClient();
-
-	const { data: organizations } = useQuery(
-		trpc.user.myOrganizations.queryOptions(),
-	);
 
 	const user = session?.user;
-	const activeOrganizationId = session?.session?.activeOrganizationId;
-	const activeOrganization = organizations?.find(
-		(org) => org.id === activeOrganizationId,
-	);
-
-	const displayName = activeOrganization?.name ?? "Organization";
+	const displayName = "Superset";
 
 	const handleSignOut = async () => {
 		await authClient.signOut();
 		router.push("/sign-in");
-	};
-
-	const handleSwitchOrganization = async (organizationId: string) => {
-		await authClient.organization.setActive({ organizationId });
-		queryClient.invalidateQueries();
-		router.refresh();
 	};
 
 	return (
@@ -67,13 +44,9 @@ export function Header() {
 						<button
 							type="button"
 							className="flex cursor-pointer items-center gap-2 rounded-md border border-border/60 bg-secondary/50 px-3 py-1.5 transition-all duration-150 hover:border-border hover:bg-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-							aria-label="Organization menu"
+							aria-label="User menu"
 						>
 							<Avatar className="size-5">
-								<AvatarImage
-									src={activeOrganization?.logo ?? undefined}
-									alt={displayName}
-								/>
 								<AvatarFallback className="text-[10px]">
 									{displayName.charAt(0)}
 								</AvatarFallback>
@@ -92,42 +65,6 @@ export function Header() {
 							</div>
 						</DropdownMenuLabel>
 						<DropdownMenuSeparator />
-						{organizations && organizations.length > 1 && (
-							<>
-								<DropdownMenuSub>
-									<DropdownMenuSubTrigger className="cursor-pointer">
-										<span>Switch organization</span>
-									</DropdownMenuSubTrigger>
-									<DropdownMenuSubContent>
-										<DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-											{user?.email}
-										</DropdownMenuLabel>
-										{organizations.map((org) => (
-											<DropdownMenuItem
-												key={org.id}
-												className="cursor-pointer gap-2"
-												onClick={() => handleSwitchOrganization(org.id)}
-											>
-												<Avatar className="size-4">
-													<AvatarImage
-														src={org.logo ?? undefined}
-														alt={org.name ?? "Organization"}
-													/>
-													<AvatarFallback className="text-[8px]">
-														{org.name?.charAt(0) ?? "O"}
-													</AvatarFallback>
-												</Avatar>
-												<span className="flex-1 truncate">{org.name}</span>
-												{org.id === activeOrganizationId && (
-													<Check className="size-4 text-primary" />
-												)}
-											</DropdownMenuItem>
-										))}
-									</DropdownMenuSubContent>
-								</DropdownMenuSub>
-								<DropdownMenuSeparator />
-							</>
-						)}
 						<DropdownMenuItem
 							className="cursor-pointer gap-2"
 							onClick={handleSignOut}

@@ -16,21 +16,7 @@ import { RepositoryList } from "./components/RepositoryList";
 
 export default async function GitHubIntegrationPage() {
 	const trpc = await api();
-	const organization = await trpc.user.myOrganization.query();
-
-	if (!organization) {
-		return (
-			<div className="flex flex-col items-center justify-center py-16">
-				<p className="text-muted-foreground">
-					You need to be part of an organization to use integrations.
-				</p>
-			</div>
-		);
-	}
-
-	const installation = await trpc.integration.github.getInstallation.query({
-		organizationId: organization.id,
-	});
+	const installation = await trpc.integration.github.getInstallation.query();
 	const isConnected = !!installation;
 
 	return (
@@ -77,7 +63,7 @@ export default async function GitHubIntegrationPage() {
 				</CardHeader>
 				<CardContent>
 					<ConnectionControls
-						organizationId={organization.id}
+						installationId={installation?.id}
 						isConnected={isConnected}
 					/>
 					{installation && (
@@ -103,7 +89,7 @@ export default async function GitHubIntegrationPage() {
 						</CardDescription>
 					</CardHeader>
 					<CardContent>
-						<RepositoryList organizationId={organization.id} />
+						<RepositoryList />
 					</CardContent>
 				</Card>
 			)}

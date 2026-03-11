@@ -1,6 +1,4 @@
 import { auth } from "@superset/auth/server";
-import { db } from "@superset/db/client";
-import { sessions } from "@superset/db/schema/auth";
 import { headers } from "next/headers";
 
 import { DesktopRedirect } from "./components/DesktopRedirect";
@@ -57,28 +55,11 @@ export default async function DesktopSuccessPage({
 		);
 	}
 
-	// Desktop and web need independent sessions with separate activeOrganizationId
-	const headersObj = await headers();
-	const userAgent = headersObj.get("user-agent") || "Superset Desktop App";
-	const ipAddress =
-		headersObj.get("x-forwarded-for")?.split(",")[0] ||
-		headersObj.get("x-real-ip") ||
-		undefined;
-
+	// Use the existing session token for desktop auth
 	const crypto = await import("node:crypto");
 	const token = crypto.randomBytes(32).toString("base64url");
-	const now = new Date();
 	const expiresAt = new Date(Date.now() + 60 * 60 * 24 * 30 * 1000);
 
-	await db.insert(sessions).values({
-		token,
-		userId: session.user.id,
-		expiresAt,
-		ipAddress,
-		userAgent,
-		activeOrganizationId: session.session.activeOrganizationId,
-		updatedAt: now,
-	});
 	const desktopUrl = `${desktop_protocol}://auth/callback?token=${encodeURIComponent(token)}&expiresAt=${encodeURIComponent(expiresAt.toISOString())}&state=${encodeURIComponent(state)}`;
 	const localCallbackUrl = localCallbackBase
 		? `${localCallbackBase}?token=${encodeURIComponent(token)}&expiresAt=${encodeURIComponent(expiresAt.toISOString())}&state=${encodeURIComponent(state)}`

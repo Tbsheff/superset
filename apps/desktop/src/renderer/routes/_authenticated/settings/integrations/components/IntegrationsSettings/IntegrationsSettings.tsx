@@ -7,12 +7,16 @@ import {
 	CardDescription,
 	CardHeader,
 } from "@superset/ui/card";
+import { Input } from "@superset/ui/input";
 import { Skeleton } from "@superset/ui/skeleton";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useCallback, useEffect, useState } from "react";
 import { FaGithub, FaSlack } from "react-icons/fa";
-import { HiCheckCircle, HiOutlineArrowTopRightOnSquare } from "react-icons/hi2";
+import {
+	HiCheckCircle,
+	HiOutlineArrowTopRightOnSquare,
+} from "react-icons/hi2";
 import { SiLinear } from "react-icons/si";
 import { GATED_FEATURES, usePaywall } from "renderer/components/Paywall";
 import { env } from "renderer/env.renderer";
@@ -98,10 +102,6 @@ export function IntegrationsSettings({
 		hasSlackAccess &&
 		isItemVisible(SETTING_ITEM_ID.INTEGRATIONS_SLACK, visibleItems);
 
-	const handleOpenWeb = (path: string) => {
-		window.open(`${env.NEXT_PUBLIC_WEB_URL}${path}`, "_blank");
-	};
-
 	const handleOpenApi = (path: string) => {
 		window.open(`${env.NEXT_PUBLIC_API_URL}${path}`, "_blank");
 	};
@@ -111,23 +111,15 @@ export function IntegrationsSettings({
 			<div className="mb-8">
 				<h2 className="text-xl font-semibold">Integrations</h2>
 				<p className="text-sm text-muted-foreground mt-1">
-					Connect external services to sync data with your organization
+					Connect external services to sync data
 				</p>
 			</div>
 
 			<div className="grid gap-4">
 				{showLinear && (
-					<IntegrationCard
-						name="Linear"
-						description="Sync issues bidirectionally with Linear"
-						icon={<SiLinear className="size-6" />}
+					<LinearIntegrationCard
 						isConnected={isLinearConnected}
 						connectedOrgName={linearConnection?.externalOrgName}
-						onManage={() =>
-							isLinearConnected
-								? handleOpenWeb("/integrations/linear")
-								: handleOpenApi("/api/integrations/linear/connect")
-						}
 					/>
 				)}
 
@@ -141,7 +133,7 @@ export function IntegrationsSettings({
 						isLoading={isLoadingGithub}
 						onManage={() =>
 							isGithubConnected
-								? handleOpenWeb("/integrations/github")
+								? handleOpenApi("/api/github/install")
 								: handleOpenApi("/api/github/install")
 						}
 					/>
@@ -156,7 +148,7 @@ export function IntegrationsSettings({
 						connectedOrgName={slackConnection?.externalOrgName}
 						onManage={() =>
 							isSlackConnected
-								? handleOpenWeb("/integrations/slack")
+								? handleOpenApi("/api/integrations/slack/connect")
 								: handleOpenApi("/api/integrations/slack/connect")
 						}
 					/>
@@ -164,18 +156,137 @@ export function IntegrationsSettings({
 			</div>
 
 			<p className="mt-6 text-xs text-muted-foreground">
-				Manage integrations in the web app to connect and configure services.{" "}
+				Get your Linear API key from{" "}
 				<a
-					href={`${COMPANY.DOCS_URL}/integrations`}
+					href="https://linear.app/settings/api"
 					target="_blank"
 					rel="noopener noreferrer"
 					className="inline-flex items-center gap-1 text-primary hover:underline"
 				>
-					Learn more
+					Linear Settings → API
 					<HiOutlineArrowTopRightOnSquare className="h-3 w-3" />
 				</a>
 			</p>
 		</div>
+	);
+}
+
+function LinearIntegrationCard({
+	isConnected,
+	connectedOrgName,
+}: {
+	isConnected: boolean;
+	connectedOrgName?: string | null;
+}) {
+	const [tokenInput, setTokenInput] = useState("");
+	const [isConnecting, setIsConnecting] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+	const [showInput, setShowInput] = useState(false);
+
+	const handleConnect = async () => {
+		if (!tokenInput.trim()) return;
+		setIsConnecting(true);
+		setError(null);
+		try {
+			await apiTrpcClient.integration.linear.connectWithToken.mutate({
+				apiToken: tokenInput.trim(),
+			});
+			setTokenInput("");
+			setShowInput(false);
+		} catch (err) {
+			setError(
+				err instanceof Error ? err.message : "Failed to connect",
+			);
+		} finally {
+			setIsConnecting(false);
+		}
+	};
+
+	const handleDisconnect = async () => {
+		try {
+			await apiTrpcClient.integration.linear.disconnect.mutate();
+		} catch (err) {
+			console.error("[integrations] Failed to disconnect Linear:", err);
+		}
+	};
+
+	return (
+		<Card>
+			<CardHeader className="pb-3">
+				<div className="flex items-center justify-between">
+					<div className="flex items-center gap-3">
+						<div className="flex size-10 items-center justify-center rounded-lg border bg-muted/50">
+							<SiLinear className="size-6" />
+						</div>
+						<div>
+							<div className="flex items-center gap-2">
+								<span className="font-medium">Linear</span>
+								{isConnected ? (
+									<Badge variant="default" className="gap-1">
+										<HiCheckCircle className="size-3" />
+										Connected
+									</Badge>
+								) : (
+									<Badge variant="secondary">Not Connected</Badge>
+								)}
+							</div>
+							<CardDescription className="mt-0.5">
+								Sync issues bidirectionally with Linear
+							</CardDescription>
+						</div>
+					</div>
+					{isConnected ? (
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={handleDisconnect}
+						>
+							Disconnect
+						</Button>
+					) : (
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => setShowInput(!showInput)}
+						>
+							Connect
+						</Button>
+					)}
+				</div>
+			</CardHeader>
+			{isConnected && connectedOrgName && (
+				<CardContent className="pt-0">
+					<p className="text-sm text-muted-foreground">
+						Connected to{" "}
+						<span className="font-medium">{connectedOrgName}</span>
+					</p>
+				</CardContent>
+			)}
+			{!isConnected && showInput && (
+				<CardContent className="pt-0">
+					<div className="flex gap-2">
+						<Input
+							type="password"
+							placeholder="lin_api_..."
+							value={tokenInput}
+							onChange={(e) => setTokenInput(e.target.value)}
+							onKeyDown={(e) => e.key === "Enter" && handleConnect()}
+							className="font-mono text-sm"
+						/>
+						<Button
+							size="sm"
+							onClick={handleConnect}
+							disabled={isConnecting || !tokenInput.trim()}
+						>
+							{isConnecting ? "Connecting..." : "Save"}
+						</Button>
+					</div>
+					{error && (
+						<p className="mt-2 text-sm text-destructive">{error}</p>
+					)}
+				</CardContent>
+			)}
+		</Card>
 	);
 }
 
@@ -244,7 +355,8 @@ function IntegrationCard({
 			{isConnected && connectedOrgName && (
 				<CardContent className="pt-0">
 					<p className="text-sm text-muted-foreground">
-						Connected to <span className="font-medium">{connectedOrgName}</span>
+						Connected to{" "}
+						<span className="font-medium">{connectedOrgName}</span>
 					</p>
 				</CardContent>
 			)}

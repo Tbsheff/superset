@@ -12,18 +12,13 @@ import {
 	githubPullRequests,
 	githubRepositories,
 	integrationConnections,
-	invitations,
-	members,
-	organizations,
 	projects,
 	sessionHosts,
-	subscriptions,
 	taskStatuses,
 	tasks,
 	users,
 	workspaces,
 } from "@superset/db/schema";
-import { eq, sql } from "drizzle-orm";
 
 const CORS_HEADERS: Record<string, string> = {
 	"Access-Control-Allow-Origin": "*",
@@ -65,7 +60,6 @@ const COLUMN_RESTRICTIONS: Record<string, Set<string>> = {
 	]),
 	integration_connections: new Set([
 		"id",
-		"organization_id",
 		"connected_by_user_id",
 		"provider",
 		"token_expires_at",
@@ -94,74 +88,35 @@ function applyColumnRestrictions(
 
 function queryTable(
 	tableName: string,
-	organizationId: string | null,
 ): Record<string, unknown>[] {
 	// biome-ignore lint/suspicious/noExplicitAny: drizzle cross-package type issues
-	const orgFilter = (table: any, orgCol: any) => {
-		if (organizationId) {
-			return db.select().from(table).where(eq(orgCol, organizationId)).all();
-		}
-		return db.select().from(table).all();
-	};
+	const selectAll = (table: any) => db.select().from(table).all();
 
 	switch (tableName) {
 		case "tasks":
-			return orgFilter(tasks, tasks.organizationId);
+			return selectAll(tasks);
 		case "task_statuses":
-			return orgFilter(taskStatuses, taskStatuses.organizationId);
+			return selectAll(taskStatuses);
 		case "projects":
-			return orgFilter(projects, projects.organizationId);
+			return selectAll(projects);
 		case "workspaces":
-			return orgFilter(workspaces, workspaces.organizationId);
-		case "auth.members":
-			return orgFilter(members, members.organizationId);
-		case "auth.invitations":
-			return orgFilter(invitations, invitations.organizationId);
-		case "auth.organizations":
-			return db.select().from(organizations).all();
-		case "auth.users": {
-			if (!organizationId) return db.select().from(users).all();
-			return db
-				.select()
-				.from(users)
-				.where(
-					sql`EXISTS (SELECT 1 FROM json_each(${users.organizationIds}) WHERE json_each.value = ${organizationId})`,
-				)
-				.all();
-		}
+			return selectAll(workspaces);
+		case "auth.users":
+			return selectAll(users);
 		case "device_presence":
-			return orgFilter(devicePresence, devicePresence.organizationId);
+			return selectAll(devicePresence);
 		case "agent_commands":
-			return orgFilter(agentCommands, agentCommands.organizationId);
-		case "auth.apikeys": {
-			if (!organizationId) return [];
-			return db
-				.all(
-					sql`SELECT id, name, start, created_at, last_request FROM auth_apikeys WHERE metadata LIKE ${"%" + `"organizationId":"${organizationId}"` + "%"}`,
-				)
-				.map((row) => row as Record<string, unknown>);
-		}
+			return selectAll(agentCommands);
 		case "integration_connections":
-			return orgFilter(
-				integrationConnections,
-				integrationConnections.organizationId,
-			);
-		case "subscriptions":
-			return orgFilter(subscriptions, subscriptions.referenceId);
+			return selectAll(integrationConnections);
 		case "chat_sessions":
-			return orgFilter(chatSessions, chatSessions.organizationId);
+			return selectAll(chatSessions);
 		case "session_hosts":
-			return orgFilter(sessionHosts, sessionHosts.organizationId);
+			return selectAll(sessionHosts);
 		case "github_repositories":
-			return orgFilter(
-				githubRepositories,
-				githubRepositories.organizationId,
-			);
+			return selectAll(githubRepositories);
 		case "github_pull_requests":
-			return orgFilter(
-				githubPullRequests,
-				githubPullRequests.organizationId,
-			);
+			return selectAll(githubPullRequests);
 		default:
 			return [];
 	}
@@ -174,7 +129,6 @@ export async function OPTIONS(): Promise<Response> {
 export async function GET(request: Request): Promise<Response> {
 	const url = new URL(request.url);
 	const tableName = url.searchParams.get("table");
-	const organizationId = url.searchParams.get("organizationId");
 
 	if (!tableName) {
 		return new Response(JSON.stringify({ error: "Missing table parameter" }), {
@@ -183,7 +137,7 @@ export async function GET(request: Request): Promise<Response> {
 		});
 	}
 
-	const rows = queryTable(tableName, organizationId);
+	const rows = queryTable(tableName);
 	const serialized = rows.map((row) =>
 		applyColumnRestrictions(tableName, serializeRow(row)),
 	);

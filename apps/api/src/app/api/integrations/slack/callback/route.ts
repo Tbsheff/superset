@@ -1,8 +1,7 @@
 import { WebClient } from "@slack/web-api";
 import { db } from "@superset/db/client";
 import type { SlackConfig } from "@superset/db/schema";
-import { integrationConnections, members } from "@superset/db/schema";
-import { and, eq } from "drizzle-orm";
+import { integrationConnections } from "@superset/db/schema";
 
 import { env } from "@/env";
 import { posthog } from "@/lib/analytics";
@@ -40,25 +39,7 @@ export async function GET(request: Request) {
 		);
 	}
 
-	const { organizationId, userId } = stateData;
-
-	// Re-verify membership at callback time (state was signed earlier)
-	const membership = await db.query.members.findFirst({
-		where: and(
-			eq(members.organizationId, organizationId),
-			eq(members.userId, userId),
-		),
-	});
-
-	if (!membership) {
-		console.error("[slack/callback] Membership verification failed:", {
-			organizationId,
-			userId,
-		});
-		return Response.redirect(
-			`${env.NEXT_PUBLIC_WEB_URL}/integrations/slack?error=unauthorized`,
-		);
-	}
+	const { userId } = stateData;
 
 	const redirectUri = `${env.NEXT_PUBLIC_API_URL}/api/integrations/slack/callback`;
 	const client = new WebClient();
@@ -85,7 +66,6 @@ export async function GET(request: Request) {
 		await db
 			.insert(integrationConnections)
 			.values({
-				organizationId,
 				connectedByUserId: userId,
 				provider: "slack",
 				accessToken: tokenData.access_token,
@@ -94,10 +74,7 @@ export async function GET(request: Request) {
 				config,
 			})
 			.onConflictDoUpdate({
-				target: [
-					integrationConnections.organizationId,
-					integrationConnections.provider,
-				],
+				target: [integrationConnections.provider],
 				set: {
 					accessToken: tokenData.access_token,
 					externalOrgId: tokenData.team.id,
@@ -109,7 +86,6 @@ export async function GET(request: Request) {
 			});
 
 		console.log("[slack/callback] Connected workspace:", {
-			organizationId,
 			teamId: tokenData.team.id,
 			teamName: tokenData.team.name,
 		});

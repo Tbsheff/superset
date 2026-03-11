@@ -1,6 +1,5 @@
 import { db } from "@superset/db/client";
-import { githubInstallations, members } from "@superset/db/schema";
-import { and, eq } from "drizzle-orm";
+import { githubInstallations } from "@superset/db/schema";
 
 import { env } from "@/env";
 import { verifySignedState } from "@/lib/oauth-state";
@@ -43,24 +42,7 @@ export async function GET(request: Request) {
 		);
 	}
 
-	const { organizationId, userId } = stateData;
-
-	const membership = await db.query.members.findFirst({
-		where: and(
-			eq(members.organizationId, organizationId),
-			eq(members.userId, userId),
-		),
-	});
-
-	if (!membership) {
-		console.error("[github/callback] Membership verification failed:", {
-			organizationId,
-			userId,
-		});
-		return Response.redirect(
-			`${env.NEXT_PUBLIC_WEB_URL}/integrations/github?error=unauthorized`,
-		);
-	}
+	const { userId } = stateData;
 
 	try {
 		const octokit = await githubApp.getInstallationOctokit(
@@ -93,7 +75,6 @@ export async function GET(request: Request) {
 		const [savedInstallation] = await db
 			.insert(githubInstallations)
 			.values({
-				organizationId,
 				connectedByUserId: userId,
 				installationId: String(installation.id),
 				accountLogin,
@@ -101,7 +82,7 @@ export async function GET(request: Request) {
 				permissions: installation.permissions as Record<string, string>,
 			})
 			.onConflictDoUpdate({
-				target: [githubInstallations.organizationId],
+				target: [githubInstallations.installationId],
 				set: {
 					connectedByUserId: userId,
 					installationId: String(installation.id),
@@ -122,7 +103,7 @@ export async function GET(request: Request) {
 		}
 
 		try {
-			await performGitHubInitialSync(savedInstallation.id, organizationId);
+			await performGitHubInitialSync(savedInstallation.id);
 		} catch (error) {
 			console.error("[github/callback] Failed to run initial sync:", error);
 			return Response.redirect(

@@ -1,7 +1,6 @@
 import { LinearClient } from "@linear/sdk";
 import { db } from "@superset/db/client";
-import { integrationConnections, members } from "@superset/db/schema";
-import { and, eq } from "drizzle-orm";
+import { integrationConnections } from "@superset/db/schema";
 
 import { env } from "@/env";
 import { verifySignedState } from "@/lib/oauth-state";
@@ -39,24 +38,7 @@ export async function GET(request: Request) {
 		);
 	}
 
-	const { organizationId, userId } = stateData;
-
-	const membership = await db.query.members.findFirst({
-		where: and(
-			eq(members.organizationId, organizationId),
-			eq(members.userId, userId),
-		),
-	});
-
-	if (!membership) {
-		console.error("[linear/callback] Membership verification failed:", {
-			organizationId,
-			userId,
-		});
-		return Response.redirect(
-			`${env.NEXT_PUBLIC_WEB_URL}/integrations/linear?error=unauthorized`,
-		);
-	}
+	const { userId } = stateData;
 
 	const tokenResponse = await fetch("https://api.linear.app/oauth/token", {
 		method: "POST",
@@ -92,7 +74,6 @@ export async function GET(request: Request) {
 	await db
 		.insert(integrationConnections)
 		.values({
-			organizationId,
 			connectedByUserId: userId,
 			provider: "linear",
 			accessToken: tokenData.access_token,
@@ -101,10 +82,7 @@ export async function GET(request: Request) {
 			externalOrgName: linearOrg.name,
 		})
 		.onConflictDoUpdate({
-			target: [
-				integrationConnections.organizationId,
-				integrationConnections.provider,
-			],
+			target: [integrationConnections.provider],
 			set: {
 				accessToken: tokenData.access_token,
 				tokenExpiresAt,
@@ -116,7 +94,7 @@ export async function GET(request: Request) {
 		});
 
 	try {
-		await performLinearInitialSync(organizationId, userId);
+		await performLinearInitialSync(userId);
 	} catch (syncError) {
 		console.error("Failed to run initial sync:", syncError);
 		return Response.redirect(

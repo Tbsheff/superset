@@ -33,16 +33,8 @@ export async function PUT(
 	const { sessionId } = await params;
 
 	const body = (await request.json()) as {
-		organizationId: string;
 		workspaceId?: string;
 	};
-
-	if (!body.organizationId) {
-		return Response.json(
-			{ error: "organizationId is required" },
-			{ status: 400 },
-		);
-	}
 
 	const stream = getDurableStream(sessionId);
 	try {
@@ -55,7 +47,6 @@ export async function PUT(
 		if (!isAlreadyExists) {
 			console.error("[chat] failed to create stream", {
 				sessionId,
-				organizationId: body.organizationId,
 				error: errorMessage(error),
 			});
 			throw error;
@@ -64,7 +55,6 @@ export async function PUT(
 
 	const baseValues = {
 		id: sessionId,
-		organizationId: body.organizationId,
 		createdBy: session.user.id,
 	};
 
@@ -81,7 +71,6 @@ export async function PUT(
 		if (!body.workspaceId || !shouldRetryWithoutWorkspaceId(error)) {
 			console.error("[chat] failed to persist chat session", {
 				sessionId,
-				organizationId: body.organizationId,
 				workspaceId: body.workspaceId,
 				error: errorMessage(error),
 			});
@@ -90,7 +79,6 @@ export async function PUT(
 
 		console.warn("[chat] retrying chat session insert without workspaceId", {
 			sessionId,
-			organizationId: body.organizationId,
 			workspaceId: body.workspaceId,
 			error: errorMessage(error),
 		});

@@ -15,13 +15,6 @@ async function verifyToken(req: Request): Promise<AuthInfo | undefined> {
 	// 1. Try session auth (for desktop/web app)
 	const session = await auth.api.getSession({ headers: req.headers });
 	if (session?.session) {
-		const extendedSession = session.session as {
-			activeOrganizationId?: string;
-		};
-		if (!extendedSession.activeOrganizationId) {
-			console.error("[mcp/auth] Session missing activeOrganizationId");
-			return undefined;
-		}
 		return {
 			token: "session",
 			clientId: "session",
@@ -29,7 +22,6 @@ async function verifyToken(req: Request): Promise<AuthInfo | undefined> {
 			extra: {
 				mcpContext: {
 					userId: session.user.id,
-					organizationId: extendedSession.activeOrganizationId,
 				} satisfies McpContext,
 			},
 		};
@@ -47,17 +39,6 @@ async function verifyToken(req: Request): Promise<AuthInfo | undefined> {
 					console.error("[mcp/auth] API key missing userId");
 					return undefined;
 				}
-				const metadata =
-					typeof result.key.metadata === "string"
-						? JSON.parse(result.key.metadata)
-						: result.key.metadata;
-				const organizationId = metadata?.organizationId as string | undefined;
-				if (!organizationId) {
-					console.error(
-						"[mcp/auth] API key missing organizationId in metadata",
-					);
-					return undefined;
-				}
 				return {
 					token: "api-key",
 					clientId: "api-key",
@@ -65,7 +46,6 @@ async function verifyToken(req: Request): Promise<AuthInfo | undefined> {
 					extra: {
 						mcpContext: {
 							userId,
-							organizationId,
 						} satisfies McpContext,
 					},
 				};
@@ -85,9 +65,9 @@ async function verifyToken(req: Request): Promise<AuthInfo | undefined> {
 					audience: [env.NEXT_PUBLIC_API_URL, `${env.NEXT_PUBLIC_API_URL}/`],
 				},
 			});
-			if (!payload?.sub || !payload.organizationId) {
+			if (!payload?.sub) {
 				console.error(
-					"[mcp/auth] Access token missing sub or organizationId claim",
+					"[mcp/auth] Access token missing sub claim",
 				);
 				return undefined;
 			}
@@ -105,7 +85,6 @@ async function verifyToken(req: Request): Promise<AuthInfo | undefined> {
 				extra: {
 					mcpContext: {
 						userId: payload.sub,
-						organizationId: payload.organizationId as string,
 					} satisfies McpContext,
 				},
 			};

@@ -1,7 +1,6 @@
 import { db } from "@superset/db/client";
 import {
 	integrationConnections,
-	subscriptions,
 	usersSlackUsers,
 } from "@superset/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -76,62 +75,15 @@ export async function processAssistantMessage({
 
 	const slack = createSlackClient(connection.accessToken);
 
-	const [slackUserLink, activeSubscription] = await Promise.all([
-		event.user
-			? db.query.usersSlackUsers.findFirst({
-					where: and(
-						eq(usersSlackUsers.slackUserId, event.user),
-						eq(usersSlackUsers.teamId, teamId),
-					),
-					columns: { userId: true, modelPreference: true },
-				})
-			: undefined,
-		db.query.subscriptions.findFirst({
-			where: and(
-				eq(subscriptions.referenceId, connection.organizationId),
-				eq(subscriptions.status, "active"),
-			),
-			columns: { id: true },
-		}),
-	]);
-
-	if (!activeSubscription) {
-		posthog.capture({
-			distinctId: event.user,
-			event: "slack_gated",
-			properties: {
-				reason: "no_subscription",
-				team_id: teamId,
-				$process_person_profile: false,
-			},
-		});
-		await slack.chat.postMessage({
-			channel: event.channel,
-			thread_ts: event.thread_ts ?? event.ts,
-			text: "The Superset Slack integration requires a Pro plan.",
-			blocks: [
-				{
-					type: "section",
-					text: {
-						type: "mrkdwn",
-						text: "The Superset Slack integration requires a Pro plan.",
-					},
-				},
-				{
-					type: "actions",
-					elements: [
-						{
-							type: "button",
-							text: { type: "plain_text", text: "Upgrade to Pro", emoji: true },
-							url: "https://app.superset.sh/settings/billing",
-							style: "primary",
-						},
-					],
-				},
-			],
-		});
-		return;
-	}
+	const slackUserLink = event.user
+		? await db.query.usersSlackUsers.findFirst({
+				where: and(
+					eq(usersSlackUsers.slackUserId, event.user),
+					eq(usersSlackUsers.teamId, teamId),
+				),
+				columns: { userId: true, modelPreference: true },
+			})
+		: undefined;
 
 	if (!slackUserLink) {
 		if (!event.user) return;
@@ -214,7 +166,6 @@ export async function processAssistantMessage({
 			prompt: resolve(event.text ?? ""),
 			channelId: event.channel,
 			threadTs,
-			organizationId: connection.organizationId,
 			userId: slackUserLink.userId,
 			slackToken: connection.accessToken,
 			model: slackUserLink.modelPreference ?? undefined,

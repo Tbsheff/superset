@@ -11,7 +11,6 @@ import { githubApp } from "../../octokit";
 
 const payloadSchema = z.object({
 	installationDbId: z.string().uuid(),
-	organizationId: z.string().uuid(),
 });
 
 export async function POST(request: Request) {
@@ -36,10 +35,10 @@ export async function POST(request: Request) {
 		return Response.json({ error: "Invalid payload" }, { status: 400 });
 	}
 
-	const { installationDbId, organizationId } = parsed.data;
+	const { installationDbId } = parsed.data;
 
 	try {
-		await performGitHubInitialSync(installationDbId, organizationId);
+		await performGitHubInitialSync(installationDbId);
 		return Response.json({ success: true });
 	} catch (error) {
 		console.error("[github/initial-sync] Sync failed:", error);
@@ -52,7 +51,6 @@ export async function POST(request: Request) {
 
 export async function performGitHubInitialSync(
 	installationDbId: string,
-	organizationId: string,
 ) {
 	if (!githubApp) {
 		throw new Error("GitHub App not configured");
@@ -84,7 +82,6 @@ export async function performGitHubInitialSync(
 			.insert(githubRepositories)
 			.values({
 				installationId: installationDbId,
-				organizationId,
 				repoId: String(repo.id),
 				owner: repo.owner.login,
 				name: repo.name,
@@ -95,7 +92,6 @@ export async function performGitHubInitialSync(
 			.onConflictDoUpdate({
 				target: [githubRepositories.repoId],
 				set: {
-					organizationId,
 					owner: repo.owner.login,
 					name: repo.name,
 					fullName: repo.full_name,
@@ -191,7 +187,6 @@ export async function performGitHubInitialSync(
 				.insert(githubPullRequests)
 				.values({
 					repositoryId: dbRepo.id,
-					organizationId,
 					prNumber: pr.number,
 					nodeId: pr.node_id,
 					headBranch: pr.head.ref,
@@ -218,7 +213,6 @@ export async function performGitHubInitialSync(
 						githubPullRequests.prNumber,
 					],
 					set: {
-						organizationId: dbRepo.organizationId,
 						headSha: pr.head.sha,
 						title: pr.title,
 						state: pr.state,

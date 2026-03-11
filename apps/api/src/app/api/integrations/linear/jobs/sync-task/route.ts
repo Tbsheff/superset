@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 	}
 
 	const resolvedTeamId =
-		teamId ?? (await getNewTasksTeamId(task.organizationId));
+		teamId ?? (await getNewTasksTeamId());
 	if (!resolvedTeamId) {
 		return Response.json({ error: "No team configured", skipped: true });
 	}

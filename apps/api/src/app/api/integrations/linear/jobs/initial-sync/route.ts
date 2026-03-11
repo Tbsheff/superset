@@ -2,12 +2,11 @@ import { LinearClient } from "@linear/sdk";
 import { buildConflictUpdateColumns, db } from "@superset/db";
 import {
 	integrationConnections,
-	members,
 	taskStatuses,
 	tasks,
 	users,
 } from "@superset/db/schema";
-import { and, eq, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import chunk from "lodash.chunk";
 import { z } from "zod";
 import { syncWorkflowStates } from "./syncWorkflowStates";
@@ -16,7 +15,6 @@ import { fetchAllIssues, mapIssueToTask } from "./utils";
 const BATCH_SIZE = 100;
 
 const payloadSchema = z.object({
-	organizationId: z.string().min(1),
 	creatorUserId: z.string().min(1),
 });
 
@@ -35,20 +33,16 @@ export async function POST(request: Request) {
 		return Response.json({ error: "Invalid payload" }, { status: 400 });
 	}
 
-	const { organizationId, creatorUserId } = parsed.data;
-	await performLinearInitialSync(organizationId, creatorUserId);
+	const { creatorUserId } = parsed.data;
+	await performLinearInitialSync(creatorUserId);
 	return Response.json({ success: true });
 }
 
 export async function performLinearInitialSync(
-	organizationId: string,
 	creatorUserId: string,
 ) {
 	const connection = await db.query.integrationConnections.findFirst({
-		where: and(
-			eq(integrationConnections.organizationId, organizationId),
-			eq(integrationConnections.provider, "linear"),
-		),
+		where: eq(integrationConnections.provider, "linear"),
 	});
 
 	if (!connection) {
@@ -57,14 +51,11 @@ export async function performLinearInitialSync(
 
 	const client = new LinearClient({ accessToken: connection.accessToken });
 
-	await syncWorkflowStates({ client, organizationId });
+	await syncWorkflowStates({ client });
 
 	const statusByExternalId = new Map<string, string>();
 	const statuses = await db.query.taskStatuses.findMany({
-		where: and(
-			eq(taskStatuses.organizationId, organizationId),
-			eq(taskStatuses.externalProvider, "linear"),
-		),
+		where: eq(taskStatuses.externalProvider, "linear"),
 	});
 	for (const status of statuses) {
 		if (status.externalId) {
@@ -89,13 +80,7 @@ export async function performLinearInitialSync(
 			? await db
 					.select({ id: users.id, email: users.email })
 					.from(users)
-					.innerJoin(members, eq(members.userId, users.id))
-					.where(
-						and(
-							inArray(users.email, assigneeEmails),
-							eq(members.organizationId, organizationId),
-						),
-					)
+					.where(inArray(users.email, assigneeEmails))
 			: [];
 
 	const userByEmail = new Map(matchedUsers.map((u) => [u.email, u.id]));
@@ -103,7 +88,6 @@ export async function performLinearInitialSync(
 	const taskValues = issues.map((issue) =>
 		mapIssueToTask(
 			issue,
-			organizationId,
 			creatorUserId,
 			userByEmail,
 			statusByExternalId,
@@ -118,7 +102,6 @@ export async function performLinearInitialSync(
 			.values(batch)
 			.onConflictDoUpdate({
 				target: [
-					tasks.organizationId,
 					tasks.externalProvider,
 					tasks.externalId,
 				],

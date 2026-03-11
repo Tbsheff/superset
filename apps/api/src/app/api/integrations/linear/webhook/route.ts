@@ -7,7 +7,6 @@ import { db } from "@superset/db/client";
 import type { SelectIntegrationConnection } from "@superset/db/schema";
 import {
 	integrationConnections,
-	members,
 	taskStatuses,
 	tasks,
 	users,
@@ -132,7 +131,6 @@ async function processIssueEvent(
 	if (payload.action === "create" || payload.action === "update") {
 		const taskStatus = await db.query.taskStatuses.findFirst({
 			where: and(
-				eq(taskStatuses.organizationId, connection.organizationId),
 				eq(taskStatuses.externalProvider, "linear"),
 				eq(taskStatuses.externalId, issue.state.id),
 			),
@@ -150,19 +148,13 @@ async function processIssueEvent(
 
 		let assigneeId: string | null = null;
 		if (issue.assignee?.email) {
-			const matchedMember = await db
+			const matchedUser = await db
 				.select({ userId: users.id })
 				.from(users)
-				.innerJoin(members, eq(members.userId, users.id))
-				.where(
-					and(
-						eq(users.email, issue.assignee.email),
-						eq(members.organizationId, connection.organizationId),
-					),
-				)
+				.where(eq(users.email, issue.assignee.email))
 				.limit(1)
 				.then((rows) => rows[0]);
-			assigneeId = matchedMember?.userId ?? null;
+			assigneeId = matchedUser?.userId ?? null;
 		}
 
 		let assigneeExternalId: string | null = null;
@@ -201,13 +193,11 @@ async function processIssueEvent(
 			.insert(tasks)
 			.values({
 				...taskData,
-				organizationId: connection.organizationId,
 				creatorId: connection.connectedByUserId,
 				createdAt: new Date(issue.createdAt),
 			})
 			.onConflictDoUpdate({
 				target: [
-					tasks.organizationId,
 					tasks.externalProvider,
 					tasks.externalId,
 				],

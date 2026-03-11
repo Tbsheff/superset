@@ -153,7 +153,6 @@ export async function fetchAllIssues(
 
 export function mapIssueToTask(
 	issue: LinearIssue,
-	organizationId: string,
 	creatorId: string,
 	userByEmail: Map<string, string>,
 	statusByExternalId: Map<string, string>,
@@ -178,7 +177,6 @@ export function mapIssueToTask(
 	}
 
 	return {
-		organizationId,
 		creatorId,
 		slug: issue.identifier,
 		title: issue.title,

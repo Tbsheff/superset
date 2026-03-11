@@ -15,405 +15,415 @@ export const webhooks = env.GH_WEBHOOK_SECRET
 	: null;
 
 if (webhooks) {
-
-webhooks.on(
-	"installation.deleted",
-	async ({ payload }: EmitterWebhookEvent<"installation.deleted">) => {
-		console.log(
-			"[github/webhook] Installation deleted:",
-			payload.installation.id,
-		);
-		await db
-			.delete(githubInstallations)
-			.where(
-				eq(githubInstallations.installationId, String(payload.installation.id)),
-			);
-	},
-);
-
-webhooks.on(
-	"installation.suspend",
-	async ({ payload }: EmitterWebhookEvent<"installation.suspend">) => {
-		console.log(
-			"[github/webhook] Installation suspended:",
-			payload.installation.id,
-		);
-		await db
-			.update(githubInstallations)
-			.set({ suspended: true, suspendedAt: new Date() })
-			.where(
-				eq(githubInstallations.installationId, String(payload.installation.id)),
-			);
-	},
-);
-
-webhooks.on(
-	"installation.unsuspend",
-	async ({ payload }: EmitterWebhookEvent<"installation.unsuspend">) => {
-		console.log(
-			"[github/webhook] Installation unsuspended:",
-			payload.installation.id,
-		);
-		await db
-			.update(githubInstallations)
-			.set({ suspended: false, suspendedAt: null })
-			.where(
-				eq(githubInstallations.installationId, String(payload.installation.id)),
-			);
-	},
-);
-
-webhooks.on(
-	"installation_repositories.added",
-	async ({
-		payload,
-	}: EmitterWebhookEvent<"installation_repositories.added">) => {
-		const [installation] = await db
-			.select()
-			.from(githubInstallations)
-			.where(
-				eq(githubInstallations.installationId, String(payload.installation.id)),
-			)
-			.limit(1);
-
-		if (!installation) {
-			console.warn(
-				"[github/webhook] Installation not found:",
+	webhooks.on(
+		"installation.deleted",
+		async ({ payload }: EmitterWebhookEvent<"installation.deleted">) => {
+			console.log(
+				"[github/webhook] Installation deleted:",
 				payload.installation.id,
 			);
-			return;
-		}
-
-		for (const repo of payload.repositories_added) {
-			const [owner, name] = repo.full_name.split("/");
-			console.log("[github/webhook] Repository added:", repo.full_name);
-
 			await db
-				.insert(githubRepositories)
-				.values({
-					installationId: installation.id,
-					organizationId: installation.organizationId,
-					repoId: String(repo.id),
-					owner: owner ?? "",
-					name: name ?? repo.name,
-					fullName: repo.full_name,
-					defaultBranch: "main",
-					isPrivate: repo.private,
-				})
-				.onConflictDoUpdate({
-					target: [githubRepositories.repoId],
-					set: {
+				.delete(githubInstallations)
+				.where(
+					eq(
+						githubInstallations.installationId,
+						String(payload.installation.id),
+					),
+				);
+		},
+	);
+
+	webhooks.on(
+		"installation.suspend",
+		async ({ payload }: EmitterWebhookEvent<"installation.suspend">) => {
+			console.log(
+				"[github/webhook] Installation suspended:",
+				payload.installation.id,
+			);
+			await db
+				.update(githubInstallations)
+				.set({ suspended: true, suspendedAt: new Date() })
+				.where(
+					eq(
+						githubInstallations.installationId,
+						String(payload.installation.id),
+					),
+				);
+		},
+	);
+
+	webhooks.on(
+		"installation.unsuspend",
+		async ({ payload }: EmitterWebhookEvent<"installation.unsuspend">) => {
+			console.log(
+				"[github/webhook] Installation unsuspended:",
+				payload.installation.id,
+			);
+			await db
+				.update(githubInstallations)
+				.set({ suspended: false, suspendedAt: null })
+				.where(
+					eq(
+						githubInstallations.installationId,
+						String(payload.installation.id),
+					),
+				);
+		},
+	);
+
+	webhooks.on(
+		"installation_repositories.added",
+		async ({
+			payload,
+		}: EmitterWebhookEvent<"installation_repositories.added">) => {
+			const [installation] = await db
+				.select()
+				.from(githubInstallations)
+				.where(
+					eq(
+						githubInstallations.installationId,
+						String(payload.installation.id),
+					),
+				)
+				.limit(1);
+
+			if (!installation) {
+				console.warn(
+					"[github/webhook] Installation not found:",
+					payload.installation.id,
+				);
+				return;
+			}
+
+			for (const repo of payload.repositories_added) {
+				const [owner, name] = repo.full_name.split("/");
+				console.log("[github/webhook] Repository added:", repo.full_name);
+
+				await db
+					.insert(githubRepositories)
+					.values({
 						installationId: installation.id,
-						organizationId: installation.organizationId,
+						
+						repoId: String(repo.id),
 						owner: owner ?? "",
 						name: name ?? repo.name,
 						fullName: repo.full_name,
+						defaultBranch: "main",
 						isPrivate: repo.private,
-						updatedAt: new Date(),
-					},
-				});
-		}
-	},
-);
+					})
+					.onConflictDoUpdate({
+						target: [githubRepositories.repoId],
+						set: {
+							installationId: installation.id,
+							
+							owner: owner ?? "",
+							name: name ?? repo.name,
+							fullName: repo.full_name,
+							isPrivate: repo.private,
+							updatedAt: new Date(),
+						},
+					});
+			}
+		},
+	);
 
-webhooks.on(
-	"installation_repositories.removed",
-	async ({
-		payload,
-	}: EmitterWebhookEvent<"installation_repositories.removed">) => {
-		for (const repo of payload.repositories_removed) {
-			console.log("[github/webhook] Repository removed:", repo.full_name);
-			await db
-				.delete(githubRepositories)
-				.where(eq(githubRepositories.repoId, String(repo.id)));
-		}
-	},
-);
+	webhooks.on(
+		"installation_repositories.removed",
+		async ({
+			payload,
+		}: EmitterWebhookEvent<"installation_repositories.removed">) => {
+			for (const repo of payload.repositories_removed) {
+				console.log("[github/webhook] Repository removed:", repo.full_name);
+				await db
+					.delete(githubRepositories)
+					.where(eq(githubRepositories.repoId, String(repo.id)));
+			}
+		},
+	);
 
-function upsertPullRequest(
-	repo: { id: string; organizationId: string },
-	pr: {
-		number: number;
-		node_id: string;
-		head: { ref: string; sha: string };
-		base: { ref: string };
-		title: string;
-		html_url: string;
-		user: { login?: string; avatar_url?: string } | null;
-		state: string;
-		draft?: boolean;
-		additions?: number;
-		deletions?: number;
-		changed_files?: number;
-		merged_at: string | null;
-		closed_at: string | null;
-	},
-) {
-	return db
-		.insert(githubPullRequests)
-		.values({
-			repositoryId: repo.id,
-			organizationId: repo.organizationId,
-			prNumber: pr.number,
-			nodeId: pr.node_id,
-			headBranch: pr.head.ref,
-			headSha: pr.head.sha,
-			baseBranch: pr.base.ref,
-			title: pr.title,
-			url: pr.html_url,
-			authorLogin: pr.user?.login ?? "unknown",
-			authorAvatarUrl: pr.user?.avatar_url ?? null,
-			state: pr.state,
-			isDraft: pr.draft ?? false,
-			additions: pr.additions ?? 0,
-			deletions: pr.deletions ?? 0,
-			changedFiles: pr.changed_files ?? 0,
-			checksStatus: "none",
-			mergedAt: pr.merged_at ? new Date(pr.merged_at) : null,
-			closedAt: pr.closed_at ? new Date(pr.closed_at) : null,
-		})
-		.onConflictDoUpdate({
-			target: [githubPullRequests.repositoryId, githubPullRequests.prNumber],
-			set: {
-				organizationId: repo.organizationId,
+	function upsertPullRequest(
+		repo: { id: string },
+		pr: {
+			number: number;
+			node_id: string;
+			head: { ref: string; sha: string };
+			base: { ref: string };
+			title: string;
+			html_url: string;
+			user: { login?: string; avatar_url?: string } | null;
+			state: string;
+			draft?: boolean;
+			additions?: number;
+			deletions?: number;
+			changed_files?: number;
+			merged_at: string | null;
+			closed_at: string | null;
+		},
+	) {
+		return db
+			.insert(githubPullRequests)
+			.values({
+				repositoryId: repo.id,
+				prNumber: pr.number,
+				nodeId: pr.node_id,
 				headBranch: pr.head.ref,
 				headSha: pr.head.sha,
 				baseBranch: pr.base.ref,
 				title: pr.title,
+				url: pr.html_url,
+				authorLogin: pr.user?.login ?? "unknown",
+				authorAvatarUrl: pr.user?.avatar_url ?? null,
 				state: pr.state,
 				isDraft: pr.draft ?? false,
 				additions: pr.additions ?? 0,
 				deletions: pr.deletions ?? 0,
 				changedFiles: pr.changed_files ?? 0,
+				checksStatus: "none",
 				mergedAt: pr.merged_at ? new Date(pr.merged_at) : null,
 				closedAt: pr.closed_at ? new Date(pr.closed_at) : null,
-				lastSyncedAt: new Date(),
-				updatedAt: new Date(),
-			},
-		});
-}
-
-webhooks.on(
-	[
-		"pull_request.opened",
-		"pull_request.synchronize",
-		"pull_request.edited",
-		"pull_request.reopened",
-		"pull_request.ready_for_review",
-		"pull_request.converted_to_draft",
-	],
-	async ({
-		payload,
-	}: EmitterWebhookEvent<
-		| "pull_request.opened"
-		| "pull_request.synchronize"
-		| "pull_request.edited"
-		| "pull_request.reopened"
-		| "pull_request.ready_for_review"
-		| "pull_request.converted_to_draft"
-	>) => {
-		const { pull_request: pr, repository } = payload;
-
-		const [repo] = await db
-			.select()
-			.from(githubRepositories)
-			.where(eq(githubRepositories.repoId, String(repository.id)))
-			.limit(1);
-
-		if (!repo) {
-			console.warn("[github/webhook] Repository not found:", repository.id);
-			return;
-		}
-
-		console.log(
-			`[github/webhook] PR ${payload.action}:`,
-			`${repository.full_name}#${pr.number}`,
-		);
-
-		await upsertPullRequest(repo, pr);
-	},
-);
-
-webhooks.on(
-	"pull_request.closed",
-	async ({ payload }: EmitterWebhookEvent<"pull_request.closed">) => {
-		const { pull_request: pr, repository } = payload;
-
-		const [repo] = await db
-			.select()
-			.from(githubRepositories)
-			.where(eq(githubRepositories.repoId, String(repository.id)))
-			.limit(1);
-
-		if (!repo) {
-			console.warn("[github/webhook] Repository not found:", repository.id);
-			return;
-		}
-
-		console.log(
-			"[github/webhook] PR closed:",
-			`${repository.full_name}#${pr.number}`,
-		);
-
-		await upsertPullRequest(repo, pr);
-	},
-);
-
-webhooks.on(
-	"pull_request_review.submitted",
-	async ({ payload }: EmitterWebhookEvent<"pull_request_review.submitted">) => {
-		const { review, pull_request: pr, repository } = payload;
-
-		const [repo] = await db
-			.select()
-			.from(githubRepositories)
-			.where(eq(githubRepositories.repoId, String(repository.id)))
-			.limit(1);
-
-		if (!repo) {
-			console.warn("[github/webhook] Repository not found:", repository.id);
-			return;
-		}
-
-		const reviewDecision =
-			review.state === "approved"
-				? "APPROVED"
-				: review.state === "changes_requested"
-					? "CHANGES_REQUESTED"
-					: null;
-
-		if (!reviewDecision) return;
-
-		console.log(
-			`[github/webhook] PR review ${review.state}:`,
-			`${repository.full_name}#${pr.number}`,
-		);
-
-		const result = await db
-			.update(githubPullRequests)
-			.set({
-				reviewDecision,
-				lastSyncedAt: new Date(),
-				updatedAt: new Date(),
 			})
-			.where(
-				and(
-					eq(githubPullRequests.repositoryId, repo.id),
-					eq(githubPullRequests.prNumber, pr.number),
-				),
-			)
-			.returning({ id: githubPullRequests.id });
+			.onConflictDoUpdate({
+				target: [githubPullRequests.repositoryId, githubPullRequests.prNumber],
+				set: {
+					headBranch: pr.head.ref,
+					headSha: pr.head.sha,
+					baseBranch: pr.base.ref,
+					title: pr.title,
+					state: pr.state,
+					isDraft: pr.draft ?? false,
+					additions: pr.additions ?? 0,
+					deletions: pr.deletions ?? 0,
+					changedFiles: pr.changed_files ?? 0,
+					mergedAt: pr.merged_at ? new Date(pr.merged_at) : null,
+					closedAt: pr.closed_at ? new Date(pr.closed_at) : null,
+					lastSyncedAt: new Date(),
+					updatedAt: new Date(),
+				},
+			});
+	}
 
-		if (result.length === 0) {
+	webhooks.on(
+		[
+			"pull_request.opened",
+			"pull_request.synchronize",
+			"pull_request.edited",
+			"pull_request.reopened",
+			"pull_request.ready_for_review",
+			"pull_request.converted_to_draft",
+		],
+		async ({
+			payload,
+		}: EmitterWebhookEvent<
+			| "pull_request.opened"
+			| "pull_request.synchronize"
+			| "pull_request.edited"
+			| "pull_request.reopened"
+			| "pull_request.ready_for_review"
+			| "pull_request.converted_to_draft"
+		>) => {
+			const { pull_request: pr, repository } = payload;
+
+			const [repo] = await db
+				.select()
+				.from(githubRepositories)
+				.where(eq(githubRepositories.repoId, String(repository.id)))
+				.limit(1);
+
+			if (!repo) {
+				console.warn("[github/webhook] Repository not found:", repository.id);
+				return;
+			}
+
 			console.log(
-				`[github/webhook] PR not found for review, upserting:`,
+				`[github/webhook] PR ${payload.action}:`,
 				`${repository.full_name}#${pr.number}`,
 			);
+
 			await upsertPullRequest(repo, pr);
-			await db
-				.update(githubPullRequests)
-				.set({ reviewDecision })
-				.where(
-					and(
-						eq(githubPullRequests.repositoryId, repo.id),
-						eq(githubPullRequests.prNumber, pr.number),
-					),
-				);
-		}
-	},
-);
+		},
+	);
 
-webhooks.on(
-	["check_run.created", "check_run.completed", "check_run.rerequested"],
-	async ({
-		payload,
-	}: EmitterWebhookEvent<
-		"check_run.created" | "check_run.completed" | "check_run.rerequested"
-	>) => {
-		const { check_run: checkRun, repository } = payload;
+	webhooks.on(
+		"pull_request.closed",
+		async ({ payload }: EmitterWebhookEvent<"pull_request.closed">) => {
+			const { pull_request: pr, repository } = payload;
 
-		const [repo] = await db
-			.select()
-			.from(githubRepositories)
-			.where(eq(githubRepositories.repoId, String(repository.id)))
-			.limit(1);
-
-		if (!repo) {
-			console.warn("[github/webhook] Repository not found:", repository.id);
-			return;
-		}
-
-		for (const pr of checkRun.pull_requests) {
-			const [currentPr] = await db
+			const [repo] = await db
 				.select()
-				.from(githubPullRequests)
+				.from(githubRepositories)
+				.where(eq(githubRepositories.repoId, String(repository.id)))
+				.limit(1);
+
+			if (!repo) {
+				console.warn("[github/webhook] Repository not found:", repository.id);
+				return;
+			}
+
+			console.log(
+				"[github/webhook] PR closed:",
+				`${repository.full_name}#${pr.number}`,
+			);
+
+			await upsertPullRequest(repo, pr);
+		},
+	);
+
+	webhooks.on(
+		"pull_request_review.submitted",
+		async ({
+			payload,
+		}: EmitterWebhookEvent<"pull_request_review.submitted">) => {
+			const { review, pull_request: pr, repository } = payload;
+
+			const [repo] = await db
+				.select()
+				.from(githubRepositories)
+				.where(eq(githubRepositories.repoId, String(repository.id)))
+				.limit(1);
+
+			if (!repo) {
+				console.warn("[github/webhook] Repository not found:", repository.id);
+				return;
+			}
+
+			const reviewDecision =
+				review.state === "approved"
+					? "APPROVED"
+					: review.state === "changes_requested"
+						? "CHANGES_REQUESTED"
+						: null;
+
+			if (!reviewDecision) return;
+
+			console.log(
+				`[github/webhook] PR review ${review.state}:`,
+				`${repository.full_name}#${pr.number}`,
+			);
+
+			const result = await db
+				.update(githubPullRequests)
+				.set({
+					reviewDecision,
+					lastSyncedAt: new Date(),
+					updatedAt: new Date(),
+				})
 				.where(
 					and(
 						eq(githubPullRequests.repositoryId, repo.id),
 						eq(githubPullRequests.prNumber, pr.number),
 					),
 				)
+				.returning({ id: githubPullRequests.id });
+
+			if (result.length === 0) {
+				console.log(
+					`[github/webhook] PR not found for review, upserting:`,
+					`${repository.full_name}#${pr.number}`,
+				);
+				await upsertPullRequest(repo, pr);
+				await db
+					.update(githubPullRequests)
+					.set({ reviewDecision })
+					.where(
+						and(
+							eq(githubPullRequests.repositoryId, repo.id),
+							eq(githubPullRequests.prNumber, pr.number),
+						),
+					);
+			}
+		},
+	);
+
+	webhooks.on(
+		["check_run.created", "check_run.completed", "check_run.rerequested"],
+		async ({
+			payload,
+		}: EmitterWebhookEvent<
+			"check_run.created" | "check_run.completed" | "check_run.rerequested"
+		>) => {
+			const { check_run: checkRun, repository } = payload;
+
+			const [repo] = await db
+				.select()
+				.from(githubRepositories)
+				.where(eq(githubRepositories.repoId, String(repository.id)))
 				.limit(1);
 
-			if (!currentPr) continue;
-
-			const currentChecks =
-				(currentPr.checks as Array<{
-					name: string;
-					status: string;
-					conclusion: string | null;
-					detailsUrl?: string;
-				}>) ?? [];
-
-			const newCheck = {
-				name: checkRun.name,
-				status: checkRun.status,
-				conclusion: checkRun.conclusion,
-				detailsUrl: checkRun.details_url ?? undefined,
-			};
-
-			const checkIndex = currentChecks.findIndex(
-				(c) => c.name === checkRun.name,
-			);
-
-			if (checkIndex >= 0) {
-				currentChecks[checkIndex] = newCheck;
-			} else {
-				currentChecks.push(newCheck);
+			if (!repo) {
+				console.warn("[github/webhook] Repository not found:", repository.id);
+				return;
 			}
 
-			const hasFailure = currentChecks.some(
-				(c) =>
-					c.conclusion === "failure" ||
-					c.conclusion === "timed_out" ||
-					c.conclusion === "action_required",
-			);
-			const hasPending = currentChecks.some((c) => c.status !== "completed");
+			for (const pr of checkRun.pull_requests) {
+				const [currentPr] = await db
+					.select()
+					.from(githubPullRequests)
+					.where(
+						and(
+							eq(githubPullRequests.repositoryId, repo.id),
+							eq(githubPullRequests.prNumber, pr.number),
+						),
+					)
+					.limit(1);
 
-			const checksStatus = hasFailure
-				? "failure"
-				: hasPending
-					? "pending"
-					: currentChecks.length > 0
-						? "success"
-						: "none";
+				if (!currentPr) continue;
 
-			console.log(
-				`[github/webhook] Check ${checkRun.status}/${checkRun.conclusion}:`,
-				`${repository.full_name}#${pr.number} - ${checkRun.name}`,
-			);
+				const currentChecks =
+					(currentPr.checks as Array<{
+						name: string;
+						status: string;
+						conclusion: string | null;
+						detailsUrl?: string;
+					}>) ?? [];
 
-			await db
-				.update(githubPullRequests)
-				.set({
-					checks: currentChecks,
-					checksStatus,
-					lastSyncedAt: new Date(),
-					updatedAt: new Date(),
-				})
-				.where(eq(githubPullRequests.id, currentPr.id));
-		}
-	},
-);
+				const newCheck = {
+					name: checkRun.name,
+					status: checkRun.status,
+					conclusion: checkRun.conclusion,
+					detailsUrl: checkRun.details_url ?? undefined,
+				};
 
+				const checkIndex = currentChecks.findIndex(
+					(c) => c.name === checkRun.name,
+				);
+
+				if (checkIndex >= 0) {
+					currentChecks[checkIndex] = newCheck;
+				} else {
+					currentChecks.push(newCheck);
+				}
+
+				const hasFailure = currentChecks.some(
+					(c) =>
+						c.conclusion === "failure" ||
+						c.conclusion === "timed_out" ||
+						c.conclusion === "action_required",
+				);
+				const hasPending = currentChecks.some((c) => c.status !== "completed");
+
+				const checksStatus = hasFailure
+					? "failure"
+					: hasPending
+						? "pending"
+						: currentChecks.length > 0
+							? "success"
+							: "none";
+
+				console.log(
+					`[github/webhook] Check ${checkRun.status}/${checkRun.conclusion}:`,
+					`${repository.full_name}#${pr.number} - ${checkRun.name}`,
+				);
+
+				await db
+					.update(githubPullRequests)
+					.set({
+						checks: currentChecks,
+						checksStatus,
+						lastSyncedAt: new Date(),
+						updatedAt: new Date(),
+					})
+					.where(eq(githubPullRequests.id, currentPr.id));
+			}
+		},
+	);
 } // end if (webhooks)

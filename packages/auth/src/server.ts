@@ -6,9 +6,7 @@ import { members, subscriptions } from "@superset/db/schema";
 import type { sessions } from "@superset/db/schema/auth";
 import * as authSchema from "@superset/db/schema/auth";
 import { MemberAddedEmail } from "@superset/email/emails/member-added";
-import { MemberAddedBillingEmail } from "@superset/email/emails/member-added-billing";
 import { MemberRemovedEmail } from "@superset/email/emails/member-removed";
-import { MemberRemovedBillingEmail } from "@superset/email/emails/member-removed-billing";
 import { OrganizationInvitationEmail } from "@superset/email/emails/organization-invitation";
 import { PaymentFailedEmail } from "@superset/email/emails/payment-failed";
 import { SubscriptionCancelledEmail } from "@superset/email/emails/subscription-cancelled";
@@ -24,7 +22,7 @@ import {
 	organization,
 } from "better-auth/plugins";
 import { jwt } from "better-auth/plugins/jwt";
-import { and, count, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import { env } from "./env";
 import { acceptInvitationEndpoint } from "./lib/accept-invitation-endpoint";
@@ -317,38 +315,11 @@ export const auth = betterAuth({
 					});
 				},
 
-				beforeAddMember: async ({ organization }) => {
-					const subscription = await db.query.subscriptions.findFirst({
-						where: and(
-							eq(subscriptions.referenceId, organization.id),
-							eq(subscriptions.status, "active"),
-						),
-					});
-
-					if (subscription) return;
-
-					const memberCount = await db
-						.select({ count: count() })
-						.from(members)
-						.where(eq(members.organizationId, organization.id));
-
-					const currentCount = memberCount[0]?.count ?? 0;
-
-					if (currentCount >= 1) {
-						throw new Error(
-							"Free plan is limited to 1 user. Upgrade to add more members.",
-						);
-					}
+				beforeAddMember: async () => {
+					// Paywall removed — all plans allow unlimited members
 				},
 
 				afterAddMember: async ({ member, user, organization }) => {
-					const subscription = await db.query.subscriptions.findFirst({
-						where: and(
-							eq(subscriptions.referenceId, organization.id),
-							eq(subscriptions.status, "active"),
-						),
-					});
-
 					// This email is invitation-specific. Auto-enroll and direct addMember
 					// calls should not send the invite-style "you were added" message.
 					const acceptedInvitation = await db.query.invitations.findFirst({
@@ -375,74 +346,7 @@ export const auth = betterAuth({
 						});
 					}
 
-					if (!subscription?.stripeSubscriptionId) return;
-					if (subscription.plan === "enterprise") return;
-
-					const memberCount = await db
-						.select({ count: count() })
-						.from(members)
-						.where(eq(members.organizationId, organization.id));
-
-					const quantity = memberCount[0]?.count ?? 1;
-
-					const stripeSub = await stripeClient.subscriptions.retrieve(
-						subscription.stripeSubscriptionId,
-					);
-					const itemId = stripeSub.items.data[0]?.id;
-
-					if (itemId) {
-						await stripeClient.subscriptions.update(
-							subscription.stripeSubscriptionId,
-							{
-								items: [{ id: itemId, quantity }],
-								proration_behavior: "create_prorations",
-							},
-						);
-					}
-
-					const owners = await getOrganizationOwners(organization.id);
-					const pricePerSeat = stripeSub.items.data[0]?.price?.unit_amount ?? 0;
-					const currency = stripeSub.items.data[0]?.price?.currency ?? "usd";
-					const newMonthlyTotal = formatPrice(
-						pricePerSeat * quantity,
-						currency,
-					);
-
-					await resend.batch.send(
-						owners.map((owner) => ({
-							from: "Superset <noreply@superset.sh>",
-							to: owner.email,
-							subject: `Billing update: New member added to ${organization.name}`,
-							react: MemberAddedBillingEmail({
-								ownerName: owner.name,
-								organizationName: organization.name,
-								newMemberName: user.name ?? "New member",
-								newMemberEmail: user.email,
-								addedByName: "A team admin",
-								newSeatCount: quantity,
-								newMonthlyTotal,
-							}),
-						})),
-					);
-
-					try {
-						await qstash.publishJSON({
-							url: NOTIFY_SLACK_URL,
-							body: {
-								eventType: "seat_added",
-								stripeSubscriptionId: subscription.stripeSubscriptionId,
-								memberName: user.name ?? "New member",
-								previousSeats: quantity - 1,
-								newSeats: quantity,
-							},
-							retries: 3,
-						});
-					} catch (error) {
-						console.error(
-							"[org/after-add-member] Failed to queue Slack notification:",
-							error,
-						);
-					}
+					// Stripe seat updates skipped — billing paywalls removed
 				},
 
 				afterRemoveMember: async ({ user, organization }) => {
@@ -457,81 +361,7 @@ export const auth = betterAuth({
 						}),
 					});
 
-					const subscription = await db.query.subscriptions.findFirst({
-						where: and(
-							eq(subscriptions.referenceId, organization.id),
-							eq(subscriptions.status, "active"),
-						),
-					});
-
-					if (!subscription?.stripeSubscriptionId) return;
-					if (subscription.plan === "enterprise") return;
-
-					const memberCount = await db
-						.select({ count: count() })
-						.from(members)
-						.where(eq(members.organizationId, organization.id));
-
-					const quantity = Math.max(1, memberCount[0]?.count ?? 1);
-
-					const stripeSub = await stripeClient.subscriptions.retrieve(
-						subscription.stripeSubscriptionId,
-					);
-					const itemId = stripeSub.items.data[0]?.id;
-
-					if (itemId) {
-						await stripeClient.subscriptions.update(
-							subscription.stripeSubscriptionId,
-							{
-								items: [{ id: itemId, quantity }],
-								proration_behavior: "create_prorations",
-							},
-						);
-					}
-
-					const owners = await getOrganizationOwners(organization.id);
-					const pricePerSeat = stripeSub.items.data[0]?.price?.unit_amount ?? 0;
-					const currency = stripeSub.items.data[0]?.price?.currency ?? "usd";
-					const newMonthlyTotal = formatPrice(
-						pricePerSeat * quantity,
-						currency,
-					);
-
-					await resend.batch.send(
-						owners.map((owner) => ({
-							from: "Superset <noreply@superset.sh>",
-							to: owner.email,
-							subject: `Billing update: Member removed from ${organization.name}`,
-							react: MemberRemovedBillingEmail({
-								ownerName: owner.name,
-								organizationName: organization.name,
-								removedMemberName: user.name ?? "Former member",
-								removedMemberEmail: user.email,
-								removedByName: "A team admin",
-								newSeatCount: quantity,
-								newMonthlyTotal,
-							}),
-						})),
-					);
-
-					try {
-						await qstash.publishJSON({
-							url: NOTIFY_SLACK_URL,
-							body: {
-								eventType: "seat_removed",
-								stripeSubscriptionId: subscription.stripeSubscriptionId,
-								memberName: user.name ?? "Former member",
-								previousSeats: quantity + 1,
-								newSeats: quantity,
-							},
-							retries: 3,
-						});
-					} catch (error) {
-						console.error(
-							"[org/after-remove-member] Failed to queue Slack notification:",
-							error,
-						);
-					}
+					// Stripe seat updates skipped — billing paywalls removed
 				},
 			},
 		}),
@@ -563,16 +393,8 @@ export const auth = betterAuth({
 					.where(eq(authSchema.sessions.id, session.id));
 			}
 
-			let plan: string | null = null;
-			if (activeOrganizationId) {
-				const subscription = await db.query.subscriptions.findFirst({
-					where: and(
-						eq(subscriptions.referenceId, activeOrganizationId),
-						eq(subscriptions.status, "active"),
-					),
-				});
-				plan = subscription?.plan ?? null;
-			}
+			// Paywall removed — treat all users as pro
+			const plan = "pro";
 
 			return {
 				user,

@@ -1,62 +1,51 @@
 import {
-	boolean,
 	index,
 	integer,
-	jsonb,
-	pgEnum,
-	pgTable,
 	real,
+	sqliteTable,
 	text,
-	timestamp,
 	unique,
 	uniqueIndex,
-	uuid,
-} from "drizzle-orm/pg-core";
+} from "drizzle-orm/sqlite-core";
 
 import { organizations, users } from "./auth";
-import {
-	commandStatusValues,
-	deviceTypeValues,
-	integrationProviderValues,
-	taskPriorityValues,
-	taskStatusEnumValues,
-	workspaceTypeValues,
+import type {
+	CommandStatus,
+	DeviceType,
+	IntegrationProvider,
+	TaskPriority,
+	WorkspaceType,
 } from "./enums";
 import { githubRepositories } from "./github";
 import type { IntegrationConfig } from "./types";
 import type { WorkspaceConfig } from "./zod";
 
-export const taskStatus = pgEnum("task_status", taskStatusEnumValues);
-export const taskPriority = pgEnum("task_priority", taskPriorityValues);
-export const integrationProvider = pgEnum(
-	"integration_provider",
-	integrationProviderValues,
-);
-export const deviceType = pgEnum("device_type", deviceTypeValues);
-export const commandStatus = pgEnum("command_status", commandStatusValues);
-
-export const taskStatuses = pgTable(
+export const taskStatuses = sqliteTable(
 	"task_statuses",
 	{
-		id: uuid().primaryKey().defaultRandom(),
-		organizationId: uuid("organization_id")
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		organizationId: text("organization_id")
 			.notNull()
 			.references(() => organizations.id, { onDelete: "cascade" }),
 
-		name: text().notNull(),
-		color: text().notNull(),
-		type: text().notNull(), // "backlog" | "unstarted" | "started" | "completed" | "canceled"
-		position: real().notNull(),
+		name: text("name").notNull(),
+		color: text("color").notNull(),
+		type: text("type").notNull(),
+		position: real("position").notNull(),
 		progressPercent: real("progress_percent"),
 
 		// External sync
-		externalProvider: integrationProvider("external_provider"),
+		externalProvider: text("external_provider"),
 		externalId: text("external_id"),
 
-		createdAt: timestamp("created_at").notNull().defaultNow(),
-		updatedAt: timestamp("updated_at")
+		createdAt: integer("created_at", { mode: "timestamp" })
 			.notNull()
-			.defaultNow()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer("updated_at", { mode: "timestamp" })
+			.notNull()
+			.$defaultFn(() => new Date())
 			.$onUpdate(() => new Date()),
 	},
 	(table) => [
@@ -73,62 +62,66 @@ export const taskStatuses = pgTable(
 export type InsertTaskStatus = typeof taskStatuses.$inferInsert;
 export type SelectTaskStatus = typeof taskStatuses.$inferSelect;
 
-export const tasks = pgTable(
+export const tasks = sqliteTable(
 	"tasks",
 	{
-		id: uuid().primaryKey().defaultRandom(),
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
 
 		// Core fields
-		slug: text().notNull(),
-		title: text().notNull(),
-		description: text(),
-		statusId: uuid("status_id")
+		slug: text("slug").notNull(),
+		title: text("title").notNull(),
+		description: text("description"),
+		statusId: text("status_id")
 			.notNull()
 			.references(() => taskStatuses.id),
-		priority: taskPriority().notNull().default("none"),
+		priority: text("priority").notNull().default("none").$type<TaskPriority>(),
 
 		// Ownership
-		organizationId: uuid("organization_id")
+		organizationId: text("organization_id")
 			.notNull()
 			.references(() => organizations.id, { onDelete: "cascade" }),
-		assigneeId: uuid("assignee_id").references(() => users.id, {
+		assigneeId: text("assignee_id").references(() => users.id, {
 			onDelete: "set null",
 		}),
-		creatorId: uuid("creator_id")
+		creatorId: text("creator_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
 
 		// Planning
-		estimate: integer(),
-		dueDate: timestamp("due_date"),
-		labels: jsonb().$type<string[]>().default([]),
+		estimate: integer("estimate"),
+		dueDate: integer("due_date", { mode: "timestamp" }),
+		labels: text("labels", { mode: "json" }).$type<string[]>().default([]),
 
 		// Git/Work tracking
-		branch: text(),
+		branch: text("branch"),
 		prUrl: text("pr_url"),
 
-		// External sync (null if local-only task)
-		externalProvider: integrationProvider("external_provider"),
+		// External sync
+		externalProvider: text("external_provider"),
 		externalId: text("external_id"),
-		externalKey: text("external_key"), // "SUPER-172", "#123"
+		externalKey: text("external_key"),
 		externalUrl: text("external_url"),
-		lastSyncedAt: timestamp("last_synced_at"),
+		lastSyncedAt: integer("last_synced_at", { mode: "timestamp" }),
 		syncError: text("sync_error"),
 
-		// External assignee snapshot (for unmatched Linear users)
+		// External assignee snapshot
 		assigneeExternalId: text("assignee_external_id"),
 		assigneeDisplayName: text("assignee_display_name"),
 		assigneeAvatarUrl: text("assignee_avatar_url"),
 
-		startedAt: timestamp("started_at"),
-		completedAt: timestamp("completed_at"),
-		deletedAt: timestamp("deleted_at"),
+		startedAt: integer("started_at", { mode: "timestamp" }),
+		completedAt: integer("completed_at", { mode: "timestamp" }),
+		deletedAt: integer("deleted_at", { mode: "timestamp" }),
 
 		// Timestamps
-		createdAt: timestamp("created_at").notNull().defaultNow(),
-		updatedAt: timestamp("updated_at")
+		createdAt: integer("created_at", { mode: "timestamp" })
 			.notNull()
-			.defaultNow()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer("updated_at", { mode: "timestamp" })
+			.notNull()
+			.$defaultFn(() => new Date())
 			.$onUpdate(() => new Date()),
 	},
 	(table) => [
@@ -152,34 +145,37 @@ export const tasks = pgTable(
 export type InsertTask = typeof tasks.$inferInsert;
 export type SelectTask = typeof tasks.$inferSelect;
 
-// Integration connections for external providers (Linear, GitHub, etc.)
-export const integrationConnections = pgTable(
+export const integrationConnections = sqliteTable(
 	"integration_connections",
 	{
-		id: uuid().primaryKey().defaultRandom(),
-		organizationId: uuid("organization_id")
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		organizationId: text("organization_id")
 			.notNull()
 			.references(() => organizations.id, { onDelete: "cascade" }),
-		connectedByUserId: uuid("connected_by_user_id")
+		connectedByUserId: text("connected_by_user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
 
-		provider: integrationProvider().notNull(),
+		provider: text("provider").notNull().$type<IntegrationProvider>(),
 
 		// OAuth tokens
 		accessToken: text("access_token").notNull(),
 		refreshToken: text("refresh_token"),
-		tokenExpiresAt: timestamp("token_expires_at"),
+		tokenExpiresAt: integer("token_expires_at", { mode: "timestamp" }),
 
 		externalOrgId: text("external_org_id"),
 		externalOrgName: text("external_org_name"),
 
-		config: jsonb().$type<IntegrationConfig>(),
+		config: text("config", { mode: "json" }).$type<IntegrationConfig>(),
 
-		createdAt: timestamp("created_at").notNull().defaultNow(),
-		updatedAt: timestamp("updated_at")
+		createdAt: integer("created_at", { mode: "timestamp" })
 			.notNull()
-			.defaultNow()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer("updated_at", { mode: "timestamp" })
+			.notNull()
+			.$defaultFn(() => new Date())
 			.$onUpdate(() => new Date()),
 	},
 	(table) => [
@@ -196,31 +192,36 @@ export type InsertIntegrationConnection =
 export type SelectIntegrationConnection =
 	typeof integrationConnections.$inferSelect;
 
-// Stripe subscriptions (org-based billing)
-export const subscriptions = pgTable(
+export const subscriptions = sqliteTable(
 	"subscriptions",
 	{
-		id: uuid().primaryKey().defaultRandom(),
-		plan: text().notNull(),
-		referenceId: uuid("reference_id")
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		plan: text("plan").notNull(),
+		referenceId: text("reference_id")
 			.notNull()
 			.references(() => organizations.id, { onDelete: "cascade" }),
 		stripeCustomerId: text("stripe_customer_id"),
 		stripeSubscriptionId: text("stripe_subscription_id"),
-		status: text().default("incomplete").notNull(),
-		periodStart: timestamp("period_start"),
-		periodEnd: timestamp("period_end"),
-		trialStart: timestamp("trial_start"),
-		trialEnd: timestamp("trial_end"),
-		cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false),
-		cancelAt: timestamp("cancel_at"),
-		canceledAt: timestamp("canceled_at"),
-		endedAt: timestamp("ended_at"),
-		seats: integer(),
-		createdAt: timestamp("created_at").notNull().defaultNow(),
-		updatedAt: timestamp("updated_at")
+		status: text("status").default("incomplete").notNull(),
+		periodStart: integer("period_start", { mode: "timestamp" }),
+		periodEnd: integer("period_end", { mode: "timestamp" }),
+		trialStart: integer("trial_start", { mode: "timestamp" }),
+		trialEnd: integer("trial_end", { mode: "timestamp" }),
+		cancelAtPeriodEnd: integer("cancel_at_period_end", {
+			mode: "boolean",
+		}).default(false),
+		cancelAt: integer("cancel_at", { mode: "timestamp" }),
+		canceledAt: integer("canceled_at", { mode: "timestamp" }),
+		endedAt: integer("ended_at", { mode: "timestamp" }),
+		seats: integer("seats"),
+		createdAt: integer("created_at", { mode: "timestamp" })
 			.notNull()
-			.defaultNow()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer("updated_at", { mode: "timestamp" })
+			.notNull()
+			.$defaultFn(() => new Date())
 			.$onUpdate(() => new Date()),
 	},
 	(table) => [
@@ -233,26 +234,27 @@ export const subscriptions = pgTable(
 export type InsertSubscription = typeof subscriptions.$inferInsert;
 export type SelectSubscription = typeof subscriptions.$inferSelect;
 
-// Device presence - tracks online devices for command routing
-export const devicePresence = pgTable(
+export const devicePresence = sqliteTable(
 	"device_presence",
 	{
-		id: uuid().primaryKey().defaultRandom(),
-		userId: uuid("user_id")
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
-		organizationId: uuid("organization_id")
+		organizationId: text("organization_id")
 			.notNull()
 			.references(() => organizations.id, { onDelete: "cascade" }),
 		deviceId: text("device_id").notNull(),
 		deviceName: text("device_name").notNull(),
-		deviceType: deviceType("device_type").notNull(),
-		lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
+		deviceType: text("device_type").notNull().$type<DeviceType>(),
+		lastSeenAt: integer("last_seen_at", { mode: "timestamp" })
 			.notNull()
-			.defaultNow(),
-		createdAt: timestamp("created_at", { withTimezone: true })
+			.$defaultFn(() => new Date()),
+		createdAt: integer("created_at", { mode: "timestamp" })
 			.notNull()
-			.defaultNow(),
+			.$defaultFn(() => new Date()),
 	},
 	(table) => [
 		index("device_presence_user_org_idx").on(
@@ -270,30 +272,31 @@ export const devicePresence = pgTable(
 export type InsertDevicePresence = typeof devicePresence.$inferInsert;
 export type SelectDevicePresence = typeof devicePresence.$inferSelect;
 
-// Agent commands - synced via Electric SQL to executors
-export const agentCommands = pgTable(
+export const agentCommands = sqliteTable(
 	"agent_commands",
 	{
-		id: uuid().primaryKey().defaultRandom(),
-		userId: uuid("user_id")
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
-		organizationId: uuid("organization_id")
+		organizationId: text("organization_id")
 			.notNull()
 			.references(() => organizations.id, { onDelete: "cascade" }),
 		targetDeviceId: text("target_device_id"),
 		targetDeviceType: text("target_device_type"),
-		tool: text().notNull(),
-		params: jsonb().$type<Record<string, unknown>>(),
-		parentCommandId: uuid("parent_command_id"),
-		status: commandStatus().notNull().default("pending"),
-		result: jsonb().$type<Record<string, unknown>>(),
-		error: text(),
-		createdAt: timestamp("created_at", { withTimezone: true })
+		tool: text("tool").notNull(),
+		params: text("params", { mode: "json" }).$type<Record<string, unknown>>(),
+		parentCommandId: text("parent_command_id"),
+		status: text("status").notNull().default("pending").$type<CommandStatus>(),
+		result: text("result", { mode: "json" }).$type<Record<string, unknown>>(),
+		error: text("error"),
+		createdAt: integer("created_at", { mode: "timestamp" })
 			.notNull()
-			.defaultNow(),
-		executedAt: timestamp("executed_at", { withTimezone: true }),
-		timeoutAt: timestamp("timeout_at", { withTimezone: true }),
+			.$defaultFn(() => new Date()),
+		executedAt: integer("executed_at", { mode: "timestamp" }),
+		timeoutAt: integer("timeout_at", { mode: "timestamp" }),
 	},
 	(table) => [
 		index("agent_commands_user_status_idx").on(table.userId, table.status),
@@ -311,20 +314,24 @@ export const agentCommands = pgTable(
 export type InsertAgentCommand = typeof agentCommands.$inferInsert;
 export type SelectAgentCommand = typeof agentCommands.$inferSelect;
 
-export const usersSlackUsers = pgTable(
+export const usersSlackUsers = sqliteTable(
 	"users__slack_users",
 	{
-		id: uuid().primaryKey().defaultRandom(),
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
 		slackUserId: text("slack_user_id").notNull(),
 		teamId: text("team_id").notNull(),
-		userId: uuid("user_id")
+		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
-		organizationId: uuid("organization_id")
+		organizationId: text("organization_id")
 			.notNull()
 			.references(() => organizations.id, { onDelete: "cascade" }),
 		modelPreference: text("model_preference"),
-		createdAt: timestamp("created_at").notNull().defaultNow(),
+		createdAt: integer("created_at", { mode: "timestamp" })
+			.notNull()
+			.$defaultFn(() => new Date()),
 	},
 	(table) => [
 		unique("users__slack_users_unique").on(table.slackUserId, table.teamId),
@@ -336,18 +343,18 @@ export const usersSlackUsers = pgTable(
 export type InsertUsersSlackUsers = typeof usersSlackUsers.$inferInsert;
 export type SelectUsersSlackUsers = typeof usersSlackUsers.$inferSelect;
 
-export const workspaceType = pgEnum("workspace_type", workspaceTypeValues);
-
-export const projects = pgTable(
+export const projects = sqliteTable(
 	"projects",
 	{
-		id: uuid().primaryKey().defaultRandom(),
-		organizationId: uuid("organization_id")
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		organizationId: text("organization_id")
 			.notNull()
 			.references(() => organizations.id, { onDelete: "cascade" }),
-		name: text().notNull(),
-		slug: text().notNull(),
-		githubRepositoryId: uuid("github_repository_id").references(
+		name: text("name").notNull(),
+		slug: text("slug").notNull(),
+		githubRepositoryId: text("github_repository_id").references(
 			() => githubRepositories.id,
 			{ onDelete: "set null" },
 		),
@@ -355,10 +362,12 @@ export const projects = pgTable(
 		repoName: text("repo_name").notNull(),
 		repoUrl: text("repo_url").notNull(),
 		defaultBranch: text("default_branch").notNull().default("main"),
-		createdAt: timestamp("created_at").notNull().defaultNow(),
-		updatedAt: timestamp("updated_at")
+		createdAt: integer("created_at", { mode: "timestamp" })
 			.notNull()
-			.defaultNow()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer("updated_at", { mode: "timestamp" })
+			.notNull()
+			.$defaultFn(() => new Date())
 			.$onUpdate(() => new Date()),
 	},
 	(table) => [
@@ -370,26 +379,32 @@ export const projects = pgTable(
 export type InsertProject = typeof projects.$inferInsert;
 export type SelectProject = typeof projects.$inferSelect;
 
-export const secrets = pgTable(
+export const secrets = sqliteTable(
 	"secrets",
 	{
-		id: uuid().primaryKey().defaultRandom(),
-		organizationId: uuid("organization_id")
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		organizationId: text("organization_id")
 			.notNull()
 			.references(() => organizations.id, { onDelete: "cascade" }),
-		projectId: uuid("project_id")
+		projectId: text("project_id")
 			.notNull()
 			.references(() => projects.id, { onDelete: "cascade" }),
-		key: text().notNull(),
+		key: text("key").notNull(),
 		encryptedValue: text("encrypted_value").notNull(),
-		sensitive: boolean().notNull().default(false),
-		createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+		sensitive: integer("sensitive", { mode: "boolean" })
+			.notNull()
+			.default(false),
+		createdByUserId: text("created_by_user_id").references(() => users.id, {
 			onDelete: "set null",
 		}),
-		createdAt: timestamp("created_at").notNull().defaultNow(),
-		updatedAt: timestamp("updated_at")
+		createdAt: integer("created_at", { mode: "timestamp" })
 			.notNull()
-			.defaultNow()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer("updated_at", { mode: "timestamp" })
+			.notNull()
+			.$defaultFn(() => new Date())
 			.$onUpdate(() => new Date()),
 	},
 	(table) => [
@@ -402,23 +417,31 @@ export const secrets = pgTable(
 export type InsertSecret = typeof secrets.$inferInsert;
 export type SelectSecret = typeof secrets.$inferSelect;
 
-export const sandboxImages = pgTable(
+export const sandboxImages = sqliteTable(
 	"sandbox_images",
 	{
-		id: uuid().primaryKey().defaultRandom(),
-		organizationId: uuid("organization_id")
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		organizationId: text("organization_id")
 			.notNull()
 			.references(() => organizations.id, { onDelete: "cascade" }),
-		projectId: uuid("project_id")
+		projectId: text("project_id")
 			.notNull()
 			.references(() => projects.id, { onDelete: "cascade" }),
-		setupCommands: jsonb("setup_commands").$type<string[]>().default([]),
+		setupCommands: text("setup_commands", { mode: "json" })
+			.$type<string[]>()
+			.default([]),
 		baseImage: text("base_image"),
-		systemPackages: jsonb("system_packages").$type<string[]>().default([]),
-		createdAt: timestamp("created_at").notNull().defaultNow(),
-		updatedAt: timestamp("updated_at")
+		systemPackages: text("system_packages", { mode: "json" })
+			.$type<string[]>()
+			.default([]),
+		createdAt: integer("created_at", { mode: "timestamp" })
 			.notNull()
-			.defaultNow()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer("updated_at", { mode: "timestamp" })
+			.notNull()
+			.$defaultFn(() => new Date())
 			.$onUpdate(() => new Date()),
 	},
 	(table) => [
@@ -430,26 +453,30 @@ export const sandboxImages = pgTable(
 export type InsertSandboxImage = typeof sandboxImages.$inferInsert;
 export type SelectSandboxImage = typeof sandboxImages.$inferSelect;
 
-export const workspaces = pgTable(
+export const workspaces = sqliteTable(
 	"workspaces",
 	{
-		id: uuid().primaryKey().defaultRandom(),
-		organizationId: uuid("organization_id")
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		organizationId: text("organization_id")
 			.notNull()
 			.references(() => organizations.id, { onDelete: "cascade" }),
-		projectId: uuid("project_id")
+		projectId: text("project_id")
 			.notNull()
 			.references(() => projects.id, { onDelete: "cascade" }),
-		name: text().notNull(),
-		type: workspaceType().notNull(),
-		config: jsonb().notNull().$type<WorkspaceConfig>(),
-		createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+		name: text("name").notNull(),
+		type: text("type").notNull().$type<WorkspaceType>(),
+		config: text("config", { mode: "json" }).notNull().$type<WorkspaceConfig>(),
+		createdByUserId: text("created_by_user_id").references(() => users.id, {
 			onDelete: "set null",
 		}),
-		createdAt: timestamp("created_at").notNull().defaultNow(),
-		updatedAt: timestamp("updated_at")
+		createdAt: integer("created_at", { mode: "timestamp" })
 			.notNull()
-			.defaultNow()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer("updated_at", { mode: "timestamp" })
+			.notNull()
+			.$defaultFn(() => new Date())
 			.$onUpdate(() => new Date()),
 	},
 	(table) => [
@@ -462,25 +489,31 @@ export const workspaces = pgTable(
 export type InsertWorkspace = typeof workspaces.$inferInsert;
 export type SelectWorkspace = typeof workspaces.$inferSelect;
 
-export const chatSessions = pgTable(
+export const chatSessions = sqliteTable(
 	"chat_sessions",
 	{
-		id: uuid().primaryKey().defaultRandom(),
-		organizationId: uuid("organization_id")
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		organizationId: text("organization_id")
 			.notNull()
 			.references(() => organizations.id, { onDelete: "cascade" }),
-		createdBy: uuid("created_by")
+		createdBy: text("created_by")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
-		workspaceId: uuid("workspace_id").references(() => workspaces.id, {
+		workspaceId: text("workspace_id").references(() => workspaces.id, {
 			onDelete: "set null",
 		}),
-		title: text(),
-		lastActiveAt: timestamp("last_active_at").notNull().defaultNow(),
-		createdAt: timestamp("created_at").notNull().defaultNow(),
-		updatedAt: timestamp("updated_at")
+		title: text("title"),
+		lastActiveAt: integer("last_active_at", { mode: "timestamp" })
 			.notNull()
-			.defaultNow()
+			.$defaultFn(() => new Date()),
+		createdAt: integer("created_at", { mode: "timestamp" })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer("updated_at", { mode: "timestamp" })
+			.notNull()
+			.$defaultFn(() => new Date())
 			.$onUpdate(() => new Date()),
 	},
 	(table) => [
@@ -493,18 +526,22 @@ export const chatSessions = pgTable(
 export type InsertChatSession = typeof chatSessions.$inferInsert;
 export type SelectChatSession = typeof chatSessions.$inferSelect;
 
-export const sessionHosts = pgTable(
+export const sessionHosts = sqliteTable(
 	"session_hosts",
 	{
-		id: uuid().primaryKey().defaultRandom(),
-		sessionId: uuid("session_id")
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		sessionId: text("session_id")
 			.notNull()
 			.references(() => chatSessions.id, { onDelete: "cascade" }),
-		organizationId: uuid("organization_id")
+		organizationId: text("organization_id")
 			.notNull()
 			.references(() => organizations.id, { onDelete: "cascade" }),
 		deviceId: text("device_id").notNull(),
-		createdAt: timestamp("created_at").notNull().defaultNow(),
+		createdAt: integer("created_at", { mode: "timestamp" })
+			.notNull()
+			.$defaultFn(() => new Date()),
 	},
 	(table) => [
 		index("session_hosts_session_id_idx").on(table.sessionId),

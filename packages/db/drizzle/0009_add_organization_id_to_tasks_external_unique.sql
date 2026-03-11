@@ -1,2 +1,0 @@
-ALTER TABLE "tasks" DROP CONSTRAINT "tasks_external_unique";--> statement-breakpoint
-ALTER TABLE "tasks" ADD CONSTRAINT "tasks_external_unique" UNIQUE("organization_id","external_provider","external_id");

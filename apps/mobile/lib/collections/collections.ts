@@ -62,7 +62,9 @@ function createOrgCollections(organizationId: string): OrgCollections {
 			getKey: (item) => item.id,
 			onInsert: async ({ transaction }) => {
 				const item = transaction.mutations[0].modified;
-				const result = await apiClient.task.create.mutate(item);
+				const result = await apiClient.task.create.mutate(
+					item as Parameters<typeof apiClient.task.create.mutate>[0],
+				);
 				return { txid: result.txid };
 			},
 			onUpdate: async ({ transaction }) => {
@@ -70,7 +72,7 @@ function createOrgCollections(organizationId: string): OrgCollections {
 				const result = await apiClient.task.update.mutate({
 					...changes,
 					id: original.id,
-				});
+				} as Parameters<typeof apiClient.task.update.mutate>[0]);
 				return { txid: result.txid };
 			},
 			onDelete: async ({ transaction }) => {

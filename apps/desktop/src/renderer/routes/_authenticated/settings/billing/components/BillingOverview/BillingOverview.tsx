@@ -4,7 +4,6 @@ import { useLiveQuery } from "@tanstack/react-db";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { HiArrowRight } from "react-icons/hi2";
-import { env } from "renderer/env.renderer";
 import { authClient } from "renderer/lib/auth-client";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 import {
@@ -24,11 +23,11 @@ interface BillingOverviewProps {
 export function BillingOverview({ visibleItems }: BillingOverviewProps) {
 	const { data: session } = authClient.useSession();
 	const collections = useCollections();
-	const [isUpgrading, setIsUpgrading] = useState(false);
-	const [isCanceling, setIsCanceling] = useState(false);
-	const [isRestoring, setIsRestoring] = useState(false);
+	const [isUpgrading, _setIsUpgrading] = useState(false);
+	const [isCanceling, _setIsCanceling] = useState(false);
+	const [isRestoring, _setIsRestoring] = useState(false);
 
-	const activeOrgId = session?.session?.activeOrganizationId;
+	const _activeOrgId = session?.session?.activeOrganizationId;
 
 	// Get subscription from Electric (preloaded, instant)
 	const { data: subscriptionsData } = useLiveQuery(
@@ -57,69 +56,17 @@ export function BillingOverview({ visibleItems }: BillingOverviewProps) {
 		visibleItems,
 	);
 
-	const handleUpgrade = async (annual = false) => {
-		if (!activeOrgId || memberCount === undefined) return;
-
-		setIsUpgrading(true);
-		try {
-			await authClient.subscription.upgrade(
-				{
-					plan: "pro",
-					referenceId: activeOrgId,
-					annual,
-					seats: memberCount,
-					successUrl: `${env.NEXT_PUBLIC_WEB_URL}/settings/billing?success=true`,
-					cancelUrl: env.NEXT_PUBLIC_WEB_URL,
-					disableRedirect: true,
-				},
-				{
-					onSuccess: (ctx) => {
-						if (ctx.data?.url) {
-							window.open(ctx.data.url, "_blank");
-						}
-					},
-				},
-			);
-		} finally {
-			setIsUpgrading(false);
-		}
+	// All features are free — subscription actions are no-ops
+	const handleUpgrade = async (_annual = false) => {
+		toast.success("All features are free — no action needed");
 	};
 
 	const handleCancel = async () => {
-		if (!activeOrgId) return;
-
-		setIsCanceling(true);
-		try {
-			await authClient.subscription.cancel(
-				{
-					referenceId: activeOrgId,
-					returnUrl: env.NEXT_PUBLIC_WEB_URL,
-				},
-				{
-					onSuccess: (ctx) => {
-						if (ctx.data?.url) {
-							window.open(ctx.data.url, "_blank");
-						}
-					},
-				},
-			);
-		} finally {
-			setIsCanceling(false);
-		}
+		toast.success("All features are free — no action needed");
 	};
 
 	const handleRestore = async () => {
-		if (!activeOrgId) return;
-
-		setIsRestoring(true);
-		try {
-			await authClient.subscription.restore({
-				referenceId: activeOrgId,
-			});
-			toast.success("Plan restored");
-		} finally {
-			setIsRestoring(false);
-		}
+		toast.success("All features are free — no action needed");
 	};
 
 	return (

@@ -8,7 +8,7 @@ import {
 } from "react-icons/hi2";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 
-const DEVICE_ICONS = {
+const DEVICE_ICONS: Record<string, typeof HiOutlineComputerDesktop> = {
 	desktop: HiOutlineComputerDesktop,
 	mobile: HiOutlineDevicePhoneMobile,
 	web: HiOutlineGlobeAlt,

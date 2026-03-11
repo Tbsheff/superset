@@ -1,4 +1,4 @@
-import { db, dbWs } from "@superset/db/client";
+import { db } from "@superset/db/client";
 import { secrets } from "@superset/db/schema";
 import type { TRPCRouterRecord } from "@trpc/server";
 import { TRPCError } from "@trpc/server";
@@ -73,7 +73,7 @@ export const secretsRouter = {
 				});
 			}
 
-			const [result] = await dbWs
+			const [result] = await db
 				.insert(secrets)
 				.values({
 					projectId: input.projectId,
@@ -100,7 +100,7 @@ export const secretsRouter = {
 		)
 		.mutation(async ({ ctx, input }) => {
 			await verifyOrgMembership(ctx.session.user.id, input.organizationId);
-			await dbWs
+			await db
 				.delete(secrets)
 				.where(
 					and(

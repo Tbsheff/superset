@@ -1,23 +1,27 @@
-import { neon, Pool } from "@neondatabase/serverless";
-import { config } from "dotenv";
-import { drizzle } from "drizzle-orm/neon-http";
-import { drizzle as drizzleWs } from "drizzle-orm/neon-serverless";
+import { existsSync, mkdirSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
 
-import { env } from "./env";
 import * as schema from "./schema";
 
-config({ path: ".env", quiet: true });
+const dbPath =
+	process.env.SUPERSET_DB_PATH || join(homedir(), ".superset", "superset.db");
 
-const sql = neon(env.DATABASE_URL);
+// Ensure parent directory exists
+const dbDir = dirname(dbPath);
+if (!existsSync(dbDir)) {
+	mkdirSync(dbDir, { recursive: true });
+}
 
-export const db = drizzle({
-	client: sql,
-	schema,
-	casing: "snake_case",
-});
+const sqlite = new Database(dbPath);
 
-export const dbWs = drizzleWs({
-	client: new Pool({ connectionString: env.DATABASE_URL }),
+// Enable WAL mode for better concurrent read performance
+sqlite.pragma("journal_mode = WAL");
+sqlite.pragma("foreign_keys = ON");
+
+export const db = drizzle(sqlite, {
 	schema,
 	casing: "snake_case",
 });

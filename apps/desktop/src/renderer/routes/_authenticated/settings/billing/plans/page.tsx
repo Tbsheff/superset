@@ -7,7 +7,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { differenceInDays, format } from "date-fns";
 import { Fragment, useState } from "react";
 import { HiArrowLeft, HiArrowUpRight, HiCheck } from "react-icons/hi2";
-import { env } from "renderer/env.renderer";
 import { track } from "renderer/lib/analytics";
 import { authClient } from "renderer/lib/auth-client";
 import { electronTrpc } from "renderer/lib/electron-trpc";
@@ -197,9 +196,9 @@ const COMPARISON_SECTIONS: ComparisonSection[] = [
 
 function PlansPage() {
 	const [isYearly, setIsYearly] = useState(true);
-	const [isUpgrading, setIsUpgrading] = useState(false);
-	const [isCanceling, setIsCanceling] = useState(false);
-	const [isRestoring, setIsRestoring] = useState(false);
+	const [isUpgrading, _setIsUpgrading] = useState(false);
+	const [isCanceling, _setIsCanceling] = useState(false);
+	const [isRestoring, _setIsRestoring] = useState(false);
 	const { data: session } = authClient.useSession();
 	const openUrl = electronTrpc.external.openUrl.useMutation();
 	const collections = useCollections();
@@ -233,7 +232,7 @@ function PlansPage() {
 				.select(({ members }) => ({ id: members.id })),
 		[collections],
 	);
-	const memberCount = membersData?.length ?? 1;
+	const _memberCount = membersData?.length ?? 1;
 
 	const currentPlanLabelByTier: Record<PlanTier, string> = {
 		free: "Free",
@@ -262,65 +261,8 @@ function PlansPage() {
 
 		if (!activeOrgId) return;
 
-		if (action === "downgrade") {
-			setIsCanceling(true);
-			try {
-				await authClient.subscription.cancel(
-					{
-						referenceId: activeOrgId,
-						returnUrl: env.NEXT_PUBLIC_WEB_URL,
-					},
-					{
-						onSuccess: (ctx) => {
-							if (ctx.data?.url) {
-								window.open(ctx.data.url, "_blank");
-							}
-						},
-					},
-				);
-			} finally {
-				setIsCanceling(false);
-			}
-			return;
-		}
-
-		if (action === "restore") {
-			setIsRestoring(true);
-			try {
-				await authClient.subscription.restore({
-					referenceId: activeOrgId,
-				});
-				toast.success("Plan restored");
-			} finally {
-				setIsRestoring(false);
-			}
-			return;
-		}
-
-		setIsUpgrading(true);
-		try {
-			await authClient.subscription.upgrade(
-				{
-					plan: "pro",
-					referenceId: activeOrgId,
-					annual: isYearly,
-					seats: memberCount,
-					successUrl: `${env.NEXT_PUBLIC_WEB_URL}/settings/billing?success=true`,
-					cancelUrl: env.NEXT_PUBLIC_WEB_URL,
-					returnUrl: env.NEXT_PUBLIC_WEB_URL,
-					disableRedirect: true,
-				},
-				{
-					onSuccess: (ctx) => {
-						if (ctx.data?.url) {
-							window.open(ctx.data.url, "_blank");
-						}
-					},
-				},
-			);
-		} finally {
-			setIsUpgrading(false);
-		}
+		// All features are free — subscription actions are no-ops
+		toast.success("All features are free — no action needed");
 	};
 
 	const renderComparisonValue = (value: ComparisonValue) => {

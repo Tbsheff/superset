@@ -1,4 +1,4 @@
-import { dbWs } from "@superset/db/client";
+import { db } from "@superset/db/client";
 import { projects, sandboxImages } from "@superset/db/schema";
 import type { TRPCRouterRecord } from "@trpc/server";
 import { TRPCError } from "@trpc/server";
@@ -26,7 +26,7 @@ export const projectRouter = {
 		)
 		.mutation(async ({ ctx, input }) => {
 			await verifyOrgMembership(ctx.session.user.id, input.organizationId);
-			const [project] = await dbWs
+			const [project] = await db
 				.insert(projects)
 				.values({
 					organizationId: input.organizationId,
@@ -45,7 +45,7 @@ export const projectRouter = {
 					message: "Failed to create project",
 				});
 			}
-			await dbWs.insert(sandboxImages).values({
+			await db.insert(sandboxImages).values({
 				organizationId: input.organizationId,
 				projectId: project.id,
 			});
@@ -64,7 +64,7 @@ export const projectRouter = {
 		.mutation(async ({ ctx, input }) => {
 			await verifyOrgMembership(ctx.session.user.id, input.organizationId);
 			const { id, organizationId, ...data } = input;
-			const [updated] = await dbWs
+			const [updated] = await db
 				.update(projects)
 				.set(data)
 				.where(
@@ -80,7 +80,7 @@ export const projectRouter = {
 		)
 		.mutation(async ({ ctx, input }) => {
 			await verifyOrgAdmin(ctx.session.user.id, input.organizationId);
-			await dbWs
+			await db
 				.delete(projects)
 				.where(
 					and(

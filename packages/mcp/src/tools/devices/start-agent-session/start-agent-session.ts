@@ -11,7 +11,7 @@ import {
 	STARTABLE_AGENT_TYPES,
 } from "@superset/shared/agent-launch";
 import { and, eq, isNull } from "drizzle-orm";
-import { alias } from "drizzle-orm/pg-core";
+import { alias } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 import { executeOnDevice, getMcpContext } from "../../utils";
 

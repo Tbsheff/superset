@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { db, dbWs } from "@superset/db/client";
+import { db } from "@superset/db/client";
 import { tasks } from "@superset/db/schema";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
@@ -57,7 +57,7 @@ export function register(server: McpServer) {
 			const taskIdsToDelete = resolvedTasks.map((t) => t.id);
 			const deletedAt = new Date();
 
-			await dbWs
+			await db
 				.update(tasks)
 				.set({ deletedAt })
 				.where(inArray(tasks.id, taskIdsToDelete));

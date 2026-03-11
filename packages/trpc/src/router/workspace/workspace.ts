@@ -1,11 +1,10 @@
-import { dbWs } from "@superset/db/client";
+import { db } from "@superset/db/client";
 import {
 	projects,
 	workspaceConfigSchema,
 	workspaces,
 	workspaceTypeEnum,
 } from "@superset/db/schema";
-import { getCurrentTxid } from "@superset/db/utils";
 import type { TRPCRouterRecord } from "@trpc/server";
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
@@ -37,7 +36,7 @@ export const workspaceRouter = {
 		.mutation(async ({ ctx, input }) => {
 			await verifyOrgMembership(ctx.session.user.id, input.organizationId);
 
-			const result = await dbWs.transaction(async (tx) => {
+			const result = await db.transaction(async (tx) => {
 				// Upsert project by (organizationId, slug) unique constraint
 				const [upsertedProject] = await tx
 					.insert(projects)
@@ -90,11 +89,10 @@ export const workspaceRouter = {
 					})
 					.onConflictDoNothing({ target: [workspaces.id] });
 
-				const txid = await getCurrentTxid(tx);
 				return {
 					projectId: projectRow.id,
 					workspaceId: input.workspace.id,
-					txid,
+					txid: 0,
 				};
 			});
 
@@ -113,7 +111,7 @@ export const workspaceRouter = {
 		)
 		.mutation(async ({ ctx, input }) => {
 			await verifyOrgMembership(ctx.session.user.id, input.organizationId);
-			const [workspace] = await dbWs
+			const [workspace] = await db
 				.insert(workspaces)
 				.values({
 					projectId: input.projectId,
@@ -133,7 +131,7 @@ export const workspaceRouter = {
 		)
 		.mutation(async ({ ctx, input }) => {
 			await verifyOrgAdmin(ctx.session.user.id, input.organizationId);
-			await dbWs
+			await db
 				.delete(workspaces)
 				.where(
 					and(

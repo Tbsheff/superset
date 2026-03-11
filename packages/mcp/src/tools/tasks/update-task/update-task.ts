@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { db, dbWs } from "@superset/db/client";
+import { db } from "@superset/db/client";
 import { tasks } from "@superset/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
@@ -126,7 +126,7 @@ export function register(server: McpServer) {
 			const updatedTasks: { id: string; slug: string; title: string }[] = [];
 
 			for (const { taskId, updateData } of resolvedUpdates) {
-				const [task] = await dbWs
+				const [task] = await db
 					.update(tasks)
 					.set(updateData)
 					.where(eq(tasks.id, taskId))

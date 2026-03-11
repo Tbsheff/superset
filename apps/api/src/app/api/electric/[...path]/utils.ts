@@ -17,8 +17,7 @@ import {
 	workspaces,
 } from "@superset/db/schema";
 import { eq, inArray, sql } from "drizzle-orm";
-import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
-import { QueryBuilder } from "drizzle-orm/pg-core";
+import { QueryBuilder } from "drizzle-orm/sqlite-core";
 
 export type AllowedTable =
 	| "tasks"
@@ -44,7 +43,8 @@ interface WhereClause {
 	params: unknown[];
 }
 
-function build(table: PgTable, column: PgColumn, id: string): WhereClause {
+// biome-ignore lint/suspicious/noExplicitAny: cross-package drizzle-orm resolution causes type mismatch
+function build(table: any, column: any, id: string): WhereClause {
 	const whereExpr = eq(sql`${sql.identifier(column.name)}`, id);
 	const qb = new QueryBuilder();
 	const { sql: query, params } = qb

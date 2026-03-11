@@ -34,7 +34,7 @@ export const auth = betterAuth({
 	secret: env.BETTER_AUTH_SECRET,
 	disabledPaths: [],
 	database: drizzleAdapter(db, {
-		provider: "pg",
+		provider: "sqlite",
 		usePlural: true,
 		schema: { ...authSchema, subscriptions },
 	}),
@@ -91,7 +91,7 @@ export const auth = betterAuth({
 
 					if (domain) {
 						const matchingOrgs = await db.query.organizations.findMany({
-							where: sql`${authSchema.organizations.allowedDomains} @> ARRAY[${domain}]::text[]`,
+							where: sql`EXISTS (SELECT 1 FROM json_each(${authSchema.organizations.allowedDomains}) WHERE value = ${domain})`,
 						});
 
 						for (const org of matchingOrgs) {

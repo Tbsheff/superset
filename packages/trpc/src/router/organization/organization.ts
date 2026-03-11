@@ -107,7 +107,7 @@ export const organizationRouter = {
 			const domain = ctx.session.user.email.split("@")[1]?.toLowerCase();
 			if (domain) {
 				const domainOrg = await db.query.organizations.findFirst({
-					where: sql`${organizations.allowedDomains} @> ARRAY[${domain}]::text[]`,
+					where: sql`EXISTS (SELECT 1 FROM json_each(${organizations.allowedDomains}) WHERE value = ${domain})`,
 				});
 				if (domainOrg) {
 					throw new TRPCError({

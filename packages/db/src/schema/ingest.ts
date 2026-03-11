@@ -1,37 +1,35 @@
 import {
 	index,
 	integer,
-	jsonb,
-	pgSchema,
+	sqliteTable,
 	text,
-	timestamp,
 	uniqueIndex,
-	uuid,
-} from "drizzle-orm/pg-core";
-import { integrationProvider } from "./schema";
+} from "drizzle-orm/sqlite-core";
 
-export const ingestSchema = pgSchema("ingest");
-
-export const webhookEvents = ingestSchema.table(
-	"webhook_events",
+export const webhookEvents = sqliteTable(
+	"ingest_webhook_events",
 	{
-		id: uuid().primaryKey().defaultRandom(),
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
 
 		// Source
-		provider: integrationProvider().notNull(),
+		provider: text("provider").notNull(),
 		eventId: text("event_id").notNull(),
 		eventType: text("event_type"),
 
 		// Raw payload
-		payload: jsonb().notNull(),
+		payload: text("payload", { mode: "json" }).notNull(),
 
 		// Processing state
-		status: text().notNull().default("pending"), // pending | processed | failed | skipped
-		processedAt: timestamp("processed_at"),
-		error: text(),
+		status: text("status").notNull().default("pending"),
+		processedAt: integer("processed_at", { mode: "timestamp" }),
+		error: text("error"),
 		retryCount: integer("retry_count").notNull().default(0),
 
-		receivedAt: timestamp("received_at").notNull().defaultNow(),
+		receivedAt: integer("received_at", { mode: "timestamp" })
+			.notNull()
+			.$defaultFn(() => new Date()),
 	},
 	(table) => [
 		index("webhook_events_provider_status_idx").on(

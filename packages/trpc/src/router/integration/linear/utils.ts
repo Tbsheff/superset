@@ -1,11 +1,10 @@
 import { LinearClient } from "@linear/sdk";
 import { db } from "@superset/db/client";
+import type { TaskPriority } from "@superset/db/enums";
 import { integrationConnections } from "@superset/db/schema";
 import { and, eq } from "drizzle-orm";
 
-type Priority = "urgent" | "high" | "medium" | "low" | "none";
-
-export function mapPriorityToLinear(priority: Priority): number {
+export function mapPriorityToLinear(priority: string): number {
 	switch (priority) {
 		case "urgent":
 			return 1;
@@ -20,7 +19,7 @@ export function mapPriorityToLinear(priority: Priority): number {
 	}
 }
 
-export function mapPriorityFromLinear(linearPriority: number): Priority {
+export function mapPriorityFromLinear(linearPriority: number): TaskPriority {
 	switch (linearPriority) {
 		case 1:
 			return "urgent";

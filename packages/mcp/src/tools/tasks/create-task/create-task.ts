@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { db, dbWs } from "@superset/db/client";
+import { db } from "@superset/db/client";
 import { taskStatuses, tasks } from "@superset/db/schema";
-import { and, eq, ilike, or } from "drizzle-orm";
+import { and, eq, like, or } from "drizzle-orm";
 import { z } from "zod";
 import { getMcpContext } from "../../utils";
 
@@ -114,7 +114,7 @@ export function register(server: McpServer) {
 			const uniqueBaseSlugs = [...new Set(baseSlugs)];
 
 			const slugConditions = uniqueBaseSlugs.map((baseSlug) =>
-				ilike(tasks.slug, `${baseSlug}%`),
+				like(tasks.slug, `${baseSlug}%`),
 			);
 
 			const existingTasks = await db
@@ -175,7 +175,7 @@ export function register(server: McpServer) {
 				});
 			}
 
-			const createdTasks = await dbWs.transaction(async (tx) => {
+			const createdTasks = await db.transaction(async (tx) => {
 				return tx
 					.insert(tasks)
 					.values(taskValues)

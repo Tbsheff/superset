@@ -110,7 +110,7 @@
     },
     "apps/desktop": {
       "name": "@superset/desktop",
-      "version": "1.1.5",
+      "version": "1.1.6",
       "dependencies": {
         "@ai-sdk/anthropic": "^3.0.43",
         "@ai-sdk/openai": "3.0.36",
@@ -677,14 +677,15 @@
       "name": "@superset/db",
       "version": "0.1.0",
       "dependencies": {
-        "@neondatabase/serverless": "1.0.2",
         "@t3-oss/env-core": "^0.13.8",
+        "better-sqlite3": "12.6.2",
         "dotenv": "^17.3.1",
         "drizzle-orm": "0.45.1",
         "zod": "^4.3.5",
       },
       "devDependencies": {
         "@superset/typescript": "workspace:*",
+        "@types/better-sqlite3": "^7.6.13",
         "@types/node": "^24.9.1",
         "bun-types": "^1.3.1",
         "drizzle-kit": "0.31.8",
@@ -775,7 +776,6 @@
         "@modelcontextprotocol/sdk": "^1.26.0",
         "@superset/db": "workspace:*",
         "@superset/shared": "workspace:*",
-        "drizzle-orm": "0.45.1",
         "zod": "^4.3.5",
       },
       "devDependencies": {
@@ -918,6 +918,7 @@
   "overrides": {
     "@mastra/core": "https://github.com/superset-sh/mastra/releases/download/mastracode-v0.4.0-superset.12/mastra-core-1.8.0-superset.1.tgz",
     "@mastra/memory": "https://github.com/superset-sh/mastra/releases/download/mastracode-v0.4.0-superset.12/mastra-memory-1.5.2-superset.1.tgz",
+    "drizzle-orm": "0.45.1",
     "mastracode": "https://github.com/superset-sh/mastra/releases/download/mastracode-v0.4.0-superset.12/mastracode-0.4.0-superset.12.tgz",
   },
   "packages": {

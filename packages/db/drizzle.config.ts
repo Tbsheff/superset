@@ -1,11 +1,15 @@
+import { homedir } from "node:os";
+import { join } from "node:path";
 import type { Config } from "drizzle-kit";
-
-import { env } from "./src/env";
 
 export default {
 	schema: "./src/schema/index.ts",
 	out: "./drizzle",
-	dialect: "postgresql",
-	dbCredentials: { url: env.DATABASE_URL_UNPOOLED },
+	dialect: "sqlite",
+	dbCredentials: {
+		url:
+			process.env.SUPERSET_DB_PATH ||
+			join(homedir(), ".superset", "superset.db"),
+	},
 	casing: "snake_case",
 } satisfies Config;

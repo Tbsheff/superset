@@ -2,8 +2,8 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db } from "@superset/db/client";
 import { taskStatuses, tasks, users } from "@superset/db/schema";
 import type { SQL } from "drizzle-orm";
-import { and, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
-import { alias } from "drizzle-orm/pg-core";
+import { and, desc, eq, isNull, like, or, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 import { getMcpContext } from "../../utils";
 
@@ -134,14 +134,17 @@ export function register(server: McpServer) {
 
 			if (labels && labels.length > 0) {
 				conditions.push(
-					sql`${tasks.labels} @> ${JSON.stringify(labels)}::jsonb`,
+					...labels.map(
+						(label) =>
+							sql`EXISTS (SELECT 1 FROM json_each(${tasks.labels}) WHERE value = ${label})`,
+					),
 				);
 			}
 
 			if (search) {
 				const searchCondition = or(
-					ilike(tasks.title, `%${search}%`),
-					ilike(tasks.description, `%${search}%`),
+					like(tasks.title, `%${search}%`),
+					like(tasks.description, `%${search}%`),
 				);
 				if (searchCondition) {
 					conditions.push(searchCondition);

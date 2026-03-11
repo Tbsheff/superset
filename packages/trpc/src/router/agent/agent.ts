@@ -1,6 +1,5 @@
-import { dbWs } from "@superset/db/client";
+import { db } from "@superset/db/client";
 import { agentCommands, commandStatusValues } from "@superset/db/schema";
-import { getCurrentTxid } from "@superset/db/utils";
 import { TRPCError, type TRPCRouterRecord } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -31,7 +30,7 @@ export const agentRouter = {
 
 			const { id, ...changes } = input;
 
-			const result = await dbWs.transaction(async (tx) => {
+			const result = await db.transaction(async (tx) => {
 				const [existingCommand] = await tx
 					.select()
 					.from(agentCommands)
@@ -56,9 +55,7 @@ export const agentRouter = {
 					.where(eq(agentCommands.id, id))
 					.returning();
 
-				const txid = await getCurrentTxid(tx);
-
-				return { command: updated, txid };
+				return { command: updated, txid: 0 };
 			});
 
 			return result;

@@ -1,9 +1,8 @@
-import { db, dbWs } from "@superset/db/client";
+import { db } from "@superset/db/client";
 import { tasks, users } from "@superset/db/schema";
-import { getCurrentTxid } from "@superset/db/utils";
 import type { TRPCRouterRecord } from "@trpc/server";
 import { and, desc, eq, isNull } from "drizzle-orm";
-import { alias } from "drizzle-orm/pg-core";
+import { alias } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 import { syncTask } from "../../lib/integrations/sync";
 import { protectedProcedure, publicProcedure } from "../../trpc";
@@ -66,7 +65,7 @@ export const taskRouter = {
 	create: protectedProcedure
 		.input(createTaskSchema)
 		.mutation(async ({ ctx, input }) => {
-			const result = await dbWs.transaction(async (tx) => {
+			const result = await db.transaction(async (tx) => {
 				const [task] = await tx
 					.insert(tasks)
 					.values({
@@ -76,9 +75,7 @@ export const taskRouter = {
 					})
 					.returning();
 
-				const txid = await getCurrentTxid(tx);
-
-				return { task, txid };
+				return { task, txid: 0 };
 			});
 
 			if (result.task) {
@@ -101,16 +98,14 @@ export const taskRouter = {
 				updateData.assigneeAvatarUrl = null;
 			}
 
-			const result = await dbWs.transaction(async (tx) => {
+			const result = await db.transaction(async (tx) => {
 				const [task] = await tx
 					.update(tasks)
 					.set(updateData)
 					.where(eq(tasks.id, id))
 					.returning();
 
-				const txid = await getCurrentTxid(tx);
-
-				return { task, txid };
+				return { task, txid: 0 };
 			});
 
 			if (result.task) {
@@ -123,15 +118,13 @@ export const taskRouter = {
 	delete: protectedProcedure
 		.input(z.string().uuid())
 		.mutation(async ({ input }) => {
-			const result = await dbWs.transaction(async (tx) => {
+			const result = await db.transaction(async (tx) => {
 				await tx
 					.update(tasks)
 					.set({ deletedAt: new Date() })
 					.where(eq(tasks.id, input));
 
-				const txid = await getCurrentTxid(tx);
-
-				return { txid };
+				return { txid: 0 };
 			});
 
 			return result;

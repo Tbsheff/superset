@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db } from "@superset/db/client";
 import { members, users } from "@superset/db/schema";
-import { and, eq, ilike, or } from "drizzle-orm";
+import { and, eq, like, or } from "drizzle-orm";
 import { z } from "zod";
 import { getMcpContext } from "../../utils";
 
@@ -60,8 +60,8 @@ export function register(server: McpServer) {
 						and(
 							...conditions,
 							or(
-								ilike(users.name, `%${search}%`),
-								ilike(users.email, `%${search}%`),
+								like(users.name, `%${search}%`),
+								like(users.email, `%${search}%`),
 							),
 						),
 					)

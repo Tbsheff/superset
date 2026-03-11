@@ -17,7 +17,6 @@ import { SiLinear } from "react-icons/si";
 import { GATED_FEATURES, usePaywall } from "renderer/components/Paywall";
 import { env } from "renderer/env.renderer";
 import { apiTrpcClient } from "renderer/lib/api-trpc-client";
-import { authClient } from "renderer/lib/auth-client";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 import {
 	isItemVisible,
@@ -41,8 +40,6 @@ interface GithubInstallation {
 export function IntegrationsSettings({
 	visibleItems,
 }: IntegrationsSettingsProps) {
-	const { data: session } = authClient.useSession();
-	const activeOrganizationId = session?.session?.activeOrganizationId;
 	const collections = useCollections();
 	const { gateFeature } = usePaywall();
 
@@ -76,23 +73,16 @@ export function IntegrationsSettings({
 		isItemVisible(SETTING_ITEM_ID.INTEGRATIONS_GITHUB, visibleItems);
 
 	const fetchGithubInstallation = useCallback(async () => {
-		if (!activeOrganizationId) {
-			setIsLoadingGithub(false);
-			return;
-		}
-
 		try {
 			const result =
-				await apiTrpcClient.integration.github.getInstallation.query({
-					organizationId: activeOrganizationId,
-				});
+				await apiTrpcClient.integration.github.getInstallation.query();
 			setGithubInstallation(result);
 		} catch (err) {
 			console.error("[integrations] Failed to fetch GitHub installation:", err);
 		} finally {
 			setIsLoadingGithub(false);
 		}
-	}, [activeOrganizationId]);
+	}, []);
 
 	useEffect(() => {
 		fetchGithubInstallation();
@@ -112,21 +102,9 @@ export function IntegrationsSettings({
 		window.open(`${env.NEXT_PUBLIC_WEB_URL}${path}`, "_blank");
 	};
 
-	if (!activeOrganizationId) {
-		return (
-			<div className="p-6 max-w-4xl w-full">
-				<div className="mb-8">
-					<h2 className="text-xl font-semibold">Integrations</h2>
-					<p className="text-sm text-muted-foreground mt-1">
-						Connect external services to sync data
-					</p>
-				</div>
-				<p className="text-muted-foreground">
-					You need to be part of an organization to use integrations.
-				</p>
-			</div>
-		);
-	}
+	const handleOpenApi = (path: string) => {
+		window.open(`${env.NEXT_PUBLIC_API_URL}${path}`, "_blank");
+	};
 
 	return (
 		<div className="p-6 max-w-4xl w-full">
@@ -146,9 +124,9 @@ export function IntegrationsSettings({
 						isConnected={isLinearConnected}
 						connectedOrgName={linearConnection?.externalOrgName}
 						onManage={() =>
-							gateFeature(GATED_FEATURES.INTEGRATIONS, () =>
-								handleOpenWeb("/integrations/linear"),
-							)
+							isLinearConnected
+								? handleOpenWeb("/integrations/linear")
+								: handleOpenApi("/api/integrations/linear/connect")
 						}
 					/>
 				)}
@@ -162,9 +140,9 @@ export function IntegrationsSettings({
 						connectedOrgName={githubInstallation?.accountLogin}
 						isLoading={isLoadingGithub}
 						onManage={() =>
-							gateFeature(GATED_FEATURES.INTEGRATIONS, () =>
-								handleOpenWeb("/integrations/github"),
-							)
+							isGithubConnected
+								? handleOpenWeb("/integrations/github")
+								: handleOpenApi("/api/github/install")
 						}
 					/>
 				)}
@@ -177,9 +155,9 @@ export function IntegrationsSettings({
 						isConnected={isSlackConnected}
 						connectedOrgName={slackConnection?.externalOrgName}
 						onManage={() =>
-							gateFeature(GATED_FEATURES.INTEGRATIONS, () =>
-								handleOpenWeb("/integrations/slack"),
-							)
+							isSlackConnected
+								? handleOpenWeb("/integrations/slack")
+								: handleOpenApi("/api/integrations/slack/connect")
 						}
 					/>
 				)}

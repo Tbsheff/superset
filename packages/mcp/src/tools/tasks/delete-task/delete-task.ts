@@ -36,7 +36,6 @@ export function register(server: McpServer) {
 					.where(
 						and(
 							isUuid ? eq(tasks.id, taskId) : eq(tasks.slug, taskId),
-							eq(tasks.organizationId, ctx.organizationId),
 							isNull(tasks.deletedAt),
 						),
 					)

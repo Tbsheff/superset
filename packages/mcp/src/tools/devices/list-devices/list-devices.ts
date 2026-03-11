@@ -39,9 +39,7 @@ export function register(server: McpServer) {
 				Date.now() - DEVICE_ONLINE_THRESHOLD_MS * 10,
 			);
 
-			const conditions = [
-				eq(devicePresence.organizationId, ctx.organizationId),
-			];
+			const conditions = [];
 
 			if (!includeOffline) {
 				conditions.push(gt(devicePresence.lastSeenAt, threshold));

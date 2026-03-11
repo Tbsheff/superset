@@ -17,10 +17,8 @@ import { executeOnDevice, getMcpContext } from "../../utils";
 
 async function fetchTask({
 	taskId,
-	organizationId,
 }: {
 	taskId: string;
-	organizationId: string;
 }) {
 	const status = alias(taskStatuses, "status");
 	const [task] = await db
@@ -38,7 +36,6 @@ async function fetchTask({
 		.where(
 			and(
 				eq(tasks.id, taskId),
-				eq(tasks.organizationId, organizationId),
 				isNull(tasks.deletedAt),
 			),
 		)
@@ -150,7 +147,6 @@ export function register(server: McpServer) {
 
 			const task = await fetchTask({
 				taskId: input.taskId,
-				organizationId: ctx.organizationId,
 			});
 			if (!task) return ERROR_TASK_NOT_FOUND;
 

@@ -1,9 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { db } from "@superset/db/client";
-import { members, users } from "@superset/db/schema";
-import { and, eq, like, or } from "drizzle-orm";
 import { z } from "zod";
-import { getMcpContext } from "../../utils";
 
 export function register(server: McpServer) {
 	server.registerTool(
@@ -26,49 +22,8 @@ export function register(server: McpServer) {
 				),
 			},
 		},
-		async (args, extra) => {
-			const ctx = getMcpContext(extra);
-			const limit = args.limit as number;
-			const search = args.search as string | undefined;
-			const conditions = [eq(members.organizationId, ctx.organizationId)];
-
-			let query = db
-				.select({
-					id: users.id,
-					name: users.name,
-					email: users.email,
-					image: users.image,
-					role: members.role,
-				})
-				.from(members)
-				.innerJoin(users, eq(members.userId, users.id))
-				.where(and(...conditions))
-				.limit(limit);
-
-			if (search) {
-				query = db
-					.select({
-						id: users.id,
-						name: users.name,
-						email: users.email,
-						image: users.image,
-						role: members.role,
-					})
-					.from(members)
-					.innerJoin(users, eq(members.userId, users.id))
-					.where(
-						and(
-							...conditions,
-							or(
-								like(users.name, `%${search}%`),
-								like(users.email, `%${search}%`),
-							),
-						),
-					)
-					.limit(limit);
-			}
-
-			const membersList = await query;
+		async (_args, _extra) => {
+			const membersList: never[] = [];
 
 			return {
 				structuredContent: { members: membersList },

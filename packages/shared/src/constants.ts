@@ -1,5 +1,5 @@
 // Auth
-export const AUTH_PROVIDERS = ["github", "google"] as const;
+export const AUTH_PROVIDERS = ["github"] as const;
 export type AuthProvider = (typeof AUTH_PROVIDERS)[number];
 
 // Deep link protocol schemes (used for desktop OAuth callbacks)

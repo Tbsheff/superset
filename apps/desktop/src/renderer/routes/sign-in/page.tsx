@@ -3,7 +3,6 @@ import { Button } from "@superset/ui/button";
 import { Spinner } from "@superset/ui/spinner";
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { FaGithub } from "react-icons/fa";
-import { FcGoogle } from "react-icons/fc";
 import { env } from "renderer/env.renderer";
 import { track } from "renderer/lib/analytics";
 import { electronTrpc } from "renderer/lib/electron-trpc";
@@ -73,17 +72,6 @@ function SignInPage() {
 						>
 							<FaGithub className="size-5" />
 							Continue with GitHub
-						</Button>
-
-						<Button
-							variant="outline"
-							size="lg"
-							onClick={() => signIn("google")}
-							className="w-full gap-3"
-							disabled={signInMutation.isPending}
-						>
-							<FcGoogle className="size-5" />
-							Continue with Google
 						</Button>
 					</div>
 

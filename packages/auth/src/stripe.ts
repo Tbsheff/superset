@@ -1,4 +1,3 @@
-import Stripe from "stripe";
-import { env } from "./env";
-
-export const stripeClient = new Stripe(env.STRIPE_SECRET_KEY);
+// Stripe client removed — billing is disabled
+// This file is kept as a stub for any lingering imports
+export const stripeClient = null as never;

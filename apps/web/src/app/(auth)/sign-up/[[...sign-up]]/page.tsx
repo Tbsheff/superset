@@ -5,32 +5,14 @@ import { Button } from "@superset/ui/button";
 import Link from "next/link";
 import { useState } from "react";
 import { FaGithub } from "react-icons/fa";
-import { FcGoogle } from "react-icons/fc";
 import { env } from "@/env";
 
 export default function SignUpPage() {
-	const [isLoadingGoogle, setIsLoadingGoogle] = useState(false);
-	const [isLoadingGithub, setIsLoadingGithub] = useState(false);
+	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	const signUpWithGoogle = async () => {
-		setIsLoadingGoogle(true);
-		setError(null);
-
-		try {
-			await authClient.signIn.social({
-				provider: "google",
-				callbackURL: env.NEXT_PUBLIC_WEB_URL,
-			});
-		} catch (err) {
-			console.error("Sign up failed:", err);
-			setError("Failed to sign up. Please try again.");
-			setIsLoadingGoogle(false);
-		}
-	};
-
 	const signUpWithGithub = async () => {
-		setIsLoadingGithub(true);
+		setIsLoading(true);
 		setError(null);
 
 		try {
@@ -41,11 +23,9 @@ export default function SignUpPage() {
 		} catch (err) {
 			console.error("Sign up failed:", err);
 			setError("Failed to sign up. Please try again.");
-			setIsLoadingGithub(false);
+			setIsLoading(false);
 		}
 	};
-
-	const isLoading = isLoadingGoogle || isLoadingGithub;
 
 	return (
 		<div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
@@ -68,16 +48,7 @@ export default function SignUpPage() {
 					className="w-full"
 				>
 					<FaGithub className="mr-2 size-4" />
-					{isLoadingGithub ? "Loading..." : "Sign up with GitHub"}
-				</Button>
-				<Button
-					variant="outline"
-					disabled={isLoading}
-					onClick={signUpWithGoogle}
-					className="w-full"
-				>
-					<FcGoogle className="mr-2 size-4" />
-					{isLoadingGoogle ? "Loading..." : "Sign up with Google"}
+					{isLoading ? "Loading..." : "Sign up with GitHub"}
 				</Button>
 				<p className="text-muted-foreground px-8 text-center text-sm">
 					By clicking continue, you agree to our{" "}

@@ -1,17 +1,28 @@
 import { auth } from "@superset/auth/server";
 import { tavily } from "@tavily/core";
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
 import { env } from "@/env";
 
-const ratelimit = new Ratelimit({
-	redis: new Redis({
-		url: env.KV_REST_API_URL,
-		token: env.KV_REST_API_TOKEN,
-	}),
-	limiter: Ratelimit.slidingWindow(1000, "1 d"),
-	prefix: "ratelimit:web-search",
-});
+// Simple in-memory rate limiter (no Redis dependency)
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT = 1000;
+const WINDOW_MS = 24 * 60 * 60 * 1000; // 1 day
+
+function checkRateLimit(identifier: string): boolean {
+	const now = Date.now();
+	const entry = rateLimitMap.get(identifier);
+
+	if (!entry || now > entry.resetAt) {
+		rateLimitMap.set(identifier, { count: 1, resetAt: now + WINDOW_MS });
+		return true;
+	}
+
+	if (entry.count >= RATE_LIMIT) {
+		return false;
+	}
+
+	entry.count++;
+	return true;
+}
 
 export async function POST(request: Request): Promise<Response> {
 	const session = await auth.api.getSession({
@@ -22,8 +33,7 @@ export async function POST(request: Request): Promise<Response> {
 		return new Response("Unauthorized", { status: 401 });
 	}
 
-	const { success } = await ratelimit.limit(session.user.id);
-	if (!success) {
+	if (!checkRateLimit(session.user.id)) {
 		return Response.json(
 			{ error: "Rate limit exceeded. Try again later." },
 			{ status: 429 },

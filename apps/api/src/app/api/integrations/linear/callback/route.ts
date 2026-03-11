@@ -1,13 +1,11 @@
 import { LinearClient } from "@linear/sdk";
 import { db } from "@superset/db/client";
 import { integrationConnections, members } from "@superset/db/schema";
-import { Client } from "@upstash/qstash";
 import { and, eq } from "drizzle-orm";
 
 import { env } from "@/env";
 import { verifySignedState } from "@/lib/oauth-state";
-
-const qstash = new Client({ token: env.QSTASH_TOKEN });
+import { performLinearInitialSync } from "../jobs/initial-sync/route";
 
 export async function GET(request: Request) {
 	const url = new URL(request.url);
@@ -27,7 +25,6 @@ export async function GET(request: Request) {
 		);
 	}
 
-	// Verify signed state (prevents forgery)
 	const stateData = verifySignedState(state);
 	if (!stateData) {
 		return Response.redirect(
@@ -37,7 +34,6 @@ export async function GET(request: Request) {
 
 	const { organizationId, userId } = stateData;
 
-	// Re-verify membership at callback time (defense-in-depth)
 	const membership = await db.query.members.findFirst({
 		where: and(
 			eq(members.organizationId, organizationId),
@@ -113,13 +109,9 @@ export async function GET(request: Request) {
 		});
 
 	try {
-		await qstash.publishJSON({
-			url: `${env.NEXT_PUBLIC_API_URL}/api/integrations/linear/jobs/initial-sync`,
-			body: { organizationId, creatorUserId: userId },
-			retries: 3,
-		});
-	} catch (error) {
-		console.error("Failed to queue initial sync job:", error);
+		await performLinearInitialSync(organizationId, userId);
+	} catch (syncError) {
+		console.error("Failed to run initial sync:", syncError);
 		return Response.redirect(
 			`${env.NEXT_PUBLIC_WEB_URL}/integrations/linear?warning=sync_queued_failed`,
 		);

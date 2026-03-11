@@ -1,13 +1,11 @@
 import { db } from "@superset/db/client";
 import { githubInstallations, members } from "@superset/db/schema";
-import { Client } from "@upstash/qstash";
 import { and, eq } from "drizzle-orm";
 
 import { env } from "@/env";
 import { verifySignedState } from "@/lib/oauth-state";
+import { performGitHubInitialSync } from "../jobs/initial-sync/route";
 import { githubApp } from "../octokit";
-
-const qstash = new Client({ token: env.QSTASH_TOKEN });
 
 /**
  * Callback handler for GitHub App installation.
@@ -31,7 +29,6 @@ export async function GET(request: Request) {
 		);
 	}
 
-	// Verify signed state (prevents forgery)
 	const stateData = verifySignedState(state);
 	if (!stateData) {
 		return Response.redirect(
@@ -41,7 +38,6 @@ export async function GET(request: Request) {
 
 	const { organizationId, userId } = stateData;
 
-	// Re-verify membership at callback time (defense-in-depth)
 	const membership = await db.query.members.findFirst({
 		where: and(
 			eq(members.organizationId, organizationId),
@@ -81,14 +77,12 @@ export async function GET(request: Request) {
 
 		const installation = installationResult.data;
 
-		// Extract account info - account can be User or Enterprise
 		const account = installation.account;
 		const accountLogin =
 			account && "login" in account ? account.login : (account?.name ?? "");
 		const accountType =
 			account && "type" in account ? account.type : "Organization";
 
-		// Save the installation to our database
 		const [savedInstallation] = await db
 			.insert(githubInstallations)
 			.values({
@@ -108,7 +102,7 @@ export async function GET(request: Request) {
 					accountType,
 					permissions: installation.permissions as Record<string, string>,
 					suspended: false,
-					suspendedAt: null, // Clear suspension if reinstalling
+					suspendedAt: null,
 					updatedAt: new Date(),
 				},
 			})
@@ -120,21 +114,10 @@ export async function GET(request: Request) {
 			);
 		}
 
-		// Queue initial sync job
 		try {
-			await qstash.publishJSON({
-				url: `${env.NEXT_PUBLIC_API_URL}/api/github/jobs/initial-sync`,
-				body: {
-					installationDbId: savedInstallation.id,
-					organizationId,
-				},
-				retries: 3,
-			});
+			await performGitHubInitialSync(savedInstallation.id, organizationId);
 		} catch (error) {
-			console.error(
-				"[github/callback] Failed to queue initial sync job:",
-				error,
-			);
+			console.error("[github/callback] Failed to run initial sync:", error);
 			return Response.redirect(
 				`${env.NEXT_PUBLIC_WEB_URL}/integrations/github?warning=sync_queue_failed`,
 			);

@@ -11,17 +11,7 @@ export const env = createEnv({
 	},
 
 	server: {
-		DATABASE_URL: z.string().url(),
-		DATABASE_URL_UNPOOLED: z.string().url(),
 		BETTER_AUTH_SECRET: z.string(),
-		RESEND_API_KEY: z.string(),
-		KV_REST_API_URL: z.string(),
-		KV_REST_API_TOKEN: z.string(),
-		STRIPE_SECRET_KEY: z.string(),
-		STRIPE_WEBHOOK_SECRET: z.string(),
-		STRIPE_PRO_MONTHLY_PRICE_ID: z.string(),
-		STRIPE_PRO_YEARLY_PRICE_ID: z.string(),
-		SLACK_BILLING_WEBHOOK_URL: z.string().url(),
 		SENTRY_AUTH_TOKEN: z.string().optional(),
 		ANTHROPIC_API_KEY: z.string(),
 	},

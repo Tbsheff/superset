@@ -6,14 +6,11 @@ import {
 } from "@superset/db/schema";
 import type { TRPCRouterRecord } from "@trpc/server";
 import { TRPCError } from "@trpc/server";
-import { Client } from "@upstash/qstash";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { env } from "../../../env";
 import { protectedProcedure } from "../../../trpc";
 import { verifyOrgAdmin, verifyOrgMembership } from "../utils";
-
-const qstash = new Client({ token: env.QSTASH_TOKEN });
 
 export const githubRouter = {
 	getInstallation: protectedProcedure
@@ -76,22 +73,13 @@ export const githubRouter = {
 				organizationId: input.organizationId,
 			};
 
-			// In development, call the sync endpoint directly (QStash can't reach localhost)
-			if (env.NODE_ENV === "development") {
-				fetch(syncUrl, {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify(syncBody),
-				}).catch((error) => {
-					console.error("[github/triggerSync] Dev sync failed:", error);
-				});
-			} else {
-				await qstash.publishJSON({
-					url: syncUrl,
-					body: syncBody,
-					retries: 3,
-				});
-			}
+			fetch(syncUrl, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(syncBody),
+			}).catch((error) => {
+				console.error("[github/triggerSync] Sync failed:", error);
+			});
 
 			return { success: true };
 		}),
@@ -136,7 +124,6 @@ export const githubRouter = {
 				return [];
 			}
 
-			// Get repository IDs for this installation
 			const repos = await db.query.githubRepositories.findMany({
 				where: input.repositoryId
 					? and(
@@ -153,7 +140,6 @@ export const githubRouter = {
 
 			const repoIds = repos.map((r) => r.id);
 
-			// Build query conditions
 			const conditions = [];
 			if (repoIds.length > 0) {
 				conditions.push(inArray(githubPullRequests.repositoryId, repoIds));
@@ -215,7 +201,6 @@ export const githubRouter = {
 
 			const repoIds = repos.map((r) => r.id);
 
-			// Get open PRs
 			const openPrs = await db.query.githubPullRequests.findMany({
 				where: and(
 					eq(githubPullRequests.state, "open"),

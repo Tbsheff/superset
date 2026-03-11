@@ -1,12 +1,9 @@
-import { Client } from "@upstash/qstash";
-
-import { env } from "@/env";
 import { verifySlackSignature } from "../verify-signature";
 import { processAppHomeOpened } from "./process-app-home-opened";
+import { processAssistantMessage } from "./process-assistant-message";
 import { processEntityDetails } from "./process-entity-details";
 import { processLinkShared } from "./process-link-shared";
-
-const qstash = new Client({ token: env.QSTASH_TOKEN });
+import { processSlackMention } from "./process-mention";
 
 export async function POST(request: Request) {
 	const body = await request.text();
@@ -36,19 +33,13 @@ export async function POST(request: Request) {
 		const { event, team_id, event_id } = payload;
 
 		if (event.type === "app_mention") {
-			try {
-				await qstash.publishJSON({
-					url: `${env.NEXT_PUBLIC_API_URL}/api/integrations/slack/jobs/process-mention`,
-					body: {
-						event,
-						teamId: team_id,
-						eventId: event_id,
-					},
-					retries: 3,
-				});
-			} catch (error) {
-				console.error("[slack/events] Failed to queue mention job:", error);
-			}
+			processSlackMention({
+				event,
+				teamId: team_id,
+				eventId: event_id,
+			}).catch((err: unknown) => {
+				console.error("[slack/events] Process mention error:", err);
+			});
 		}
 
 		if (event.type === "message" && event.channel_type === "im") {
@@ -57,22 +48,13 @@ export async function POST(request: Request) {
 				return new Response("ok", { status: 200 });
 			}
 
-			try {
-				await qstash.publishJSON({
-					url: `${env.NEXT_PUBLIC_API_URL}/api/integrations/slack/jobs/process-assistant-message`,
-					body: {
-						event,
-						teamId: team_id,
-						eventId: event_id,
-					},
-					retries: 3,
-				});
-			} catch (error) {
-				console.error(
-					"[slack/events] Failed to queue assistant message job:",
-					error,
-				);
-			}
+			processAssistantMessage({
+				event,
+				teamId: team_id,
+				eventId: event_id,
+			}).catch((err: unknown) => {
+				console.error("[slack/events] Process assistant message error:", err);
+			});
 		}
 
 		if (event.type === "link_shared") {

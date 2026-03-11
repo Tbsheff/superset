@@ -1,19 +1,17 @@
-import { expoClient } from "@better-auth/expo/client";
-import { organizationClient } from "better-auth/client/plugins";
-import { createAuthClient } from "better-auth/react";
-import * as SecureStore from "expo-secure-store";
-import { env } from "../env";
+// Auth removed — single-user local mode. Stub client.
+export const authClient = {
+	getCookie: () => "",
+	useSession: () => ({
+		data: {
+			user: { id: "00000000-0000-0000-0000-000000000001", name: "Local User", email: "local@localhost", image: null },
+			session: { id: "local-session" },
+		},
+		isPending: false,
+		error: null,
+	}),
+} as any;
 
-export const authClient = createAuthClient({
-	baseURL: env.EXPO_PUBLIC_API_URL,
-	plugins: [
-		expoClient({
-			scheme: "superset",
-			storagePrefix: "superset",
-			storage: SecureStore,
-		}),
-		organizationClient(),
-	],
-});
-
-export const { signIn, signOut, signUp, useSession } = authClient;
+export const signIn = {} as any;
+export const signOut = {} as any;
+export const signUp = {} as any;
+export const useSession = authClient.useSession;

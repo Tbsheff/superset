@@ -1,100 +1,20 @@
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { auth } from "@superset/auth/server";
 import { createMcpServer } from "@superset/mcp";
 import type { McpContext } from "@superset/mcp/auth";
-import { verifyAccessToken } from "better-auth/oauth2";
-import { env } from "@/env";
+import { LOCAL_USER_ID } from "@superset/shared/constants";
 
-async function verifyToken(req: Request): Promise<AuthInfo | undefined> {
-	const authorization = req.headers.get("authorization");
-	const bearerToken = authorization?.startsWith("Bearer ")
-		? authorization.slice(7)
-		: undefined;
-
-	// 1. Try session auth (for desktop/web app)
-	const session = await auth.api.getSession({ headers: req.headers });
-	if (session?.session) {
-		return {
-			token: "session",
-			clientId: "session",
-			scopes: ["mcp:full"],
-			extra: {
-				mcpContext: {
-					userId: session.user.id,
-				} satisfies McpContext,
-			},
-		};
-	}
-
-	// 2. Try API key verification (for sk_live_ tokens)
-	if (bearerToken) {
-		try {
-			const result = await auth.api.verifyApiKey({
-				body: { key: bearerToken },
-			});
-			if (result.valid && result.key) {
-				const userId = result.key.userId;
-				if (!userId) {
-					console.error("[mcp/auth] API key missing userId");
-					return undefined;
-				}
-				return {
-					token: "api-key",
-					clientId: "api-key",
-					scopes: ["mcp:full"],
-					extra: {
-						mcpContext: {
-							userId,
-						} satisfies McpContext,
-					},
-				};
-			}
-		} catch (error) {
-			console.error("[mcp/auth] API key verification failed:", error);
-		}
-	}
-
-	// 3. Try OAuth access token verification via JWKS
-	if (bearerToken) {
-		try {
-			const payload = await verifyAccessToken(bearerToken, {
-				jwksUrl: `${env.NEXT_PUBLIC_API_URL}/api/auth/jwks`,
-				verifyOptions: {
-					issuer: env.NEXT_PUBLIC_API_URL,
-					audience: [env.NEXT_PUBLIC_API_URL, `${env.NEXT_PUBLIC_API_URL}/`],
-				},
-			});
-			if (!payload?.sub) {
-				console.error(
-					"[mcp/auth] Access token missing sub claim",
-				);
-				return undefined;
-			}
-
-			const scopes = Array.isArray(payload.scope)
-				? (payload.scope as string[])
-				: typeof payload.scope === "string"
-					? payload.scope.split(" ")
-					: [];
-
-			return {
-				token: bearerToken,
-				clientId: (payload.azp as string) ?? "mcp-client",
-				scopes,
-				extra: {
-					mcpContext: {
-						userId: payload.sub,
-					} satisfies McpContext,
-				},
-			};
-		} catch (error) {
-			console.error("[mcp/auth] Access token verification failed:", error);
-			return undefined;
-		}
-	}
-
-	return undefined;
+function verifyToken(_req: Request): AuthInfo {
+	return {
+		token: "local",
+		clientId: "local",
+		scopes: ["mcp:full"],
+		extra: {
+			mcpContext: {
+				userId: LOCAL_USER_ID,
+			} satisfies McpContext,
+		},
+	};
 }
 
 function getResourceMetadataUrl(req: Request): string {
@@ -116,7 +36,7 @@ function unauthorizedResponse(req: Request): Response {
 }
 
 async function handleRequest(req: Request): Promise<Response> {
-	const authInfo = await verifyToken(req);
+	const authInfo = verifyToken(req);
 	if (!authInfo) return unauthorizedResponse(req);
 
 	const transport = new WebStandardStreamableHTTPServerTransport();

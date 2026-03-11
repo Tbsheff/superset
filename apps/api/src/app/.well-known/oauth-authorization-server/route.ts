@@ -1,4 +1,2 @@
-import { oauthProviderAuthServerMetadata } from "@better-auth/oauth-provider";
-import { auth } from "@superset/auth/server";
-
-export const GET = oauthProviderAuthServerMetadata(auth);
+// Auth removed — single-user local mode.
+export const GET = () => Response.json({});

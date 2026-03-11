@@ -69,12 +69,19 @@ export const auth = betterAuth({
 			generateId: false,
 		},
 	},
-	socialProviders: {
-		github: {
-			clientId: env.GH_CLIENT_ID,
-			clientSecret: env.GH_CLIENT_SECRET,
-		},
+	emailAndPassword: {
+		enabled: true,
 	},
+	...(env.GH_CLIENT_ID && env.GH_CLIENT_SECRET
+		? {
+				socialProviders: {
+					github: {
+						clientId: env.GH_CLIENT_ID,
+						clientSecret: env.GH_CLIENT_SECRET,
+					},
+				},
+			}
+		: {}),
 	databaseHooks: {
 		user: {
 			create: {

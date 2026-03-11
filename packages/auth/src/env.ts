@@ -7,8 +7,8 @@ config({ path: path.resolve(process.cwd(), "../../../.env"), quiet: true });
 
 export const env = createEnv({
 	server: {
-		GH_CLIENT_ID: z.string(),
-		GH_CLIENT_SECRET: z.string(),
+		GH_CLIENT_ID: z.string().optional(),
+		GH_CLIENT_SECRET: z.string().optional(),
 		BETTER_AUTH_SECRET: z.string(),
 		// Optional — rate limiting works without Redis (falls back to no-op)
 		KV_REST_API_URL: z.string().optional(),

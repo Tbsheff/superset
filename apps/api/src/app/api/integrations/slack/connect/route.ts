@@ -1,4 +1,4 @@
-import { auth } from "@superset/auth/server";
+import { LOCAL_USER_ID } from "@superset/shared/constants";
 
 import { env } from "@/env";
 import { createSignedState } from "@/lib/oauth-state";
@@ -28,18 +28,8 @@ export async function GET(request: Request) {
 		);
 	}
 
-	const session = await auth.api.getSession({
-		headers: request.headers,
-	});
-
-	if (!session?.user) {
-		return Response.json({ error: "Unauthorized" }, { status: 401 });
-	}
-
-	const userId = session.user.id;
-
 	const state = createSignedState({
-		userId,
+		userId: LOCAL_USER_ID,
 	});
 
 	const redirectUri = `${env.NEXT_PUBLIC_API_URL}/api/integrations/slack/callback`;

@@ -1,4 +1,4 @@
-import { auth } from "@superset/auth/server";
+import { LOCAL_USER_ID } from "@superset/shared/constants";
 import { tavily } from "@tavily/core";
 import { env } from "@/env";
 
@@ -25,15 +25,7 @@ function checkRateLimit(identifier: string): boolean {
 }
 
 export async function POST(request: Request): Promise<Response> {
-	const session = await auth.api.getSession({
-		headers: request.headers,
-	});
-
-	if (!session?.user) {
-		return new Response("Unauthorized", { status: 401 });
-	}
-
-	if (!checkRateLimit(session.user.id)) {
+	if (!checkRateLimit(LOCAL_USER_ID)) {
 		return Response.json(
 			{ error: "Rate limit exceeded. Try again later." },
 			{ status: 429 },

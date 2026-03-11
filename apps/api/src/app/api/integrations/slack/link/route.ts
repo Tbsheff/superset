@@ -1,9 +1,8 @@
 import { createHmac } from "node:crypto";
-import { auth } from "@superset/auth/server";
 import { db } from "@superset/db/client";
 import { integrationConnections, usersSlackUsers } from "@superset/db/schema";
+import { LOCAL_USER_ID } from "@superset/shared/constants";
 import { and, eq } from "drizzle-orm";
-import { headers } from "next/headers";
 import { env } from "@/env";
 
 export async function GET(request: Request) {
@@ -45,14 +44,7 @@ export async function GET(request: Request) {
 		return new Response("Invalid token", { status: 400 });
 	}
 
-	const session = await auth.api.getSession({ headers: await headers() });
-	if (!session?.user) {
-		// Redirect to login, then back here
-		const returnUrl = encodeURIComponent(request.url);
-		return Response.redirect(
-			`${env.NEXT_PUBLIC_WEB_URL}/sign-in?redirect=${returnUrl}`,
-		);
-	}
+	const userId = LOCAL_USER_ID;
 
 	const connection = await db.query.integrationConnections.findFirst({
 		where: and(
@@ -73,12 +65,12 @@ export async function GET(request: Request) {
 		.values({
 			slackUserId: payload.slackUserId,
 			teamId: payload.teamId,
-			userId: session.user.id,
+			userId: userId,
 		})
 		.onConflictDoUpdate({
 			target: [usersSlackUsers.slackUserId, usersSlackUsers.teamId],
 			set: {
-				userId: session.user.id,
+				userId: userId,
 			},
 		});
 

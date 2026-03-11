@@ -1,5 +1,5 @@
 import { DurableStream } from "@durable-streams/client";
-import { auth } from "@superset/auth/server";
+import { LOCAL_USER_ID } from "@superset/shared/constants";
 import { env } from "@/env";
 
 export const PROTOCOL_QUERY_PARAMS = ["offset", "live", "cursor"];
@@ -28,12 +28,11 @@ export const PRODUCER_RESPONSE_HEADERS = [
 	"content-type",
 ];
 
-export async function requireAuth(request: Request) {
-	const sessionData = await auth.api.getSession({
-		headers: request.headers,
-	});
-	if (!sessionData?.user) return null;
-	return sessionData;
+export async function requireAuth(_request: Request) {
+	return {
+		user: { id: LOCAL_USER_ID, name: "Local User", email: "local@localhost" },
+		session: { id: "local-session" },
+	};
 }
 
 export function streamUrl(sessionId: string) {

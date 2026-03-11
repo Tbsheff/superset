@@ -1,4 +1,3 @@
-import { auth } from "@superset/auth/server";
 import { db } from "@superset/db/client";
 import { integrationConnections } from "@superset/db/schema";
 import { eq } from "drizzle-orm";
@@ -7,14 +6,6 @@ const LINEAR_IMAGE_HOST = "uploads.linear.app";
 const CACHE_MAX_AGE = 31536000; // 1 year (Linear URLs are content-addressed)
 
 export async function GET(request: Request): Promise<Response> {
-	const sessionData = await auth.api.getSession({
-		headers: request.headers,
-	});
-
-	if (!sessionData?.user) {
-		return new Response("Unauthorized", { status: 401 });
-	}
-
 	const url = new URL(request.url);
 	const linearUrl = url.searchParams.get("url");
 

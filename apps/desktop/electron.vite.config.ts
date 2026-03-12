@@ -1,5 +1,4 @@
 import { resolve } from "node:path";
-import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import reactPlugin from "@vitejs/plugin-react";
@@ -33,16 +32,6 @@ const workspaceDependencies = Object.keys(dependencies).filter((dependency) =>
 	dependency.startsWith("@superset/"),
 );
 
-// Sentry plugin for uploading sourcemaps (only in CI with auth token)
-const sentryPlugin = process.env.SENTRY_AUTH_TOKEN
-	? sentryVitePlugin({
-			org: "superset-sh",
-			project: "desktop",
-			authToken: process.env.SENTRY_AUTH_TOKEN,
-			release: { name: version },
-		})
-	: null;
-
 export default defineConfig({
 	main: {
 		plugins: [tsconfigPaths, copyResourcesPlugin()],
@@ -68,9 +57,6 @@ export default defineConfig({
 			"process.env.NEXT_PUBLIC_DOCS_URL": defineEnv(
 				process.env.NEXT_PUBLIC_DOCS_URL,
 				"https://docs.superset.sh",
-			),
-			"process.env.SENTRY_DSN_DESKTOP": defineEnv(
-				process.env.SENTRY_DSN_DESKTOP,
 			),
 			// Must match renderer for analytics in main process
 			"process.env.NEXT_PUBLIC_POSTHOG_KEY": defineEnv(
@@ -114,7 +100,6 @@ export default defineConfig({
 					dir: resolve(devPath, "main"),
 				},
 				external: ["electron", ...mainExternalizedDependencies],
-				plugins: [sentryPlugin].filter(Boolean),
 			},
 		},
 		resolve: {
@@ -132,7 +117,6 @@ export default defineConfig({
 			externalizeDepsPlugin({
 				exclude: [
 					"trpc-electron",
-					"@sentry/electron",
 					...workspaceDependencies,
 				],
 			}),
@@ -183,9 +167,6 @@ export default defineConfig({
 			),
 			"import.meta.env.NEXT_PUBLIC_POSTHOG_HOST": defineEnv(
 				process.env.NEXT_PUBLIC_POSTHOG_HOST,
-			),
-			"import.meta.env.SENTRY_DSN_DESKTOP": defineEnv(
-				process.env.SENTRY_DSN_DESKTOP,
 			),
 			"process.env.STREAMS_URL": defineEnv(
 				process.env.STREAMS_URL,
@@ -248,8 +229,7 @@ export default defineConfig({
 						NODE_ENV: "production",
 						platform: process.platform,
 					}),
-					sentryPlugin,
-				].filter(Boolean),
+				],
 
 				input: {
 					index: resolve("src/renderer/index.html"),

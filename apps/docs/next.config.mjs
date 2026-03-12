@@ -1,5 +1,4 @@
 import { join } from "node:path";
-import { withSentryConfig } from "@sentry/nextjs";
 import { config as dotenvConfig } from "dotenv";
 import { createMDX } from "fumadocs-mdx/next";
 
@@ -64,10 +63,4 @@ const config = {
 	skipTrailingSlashRedirect: true,
 };
 
-export default withSentryConfig(withMDX(config), {
-	org: "superset-sh",
-	project: "docs",
-	silent: !process.env.CI,
-	widenClientFileUpload: true,
-	tunnelRoute: "/monitoring",
-});
+export default withMDX(config);

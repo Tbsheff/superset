@@ -10,19 +10,13 @@ export const env = createEnv({
 			.default("development"),
 	},
 
-	server: {
-		SENTRY_AUTH_TOKEN: z.string().optional(),
-	},
+	server: {},
 
 	client: {
 		NEXT_PUBLIC_MARKETING_URL: z.string().url().optional(),
 		NEXT_PUBLIC_OUTLIT_KEY: z.string(),
 		NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),
 		NEXT_PUBLIC_POSTHOG_HOST: z.string().url().optional(),
-		NEXT_PUBLIC_SENTRY_DSN_DOCS: z.string().optional(),
-		NEXT_PUBLIC_SENTRY_ENVIRONMENT: z
-			.enum(["development", "preview", "production"])
-			.optional(),
 	},
 
 	experimental__runtimeEnv: {
@@ -31,8 +25,6 @@ export const env = createEnv({
 		NEXT_PUBLIC_OUTLIT_KEY: process.env.NEXT_PUBLIC_OUTLIT_KEY,
 		NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
 		NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
-		NEXT_PUBLIC_SENTRY_DSN_DOCS: process.env.NEXT_PUBLIC_SENTRY_DSN_DOCS,
-		NEXT_PUBLIC_SENTRY_ENVIRONMENT: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT,
 	},
 
 	skipValidation: !!process.env.SKIP_ENV_VALIDATION,

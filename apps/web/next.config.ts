@@ -1,5 +1,4 @@
 import { join } from "node:path";
-import { withSentryConfig } from "@sentry/nextjs";
 import { config as dotenvConfig } from "dotenv";
 import type { NextConfig } from "next";
 
@@ -45,13 +44,4 @@ const config: NextConfig = {
 	skipTrailingSlashRedirect: true,
 };
 
-export default withSentryConfig(config, {
-	org: "superset-sh",
-	project: "web",
-	silent: !process.env.CI,
-	authToken: process.env.SENTRY_AUTH_TOKEN,
-	widenClientFileUpload: true,
-	tunnelRoute: "/monitoring",
-	disableLogger: true,
-	automaticVercelMonitors: true,
-});
+export default config;

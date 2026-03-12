@@ -32,7 +32,6 @@ import { getHostServiceManager } from "./lib/host-service-manager";
 import { localDb } from "./lib/local-db";
 import { outlit } from "./lib/outlit";
 import { ensureProjectIconsDir, getProjectIconPath } from "./lib/project-icons";
-import { initSentry } from "./lib/sentry";
 import {
 	prewarmTerminalRuntime,
 	reconcileDaemonSessions,
@@ -293,7 +292,6 @@ if (!gotTheLock) {
 
 		ensureProjectIconsDir();
 		setWorkspaceDockIcon();
-		initSentry();
 		await initAppState();
 
 		await loadWebviewBrowserExtension();

@@ -12,7 +12,6 @@
 	},
 	"dependencies": {
 		"@outlit/browser": "^1.4.3",
-		"@sentry/nextjs": "^10.36.0",
 		"@superset/auth": "workspace:*",
 		"@superset/db": "workspace:*",
 		"@superset/shared": "workspace:*",

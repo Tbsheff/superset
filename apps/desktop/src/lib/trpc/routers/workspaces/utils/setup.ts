@@ -1,6 +1,6 @@
-import { cpSync, existsSync, readFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import {
 	CONFIG_FILE_NAME,
 	LOCAL_CONFIG_FILE_NAME,
@@ -73,28 +73,53 @@ export async function copyGitignoredFiles(
 		return { copied, errors: [msg] };
 	}
 
+	const resolvedMainRepo = resolve(mainRepoPath);
+	const resolvedWorktree = resolve(worktreePath);
+
 	const paths = stdout
 		.split("\n")
 		.map((p) => p.trim())
 		.filter((p) => p.length > 0 && !IGNORED_COPY_PATTERNS.has(p));
 
 	const cpFlag = process.platform === "darwin" ? "-cR" : "-R";
+	const MAX_CONCURRENCY = 4;
 
-	for (const relPath of paths) {
-		const src = join(mainRepoPath, relPath);
-		const dest = join(worktreePath, relPath);
+	// Process copies with bounded concurrency
+	for (let i = 0; i < paths.length; i += MAX_CONCURRENCY) {
+		const batch = paths.slice(i, i + MAX_CONCURRENCY);
+		const results = await Promise.allSettled(
+			batch.map(async (relPath) => {
+				const src = resolve(mainRepoPath, relPath);
+				const dest = resolve(worktreePath, relPath);
 
-		if (!existsSync(src) || existsSync(dest)) {
-			continue;
-		}
+				// Validate paths stay within expected directories
+				if (
+					!src.startsWith(`${resolvedMainRepo}/`) ||
+					!dest.startsWith(`${resolvedWorktree}/`)
+				) {
+					return;
+				}
 
-		try {
-			await execWithShellEnv("cp", [cpFlag, src, dest], { timeout: 120_000 });
-			copied.push(relPath);
-		} catch (error) {
-			const msg = `${relPath}: ${error instanceof Error ? error.message : String(error)}`;
-			console.warn(`[setup] Failed to copy gitignored file: ${msg}`);
-			errors.push(msg);
+				if (!existsSync(src) || existsSync(dest)) {
+					return;
+				}
+
+				mkdirSync(dirname(dest), { recursive: true });
+				await execWithShellEnv("cp", [cpFlag, src, dest], {
+					timeout: 120_000,
+				});
+				copied.push(relPath);
+			}),
+		);
+
+		for (let j = 0; j < results.length; j++) {
+			const result = results[j];
+			if (result.status === "rejected") {
+				const relPath = batch[j];
+				const msg = `${relPath}: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`;
+				console.warn(`[setup] Failed to copy gitignored file: ${msg}`);
+				errors.push(msg);
+			}
 		}
 	}
 

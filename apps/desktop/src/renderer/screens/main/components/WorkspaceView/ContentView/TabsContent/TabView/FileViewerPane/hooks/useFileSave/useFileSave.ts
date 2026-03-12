@@ -91,8 +91,7 @@ export function useFileSave({
 
 	const handleSaveRaw = useCallback(
 		async (options?: { force?: boolean }) => {
-			const content =
-				editorRef.current?.getValue() ?? draftContentRef.current;
+			const content = editorRef.current?.getValue() ?? draftContentRef.current;
 			if (!content || !filePath || !worktreePath) return;
 			savingFromRawRef.current = !!editorRef.current;
 			return saveFileMutation.mutateAsync({

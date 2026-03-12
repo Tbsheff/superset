@@ -15,6 +15,8 @@ import type {
 const execFileAsync = promisify(execFile);
 
 const SEARCH_INDEX_TTL_MS = 30_000;
+const MAX_SEARCH_INDEX_CACHE_SIZE = 5;
+const SEARCH_INDEX_CLEANUP_INTERVAL_MS = 60_000;
 const MAX_SEARCH_RESULTS = 500;
 const MAX_KEYWORD_FILE_SIZE_BYTES = 1024 * 1024;
 const BINARY_CHECK_SIZE = 8192;
@@ -84,6 +86,40 @@ export interface SearchKeywordOptions {
 const searchIndexCache = new Map<string, FileSearchCacheEntry>();
 const searchIndexBuilds = new Map<string, Promise<FileSearchIndex>>();
 const searchIndexVersions = new Map<string, number>();
+
+function evictStaleSearchIndexEntries(): void {
+	const now = Date.now();
+	for (const [key, entry] of searchIndexCache) {
+		if (now - entry.builtAt >= SEARCH_INDEX_TTL_MS) {
+			searchIndexCache.delete(key);
+			searchIndexVersions.delete(key);
+		}
+	}
+}
+
+const searchIndexCleanupTimer = setInterval(
+	evictStaleSearchIndexEntries,
+	SEARCH_INDEX_CLEANUP_INTERVAL_MS,
+);
+searchIndexCleanupTimer.unref?.();
+
+function enforceSearchIndexCacheLimit(): void {
+	if (searchIndexCache.size <= MAX_SEARCH_INDEX_CACHE_SIZE) {
+		return;
+	}
+	let oldestKey: string | null = null;
+	let oldestTime = Number.POSITIVE_INFINITY;
+	for (const [key, entry] of searchIndexCache) {
+		if (entry.builtAt < oldestTime) {
+			oldestTime = entry.builtAt;
+			oldestKey = key;
+		}
+	}
+	if (oldestKey) {
+		searchIndexCache.delete(oldestKey);
+		searchIndexVersions.delete(oldestKey);
+	}
+}
 
 function createFileSearchFuse(
 	items: WorkspaceFsEntry[],
@@ -290,6 +326,7 @@ async function getSearchIndex(
 			.then((index) => {
 				if (getSearchIndexVersion(cacheKey) === buildVersion) {
 					searchIndexCache.set(cacheKey, { index, builtAt: Date.now() });
+					enforceSearchIndexCacheLimit();
 				}
 				searchIndexBuilds.delete(cacheKey);
 				return index;
@@ -315,6 +352,7 @@ async function getSearchIndex(
 		.then((index) => {
 			if (getSearchIndexVersion(cacheKey) === buildVersion) {
 				searchIndexCache.set(cacheKey, { index, builtAt: Date.now() });
+				enforceSearchIndexCacheLimit();
 			}
 			searchIndexBuilds.delete(cacheKey);
 			return index;
@@ -728,6 +766,7 @@ export function invalidateAllSearchIndexes(): void {
 	}
 	searchIndexCache.clear();
 	searchIndexBuilds.clear();
+	searchIndexVersions.clear();
 }
 
 export function patchSearchIndexesForRoot(
@@ -786,6 +825,7 @@ export function patchSearchIndexesForRoot(
 			},
 			builtAt: Date.now(),
 		});
+		enforceSearchIndexCacheLimit();
 	}
 }
 

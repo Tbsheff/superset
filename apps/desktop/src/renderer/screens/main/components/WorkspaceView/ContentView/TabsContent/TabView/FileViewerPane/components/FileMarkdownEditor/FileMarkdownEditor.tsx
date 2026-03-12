@@ -28,12 +28,10 @@ import TaskList from "@tiptap/extension-task-list";
 import { Text } from "@tiptap/extension-text";
 import { Underline } from "@tiptap/extension-underline";
 import { EditorContent, ReactNodeViewRenderer, useEditor } from "@tiptap/react";
-import { common, createLowlight } from "lowlight";
 import { useCallback, useEffect, useRef } from "react";
+import { lowlight } from "renderer/lib/lowlight";
 import { CodeBlockView } from "renderer/routes/_authenticated/_dashboard/tasks/$taskId/components/TaskMarkdownRenderer/components/CodeBlockView";
 import { Markdown } from "tiptap-markdown";
-
-const lowlight = createLowlight(common);
 
 const HEADING_CLASSES: Record<number, string> = {
 	1: "text-3xl font-bold leading-tight mt-0 mb-3",

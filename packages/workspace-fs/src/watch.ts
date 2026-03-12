@@ -287,6 +287,8 @@ export interface WorkspaceFsWatcherManagerOptions {
 	ignore?: string[];
 }
 
+const MAX_PATH_TYPES_SIZE = 50_000;
+
 export class WorkspaceFsWatcherManager {
 	private readonly debounceMs: number;
 	private readonly ignore: string[];
@@ -331,6 +333,8 @@ export class WorkspaceFsWatcherManager {
 				currentState.flushTimer = null;
 			}
 
+			currentState.pathTypes.clear();
+			currentState.pendingEvents.length = 0;
 			await currentState.subscription.unsubscribe();
 			this.watchers.delete(key);
 		};
@@ -343,6 +347,8 @@ export class WorkspaceFsWatcherManager {
 					clearTimeout(state.flushTimer);
 					state.flushTimer = null;
 				}
+				state.pathTypes.clear();
+				state.pendingEvents.length = 0;
 				await state.subscription.unsubscribe();
 			}),
 		);
@@ -450,6 +456,12 @@ export class WorkspaceFsWatcherManager {
 			try {
 				const stats = await stat(absolutePath);
 				isDirectory = stats.isDirectory();
+				if (state.pathTypes.size >= MAX_PATH_TYPES_SIZE) {
+					const firstKey = state.pathTypes.keys().next().value;
+					if (firstKey !== undefined) {
+						state.pathTypes.delete(firstKey);
+					}
+				}
 				state.pathTypes.set(absolutePath, isDirectory);
 			} catch {
 				isDirectory = state.pathTypes.get(absolutePath) ?? false;

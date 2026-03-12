@@ -8,10 +8,13 @@ const queryClient = new QueryClient({
 		queries: {
 			networkMode: "always",
 			retry: false,
+			gcTime: 5 * 60 * 1000,
+			staleTime: 30 * 1000,
 		},
 		mutations: {
 			networkMode: "always",
 			retry: false,
+			gcTime: 60 * 1000,
 		},
 	},
 });

@@ -19,6 +19,10 @@ import { ListItem } from "@tiptap/extension-list-item";
 import { OrderedList } from "@tiptap/extension-ordered-list";
 import { Paragraph } from "@tiptap/extension-paragraph";
 import { Strike } from "@tiptap/extension-strike";
+import { Table } from "@tiptap/extension-table";
+import { TableCell } from "@tiptap/extension-table-cell";
+import { TableHeader } from "@tiptap/extension-table-header";
+import { TableRow } from "@tiptap/extension-table-row";
 import TaskItem from "@tiptap/extension-task-item";
 import TaskList from "@tiptap/extension-task-list";
 import { Text } from "@tiptap/extension-text";
@@ -181,6 +185,26 @@ export function FileMarkdownEditor({
 			}),
 			Image.configure({
 				HTMLAttributes: { class: "max-w-full h-auto rounded-md my-3" },
+			}),
+			Table.configure({
+				resizable: false,
+				HTMLAttributes: {
+					class: "my-3 w-full border-collapse border border-border text-sm",
+				},
+			}),
+			TableRow.configure({
+				HTMLAttributes: {},
+			}),
+			TableHeader.configure({
+				HTMLAttributes: {
+					class:
+						"border border-border bg-muted px-3 py-2 text-left font-semibold",
+				},
+			}),
+			TableCell.configure({
+				HTMLAttributes: {
+					class: "border border-border px-3 py-2",
+				},
 			}),
 			Markdown.configure({
 				html: true,

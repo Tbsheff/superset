@@ -10,7 +10,7 @@ export async function fetchGitHubOwner(
 	try {
 		const { stdout } = await execWithShellEnv(
 			"gh",
-			["repo", "view", "--jq", ".owner.login"],
+			["repo", "view", "--json", "owner", "--jq", ".owner.login"],
 			{ cwd: repoPath },
 		);
 		const owner = stdout.trim();

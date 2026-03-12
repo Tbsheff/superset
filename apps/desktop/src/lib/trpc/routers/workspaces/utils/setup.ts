@@ -9,6 +9,7 @@ import {
 	SUPERSET_DIR_NAME,
 } from "shared/constants";
 import type { LocalSetupConfig, SetupConfig } from "shared/types";
+import { execWithShellEnv } from "./shell-env";
 
 /**
  * Worktrees don't include gitignored files, so copy .superset from main repo
@@ -30,6 +31,74 @@ export function copySupersetConfigToWorktree(
 			);
 		}
 	}
+}
+
+const IGNORED_COPY_PATTERNS = new Set([
+	".superset/", // Already handled by copySupersetConfigToWorktree
+	".superset",
+	".git/",
+	".git",
+]);
+
+/**
+ * Copy gitignored files (node_modules, .env, .next, etc.) from main repo to worktree.
+ * Uses APFS copy-on-write cloning on macOS for near-instant, space-efficient copies.
+ */
+export async function copyGitignoredFiles(
+	mainRepoPath: string,
+	worktreePath: string,
+): Promise<{ copied: string[]; errors: string[] }> {
+	const copied: string[] = [];
+	const errors: string[] = [];
+
+	let stdout: string;
+	try {
+		const result = await execWithShellEnv(
+			"git",
+			[
+				"-C",
+				mainRepoPath,
+				"ls-files",
+				"--others",
+				"--ignored",
+				"--exclude-standard",
+				"--directory",
+			],
+			{ timeout: 10_000 },
+		);
+		stdout = result.stdout;
+	} catch (error) {
+		const msg = error instanceof Error ? error.message : String(error);
+		console.warn(`[setup] Failed to list gitignored files: ${msg}`);
+		return { copied, errors: [msg] };
+	}
+
+	const paths = stdout
+		.split("\n")
+		.map((p) => p.trim())
+		.filter((p) => p.length > 0 && !IGNORED_COPY_PATTERNS.has(p));
+
+	const cpFlag = process.platform === "darwin" ? "-cR" : "-R";
+
+	for (const relPath of paths) {
+		const src = join(mainRepoPath, relPath);
+		const dest = join(worktreePath, relPath);
+
+		if (!existsSync(src) || existsSync(dest)) {
+			continue;
+		}
+
+		try {
+			await execWithShellEnv("cp", [cpFlag, src, dest], { timeout: 120_000 });
+			copied.push(relPath);
+		} catch (error) {
+			const msg = `${relPath}: ${error instanceof Error ? error.message : String(error)}`;
+			console.warn(`[setup] Failed to copy gitignored file: ${msg}`);
+			errors.push(msg);
+		}
+	}
+
+	return { copied, errors };
 }
 
 function readConfigFile(configPath: string): SetupConfig | null {

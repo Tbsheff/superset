@@ -18,7 +18,7 @@ import {
 	removeWorktree,
 	sanitizeGitError,
 } from "./git";
-import { copySupersetConfigToWorktree } from "./setup";
+import { copyGitignoredFiles, copySupersetConfigToWorktree } from "./setup";
 
 export interface WorkspaceInitParams {
 	workspaceId: string;
@@ -138,6 +138,36 @@ export async function initializeWorkspaceWorktree({
 				"Copying configuration...",
 			);
 			copySupersetConfigToWorktree(mainRepoPath, worktreePath);
+
+			if (manager.isCancellationRequested(workspaceId)) {
+				try {
+					await removeWorktree(mainRepoPath, worktreePath);
+				} catch (e) {
+					console.error(
+						"[workspace-init] Failed to cleanup worktree after cancel:",
+						e,
+					);
+				}
+				return;
+			}
+
+			manager.updateProgress(
+				workspaceId,
+				"copying_files",
+				"Copying project files...",
+			);
+			const copyResult = await copyGitignoredFiles(mainRepoPath, worktreePath);
+			if (copyResult.copied.length > 0) {
+				console.log(
+					`[workspace-init] Copied ${copyResult.copied.length} gitignored items to worktree`,
+				);
+			}
+			if (copyResult.errors.length > 0) {
+				console.warn(
+					"[workspace-init] Some files failed to copy:",
+					copyResult.errors,
+				);
+			}
 
 			if (manager.isCancellationRequested(workspaceId)) {
 				try {
@@ -440,6 +470,36 @@ export async function initializeWorkspaceWorktree({
 			"Copying configuration...",
 		);
 		copySupersetConfigToWorktree(mainRepoPath, worktreePath);
+
+		if (manager.isCancellationRequested(workspaceId)) {
+			try {
+				await removeWorktree(mainRepoPath, worktreePath);
+			} catch (e) {
+				console.error(
+					"[workspace-init] Failed to cleanup worktree after cancel:",
+					e,
+				);
+			}
+			return;
+		}
+
+		manager.updateProgress(
+			workspaceId,
+			"copying_files",
+			"Copying project files...",
+		);
+		const copyResult = await copyGitignoredFiles(mainRepoPath, worktreePath);
+		if (copyResult.copied.length > 0) {
+			console.log(
+				`[workspace-init] Copied ${copyResult.copied.length} gitignored items to worktree`,
+			);
+		}
+		if (copyResult.errors.length > 0) {
+			console.warn(
+				"[workspace-init] Some files failed to copy:",
+				copyResult.errors,
+			);
+		}
 
 		if (manager.isCancellationRequested(workspaceId)) {
 			try {

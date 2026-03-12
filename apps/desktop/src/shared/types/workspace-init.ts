@@ -10,6 +10,7 @@ export type WorkspaceInitStep =
 	| "fetching" // Fetching latest changes
 	| "creating_worktree" // Creating git worktree
 	| "copying_config" // Copying .superset configuration
+	| "copying_files" // Copying gitignored files (node_modules, .env, etc.)
 	| "finalizing" // Final DB operations
 	| "ready"
 	| "failed";
@@ -30,6 +31,7 @@ export const INIT_STEP_MESSAGES: Record<WorkspaceInitStep, string> = {
 	fetching: "Fetching latest changes...",
 	creating_worktree: "Creating git worktree...",
 	copying_config: "Copying configuration...",
+	copying_files: "Copying project files...",
 	finalizing: "Finalizing setup...",
 	ready: "Ready",
 	failed: "Failed",
@@ -46,6 +48,7 @@ export const INIT_STEP_ORDER: WorkspaceInitStep[] = [
 	"fetching",
 	"creating_worktree",
 	"copying_config",
+	"copying_files",
 	"finalizing",
 	"ready",
 ];

@@ -2,11 +2,8 @@ import { cn } from "@superset/ui/utils";
 import { Link, useMatchRoute } from "@tanstack/react-router";
 import {
 	HiOutlineBell,
-	HiOutlineBuildingOffice2,
 	HiOutlineCommandLine,
-	HiOutlineCreditCard,
 	HiOutlineDevicePhoneMobile,
-	HiOutlineKey,
 	HiOutlinePaintBrush,
 	HiOutlinePuzzlePiece,
 	HiOutlineShieldCheck,
@@ -23,7 +20,6 @@ interface GeneralSettingsProps {
 
 type SettingsRoute =
 	| "/settings/account"
-	| "/settings/organization"
 	| "/settings/appearance"
 	| "/settings/ringtones"
 	| "/settings/keyboard"
@@ -32,9 +28,7 @@ type SettingsRoute =
 	| "/settings/terminal"
 	| "/settings/models"
 	| "/settings/integrations"
-	| "/settings/billing"
 	| "/settings/devices"
-	| "/settings/api-keys"
 	| "/settings/permissions";
 
 interface SectionItem {
@@ -110,14 +104,8 @@ const SECTION_GROUPS: SectionGroup[] = [
 		],
 	},
 	{
-		label: "Organization",
+		label: "Workspace",
 		items: [
-			{
-				id: "/settings/organization",
-				section: "organization",
-				label: "Organization",
-				icon: <HiOutlineBuildingOffice2 className="h-4 w-4" />,
-			},
 			{
 				id: "/settings/integrations",
 				section: "integrations",
@@ -125,22 +113,10 @@ const SECTION_GROUPS: SectionGroup[] = [
 				icon: <HiOutlinePuzzlePiece className="h-4 w-4" />,
 			},
 			{
-				id: "/settings/billing",
-				section: "billing",
-				label: "Billing",
-				icon: <HiOutlineCreditCard className="h-4 w-4" />,
-			},
-			{
 				id: "/settings/devices",
 				section: "devices",
 				label: "Devices",
 				icon: <HiOutlineDevicePhoneMobile className="h-4 w-4" />,
-			},
-			{
-				id: "/settings/api-keys",
-				section: "apikeys",
-				label: "API Keys",
-				icon: <HiOutlineKey className="h-4 w-4" />,
 			},
 		],
 	},

@@ -3,7 +3,6 @@ import { devtools } from "zustand/middleware";
 
 export type SettingsSection =
 	| "account"
-	| "organization"
 	| "appearance"
 	| "ringtones"
 	| "keyboard"
@@ -12,9 +11,7 @@ export type SettingsSection =
 	| "terminal"
 	| "models"
 	| "integrations"
-	| "billing"
 	| "devices"
-	| "apikeys"
 	| "permissions"
 	| "project";
 

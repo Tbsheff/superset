@@ -12,7 +12,6 @@ import {
 	GoGitPullRequestDraft,
 } from "react-icons/go";
 import { SiGithub } from "react-icons/si";
-import { GATED_FEATURES, usePaywall } from "renderer/components/Paywall";
 import { useDebouncedValue } from "renderer/hooks/useDebouncedValue";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useCreateFromPr } from "renderer/react-query/workspaces/useCreateFromPr";
@@ -33,7 +32,6 @@ export function PullRequestsGroup({
 }: PullRequestsGroupProps) {
 	const collections = useCollections();
 	const navigate = useNavigate();
-	const { gateFeature } = usePaywall();
 	const createFromPr = useCreateFromPr();
 	const { draft, closeAndResetDraft, runAsyncAction } =
 		useNewWorkspaceModalDraft();
@@ -191,10 +189,8 @@ export function PullRequestsGroup({
 						size="sm"
 						variant="outline"
 						onClick={() => {
-							gateFeature(GATED_FEATURES.INTEGRATIONS, () => {
-								closeAndResetDraft();
-								navigate({ to: "/settings/integrations" });
-							});
+							closeAndResetDraft();
+							navigate({ to: "/settings/integrations" });
 						}}
 					>
 						Connect

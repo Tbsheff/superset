@@ -9,7 +9,6 @@ import { useMemo } from "react";
 import { GoArrowUpRight } from "react-icons/go";
 import { HiOutlineUserCircle } from "react-icons/hi2";
 import { SiLinear } from "react-icons/si";
-import { GATED_FEATURES, usePaywall } from "renderer/components/Paywall";
 import { useDebouncedValue } from "renderer/hooks/useDebouncedValue";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { getSlugColumnWidth } from "renderer/lib/slug-width";
@@ -31,7 +30,6 @@ interface IssuesGroupProps {
 export function IssuesGroup({ projectId }: IssuesGroupProps) {
 	const collections = useCollections();
 	const navigate = useNavigate();
-	const { gateFeature } = usePaywall();
 	const createWorkspace = useCreateWorkspace();
 	const { draft, closeAndResetDraft, runAsyncAction } =
 		useNewWorkspaceModalDraft();
@@ -118,10 +116,8 @@ export function IssuesGroup({ projectId }: IssuesGroupProps) {
 					size="sm"
 					variant="outline"
 					onClick={() => {
-						gateFeature(GATED_FEATURES.INTEGRATIONS, () => {
-							closeAndResetDraft();
-							navigate({ to: "/settings/integrations" });
-						});
+						closeAndResetDraft();
+						navigate({ to: "/settings/integrations" });
 					}}
 				>
 					Connect

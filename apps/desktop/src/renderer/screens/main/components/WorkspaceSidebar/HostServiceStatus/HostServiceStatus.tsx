@@ -1,4 +1,3 @@
-import { FEATURE_FLAGS } from "@superset/shared/constants";
 import { Badge } from "@superset/ui/badge";
 import { Button } from "@superset/ui/button";
 import {
@@ -8,13 +7,9 @@ import {
 	DialogTitle,
 } from "@superset/ui/dialog";
 import { ScrollArea } from "@superset/ui/scroll-area";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useCallback, useEffect, useState } from "react";
-import { env } from "renderer/env.renderer";
-import { authClient } from "renderer/lib/auth-client";
 import type { HostServiceClient } from "renderer/lib/host-service-client";
 import { useHostService } from "renderer/routes/_authenticated/providers/HostServiceProvider";
-import { MOCK_ORG_ID } from "shared/constants";
 
 type HealthStatus = "unknown" | "ok" | "error";
 
@@ -35,15 +30,10 @@ type CloudWhoamiResult = Awaited<
 >;
 
 export function HostServiceStatus() {
-	const enabled = useFeatureFlagEnabled(FEATURE_FLAGS.V2_CLOUD);
+	const enabled = false;
 	const { services } = useHostService();
-	const { data: session } = authClient.useSession();
 
-	const activeOrgId = env.SKIP_ENV_VALIDATION
-		? MOCK_ORG_ID
-		: (session?.session?.activeOrganizationId ?? null);
-
-	const service = activeOrgId ? services.get(activeOrgId) : null;
+	const service = services.get("local") ?? null;
 
 	const [open, setOpen] = useState(false);
 	const [status, setStatus] = useState<HealthStatus>("unknown");

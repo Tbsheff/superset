@@ -1,4 +1,3 @@
-import { COMPANY, FEATURE_FLAGS } from "@superset/shared/constants";
 import { Badge } from "@superset/ui/badge";
 import { Button } from "@superset/ui/button";
 import {
@@ -10,7 +9,6 @@ import {
 import { Input } from "@superset/ui/input";
 import { Skeleton } from "@superset/ui/skeleton";
 import { useLiveQuery } from "@tanstack/react-db";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useCallback, useEffect, useState } from "react";
 import { FaGithub, FaSlack } from "react-icons/fa";
 import {
@@ -18,7 +16,6 @@ import {
 	HiOutlineArrowTopRightOnSquare,
 } from "react-icons/hi2";
 import { SiLinear } from "react-icons/si";
-import { GATED_FEATURES, usePaywall } from "renderer/components/Paywall";
 import { env } from "renderer/env.renderer";
 import { apiTrpcClient } from "renderer/lib/api-trpc-client";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
@@ -45,7 +42,6 @@ export function IntegrationsSettings({
 	visibleItems,
 }: IntegrationsSettingsProps) {
 	const collections = useCollections();
-	const { gateFeature } = usePaywall();
 
 	const { data: integrations } = useLiveQuery(
 		(q) =>
@@ -61,12 +57,8 @@ export function IntegrationsSettings({
 		useState<GithubInstallation | null>(null);
 	const [isLoadingGithub, setIsLoadingGithub] = useState(true);
 
-	const hasGithubAccess = useFeatureFlagEnabled(
-		FEATURE_FLAGS.GITHUB_INTEGRATION_ACCESS,
-	);
-	const hasSlackAccess = useFeatureFlagEnabled(
-		FEATURE_FLAGS.SLACK_INTEGRATION_ACCESS,
-	);
+	const hasGithubAccess = true;
+	const hasSlackAccess = true;
 
 	const showLinear = isItemVisible(
 		SETTING_ITEM_ID.INTEGRATIONS_LINEAR,

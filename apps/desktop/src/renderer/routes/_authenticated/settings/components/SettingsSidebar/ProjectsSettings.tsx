@@ -1,4 +1,3 @@
-import { FEATURE_FLAGS } from "@superset/shared/constants";
 import {
 	Collapsible,
 	CollapsibleContent,
@@ -6,7 +5,6 @@ import {
 } from "@superset/ui/collapsible";
 import { cn } from "@superset/ui/utils";
 import { Link, useMatchRoute } from "@tanstack/react-router";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useMemo } from "react";
 import { HiChevronDown, HiChevronRight } from "react-icons/hi2";
 import { electronTrpc } from "renderer/lib/electron-trpc";
@@ -20,7 +18,7 @@ export function ProjectsSettings({ searchQuery }: ProjectsSettingsProps) {
 	const { data: groups = [] } =
 		electronTrpc.workspaces.getAllGrouped.useQuery();
 	const matchRoute = useMatchRoute();
-	const hasCloudAccess = useFeatureFlagEnabled(FEATURE_FLAGS.CLOUD_ACCESS);
+	const hasCloudAccess = false;
 
 	const matchCounts = useMemo(() => {
 		if (!searchQuery) return null;

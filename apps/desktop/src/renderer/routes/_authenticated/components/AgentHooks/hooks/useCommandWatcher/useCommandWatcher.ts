@@ -1,9 +1,6 @@
-import { FEATURE_FLAGS } from "@superset/shared/constants";
 import { eq } from "@tanstack/db";
 import { useLiveQuery } from "@tanstack/react-db";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useCallback, useEffect, useMemo } from "react";
-import { authClient } from "renderer/lib/auth-client";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useCreateWorkspace } from "renderer/react-query/workspaces/useCreateWorkspace";
 import { useDeleteWorkspace } from "renderer/react-query/workspaces/useDeleteWorkspace";
@@ -16,14 +13,10 @@ const handledCommands = new Set<string>();
 
 export function useCommandWatcher() {
 	const { data: deviceInfo } = electronTrpc.auth.getDeviceInfo.useQuery();
-	const { data: session } = authClient.useSession();
 	const collections = useCollections();
 
-	const organizationId = session?.session?.activeOrganizationId;
-	const remoteAgentDisabled = useFeatureFlagEnabled(
-		FEATURE_FLAGS.DISABLE_REMOTE_AGENT,
-	);
-	const shouldWatch = !!deviceInfo && !!organizationId && !remoteAgentDisabled;
+	const remoteAgentDisabled = false;
+	const shouldWatch = !!deviceInfo && !remoteAgentDisabled;
 
 	const createWorktree = useCreateWorkspace({ skipNavigation: true });
 	const setActive = electronTrpc.workspaces.setActive.useMutation();
@@ -136,12 +129,7 @@ export function useCommandWatcher() {
 	);
 
 	useEffect(() => {
-		if (
-			!shouldWatch ||
-			!deviceInfo?.deviceId ||
-			!pendingCommands ||
-			!organizationId
-		) {
+		if (!shouldWatch || !deviceInfo?.deviceId || !pendingCommands) {
 			return;
 		}
 
@@ -150,7 +138,6 @@ export function useCommandWatcher() {
 		// Expire timed-out commands before filtering for execution
 		for (const cmd of pendingCommands) {
 			if (cmd.targetDeviceId !== deviceInfo.deviceId) continue;
-			if (cmd.organizationId !== organizationId) continue;
 			if (handledCommands.has(cmd.id)) continue;
 			if (cmd.timeoutAt && new Date(cmd.timeoutAt) < now) {
 				collections.agentCommands.update(cmd.id, (draft) => {
@@ -164,13 +151,6 @@ export function useCommandWatcher() {
 		const commandsForThisDevice = pendingCommands.filter((cmd) => {
 			if (cmd.targetDeviceId !== deviceInfo.deviceId) return false;
 			if (handledCommands.has(cmd.id)) return false;
-
-			// Security: verify org matches (don't trust Electric filtering alone)
-			if (cmd.organizationId !== organizationId) {
-				console.warn(`[command-watcher] Org mismatch for ${cmd.id}`);
-				return false;
-			}
-
 			return true;
 		});
 
@@ -180,7 +160,6 @@ export function useCommandWatcher() {
 	}, [
 		shouldWatch,
 		deviceInfo?.deviceId,
-		organizationId,
 		pendingCommands,
 		processCommand,
 		collections.agentCommands,

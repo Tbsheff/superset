@@ -344,10 +344,7 @@ export function PresetsBar() {
 	);
 
 	return (
-		<div
-			className="flex items-center h-8 border-b border-border bg-background px-2 gap-0.5 overflow-x-auto shrink-0"
-			style={{ scrollbarWidth: "none" }}
-		>
+		<div className="flex items-center shrink-0 gap-0.5 border-l border-border px-1.5">
 			<DropdownMenu>
 				<Tooltip>
 					<TooltipTrigger asChild>

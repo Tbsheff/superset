@@ -26,6 +26,7 @@ import {
 } from "shared/constants";
 import { type ActivePaneStatus, pickHigherStatus } from "shared/tabs-types";
 import { SidebarControl } from "../../../../SidebarControl";
+import { PresetsBar } from "../../components/PresetsBar";
 import { AddTabButton } from "./components/AddTabButton";
 import { GroupItem } from "./GroupItem";
 
@@ -382,6 +383,7 @@ export function GroupStrip() {
 			{hasHorizontalOverflow && (
 				<div className="shrink-0 bg-background/95 pr-1">{plusControl}</div>
 			)}
+			{(showPresetsBar ?? DEFAULT_SHOW_PRESETS_BAR) && <PresetsBar />}
 			{!isSidebarOpen && (
 				<div className="flex items-center shrink-0 px-2">
 					<SidebarControl />

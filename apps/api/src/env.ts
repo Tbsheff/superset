@@ -13,7 +13,6 @@ export const env = createEnv({
 		ELECTRIC_SECRET: z.string().optional(),
 		ELECTRIC_SOURCE_ID: z.string().optional(),
 		ELECTRIC_SOURCE_SECRET: z.string().optional(),
-		BLOB_READ_WRITE_TOKEN: z.string().optional(),
 		// GitHub OAuth — optional (only needed when GitHub OAuth is configured)
 		GH_CLIENT_ID: z.string().optional(),
 		GH_CLIENT_SECRET: z.string().optional(),
@@ -32,10 +31,7 @@ export const env = createEnv({
 		SLACK_CLIENT_SECRET: z.string().optional(),
 		SLACK_SIGNING_SECRET: z.string().optional(),
 		ANTHROPIC_API_KEY: z.string().optional(),
-		KV_REST_API_URL: z.string().optional(),
-		KV_REST_API_TOKEN: z.string().optional(),
 		SECRETS_ENCRYPTION_KEY: z.string().optional(),
-		SENTRY_AUTH_TOKEN: z.string().optional(),
 		DURABLE_STREAMS_URL: z.string().url().optional(),
 		DURABLE_STREAMS_SECRET: z.string().optional(),
 		TAVILY_API_KEY: z.string().optional(),
@@ -45,12 +41,6 @@ export const env = createEnv({
 		NEXT_PUBLIC_WEB_URL: z.string().url(),
 		NEXT_PUBLIC_ADMIN_URL: z.string().url().optional(),
 		NEXT_PUBLIC_DESKTOP_URL: z.string().url().optional(),
-		NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),
-		NEXT_PUBLIC_POSTHOG_HOST: z.string().url().optional(),
-		NEXT_PUBLIC_SENTRY_DSN_API: z.string().optional(),
-		NEXT_PUBLIC_SENTRY_ENVIRONMENT: z
-			.enum(["development", "preview", "production"])
-			.optional(),
 	},
 	experimental__runtimeEnv: {
 		NODE_ENV: process.env.NODE_ENV,
@@ -58,10 +48,6 @@ export const env = createEnv({
 		NEXT_PUBLIC_WEB_URL: process.env.NEXT_PUBLIC_WEB_URL,
 		NEXT_PUBLIC_ADMIN_URL: process.env.NEXT_PUBLIC_ADMIN_URL,
 		NEXT_PUBLIC_DESKTOP_URL: process.env.NEXT_PUBLIC_DESKTOP_URL,
-		NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
-		NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
-		NEXT_PUBLIC_SENTRY_DSN_API: process.env.NEXT_PUBLIC_SENTRY_DSN_API,
-		NEXT_PUBLIC_SENTRY_ENVIRONMENT: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT,
 	},
 	emptyStringAsUndefined: true,
 	skipValidation: !!process.env.SKIP_ENV_VALIDATION,

@@ -4,7 +4,6 @@
 	"globalEnv": [
 		"DATABASE_URL",
 		"DATABASE_URL_UNPOOLED",
-		"BLOB_READ_WRITE_TOKEN",
 		"NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
 		"NEXT_PUBLIC_CLERK_SIGN_IN_URL",
 		"NEXT_PUBLIC_CLERK_SIGN_UP_URL",
@@ -13,11 +12,7 @@
 		"NEXT_PUBLIC_MARKETING_URL",
 		"NEXT_PUBLIC_DOCS_URL",
 		"NEXT_PUBLIC_ADMIN_URL",
-		"NEXT_PUBLIC_ELECTRIC_URL",
-		"POSTHOG_API_KEY",
-		"POSTHOG_PROJECT_ID",
-		"KV_REST_API_URL",
-		"KV_REST_API_TOKEN"
+		"NEXT_PUBLIC_ELECTRIC_URL"
 	],
 	"globalPassThroughEnv": [
 		"NODE_ENV",
@@ -41,10 +36,6 @@
 			]
 		},
 		"dev": {
-			"cache": false,
-			"persistent": true
-		},
-		"//#dev:caddy": {
 			"cache": false,
 			"persistent": true
 		},

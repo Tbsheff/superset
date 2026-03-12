@@ -12,10 +12,11 @@ import { CodeEditor } from "renderer/screens/main/components/WorkspaceView/compo
 import type { Tab } from "renderer/stores/tabs/types";
 import type { DiffViewMode } from "shared/changes-types";
 import { detectLanguage } from "shared/detect-language";
-import { isImageFile } from "shared/file-types";
+import { isImageFile, isMarkdownFile } from "shared/file-types";
 import type { FileViewerMode } from "shared/tabs-types";
 import { DiffViewerContextMenu } from "../DiffViewerContextMenu";
 import { FileEditorContextMenu } from "../FileEditorContextMenu";
+import { FileMarkdownEditor } from "../FileMarkdownEditor";
 import { MarkdownSearch } from "../MarkdownSearch";
 import {
 	type DiffDomLocation,
@@ -437,6 +438,8 @@ export function FileViewerContent({
 	}
 
 	if (viewMode === "rendered") {
+		const isMarkdown = isMarkdownFile(filePath);
+
 		return (
 			<div className="relative h-full">
 				<MarkdownSearch
@@ -451,9 +454,21 @@ export function FileViewerContent({
 					onFindPrevious={markdownSearch.findPrevious}
 					onClose={markdownSearch.closeSearch}
 				/>
-				<div ref={markdownContainerRef} className="h-full overflow-auto p-4">
-					<MarkdownRenderer content={rawFileData.content} />
-				</div>
+				{isMarkdown ? (
+					<div ref={markdownContainerRef} className="h-full">
+						<FileMarkdownEditor
+							content={draftContentRef.current ?? rawFileData.content}
+							onEditorChange={onEditorChange}
+							onSave={() => {
+								void onSaveRaw();
+							}}
+						/>
+					</div>
+				) : (
+					<div ref={markdownContainerRef} className="h-full overflow-auto p-4">
+						<MarkdownRenderer content={rawFileData.content} />
+					</div>
+				)}
 			</div>
 		);
 	}

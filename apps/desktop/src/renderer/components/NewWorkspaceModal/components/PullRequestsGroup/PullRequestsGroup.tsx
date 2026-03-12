@@ -1,6 +1,6 @@
-import { Button } from "@superset/ui/button";
 import { CommandEmpty, CommandGroup, CommandItem } from "@superset/ui/command";
 import { toast } from "@superset/ui/sonner";
+import { Spinner } from "@superset/ui/spinner";
 import { and, eq } from "@tanstack/db";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useNavigate } from "@tanstack/react-router";
@@ -35,6 +35,13 @@ export function PullRequestsGroup({
 	const createFromPr = useCreateFromPr();
 	const { draft, closeAndResetDraft, runAsyncAction } =
 		useNewWorkspaceModalDraft();
+
+	// When githubOwner is missing, trigger avatar fetch which auto-populates it
+	const { isLoading: isResolvingOwner } =
+		electronTrpc.projects.getGitHubAvatar.useQuery(
+			{ id: projectId ?? "" },
+			{ enabled: !!projectId && !githubOwner },
+		);
 
 	const parsedPrUrl = useMemo(() => {
 		const query = draft.pullRequestsQuery.trim();
@@ -180,21 +187,26 @@ export function PullRequestsGroup({
 				<div className="flex flex-col items-center gap-3 py-8 px-4 text-center">
 					<SiGithub className="size-6 text-muted-foreground" />
 					<div className="space-y-1">
-						<p className="text-sm font-medium">Connect GitHub</p>
-						<p className="text-xs text-muted-foreground">
-							Sync pull requests from GitHub to create workspaces
-						</p>
+						{isResolvingOwner ? (
+							<>
+								<Spinner className="mx-auto size-4" />
+								<p className="text-xs text-muted-foreground">
+									Detecting GitHub repository...
+								</p>
+							</>
+						) : (
+							<>
+								<p className="text-sm font-medium">No GitHub repo detected</p>
+								<p className="text-xs text-muted-foreground">
+									Ensure{" "}
+									<code className="rounded bg-muted px-1 py-0.5 text-xs font-mono">
+										gh auth login
+									</code>{" "}
+									is configured and the project has a GitHub remote
+								</p>
+							</>
+						)}
 					</div>
-					<Button
-						size="sm"
-						variant="outline"
-						onClick={() => {
-							closeAndResetDraft();
-							navigate({ to: "/settings/integrations" });
-						}}
-					>
-						Connect
-					</Button>
 				</div>
 			</>
 		);

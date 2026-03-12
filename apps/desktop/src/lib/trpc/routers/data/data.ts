@@ -8,6 +8,7 @@ import { createCaller } from "@superset/trpc";
 import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { publicProcedure, router } from "../..";
+import { isGhAuthenticated, performGitHubSync } from "./github-sync";
 
 function getCaller() {
 	return createCaller({
@@ -79,6 +80,17 @@ export function createDataRouter() {
 				getInstallation: publicProcedure.query(() =>
 					getCaller().integration.github.getInstallation(),
 				),
+
+				getStatus: publicProcedure.query(() => isGhAuthenticated()),
+
+				triggerSync: publicProcedure.mutation(async () => {
+					const result = await performGitHubSync();
+					return {
+						success: true,
+						repoCount: result.repoCount,
+						prCount: result.prCount,
+					};
+				}),
 			}),
 
 			linear: router({

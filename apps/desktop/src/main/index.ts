@@ -29,6 +29,10 @@ import { resolveDevWorkspaceName } from "./lib/dev-workspace-name";
 import { setWorkspaceDockIcon } from "./lib/dock-icon";
 import { loadWebviewBrowserExtension } from "./lib/extensions";
 import { getHostServiceManager } from "./lib/host-service-manager";
+import {
+	startIntegrationSync,
+	stopIntegrationSync,
+} from "./lib/integration-sync";
 import { localDb } from "./lib/local-db";
 import { outlit } from "./lib/outlit";
 import { ensureProjectIconsDir, getProjectIconPath } from "./lib/project-icons";
@@ -197,6 +201,7 @@ app.on("before-quit", async (event) => {
 	// Quit confirmed or no confirmation needed - exit immediately
 	// Let OS clean up child processes, tray, etc.
 	isQuitting = true;
+	stopIntegrationSync();
 	await outlit.shutdown();
 	getHostServiceManager().stopAll();
 	disposeTray();
@@ -309,6 +314,7 @@ if (!gotTheLock) {
 		await makeAppSetup(() => MainWindow());
 		setupAutoUpdater();
 		initTray();
+		startIntegrationSync();
 
 		// Process any deep links from cold start
 		const coldStartUrl = findDeepLinkInArgv(process.argv);

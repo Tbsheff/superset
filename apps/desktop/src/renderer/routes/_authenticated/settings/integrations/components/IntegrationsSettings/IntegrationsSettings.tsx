@@ -33,15 +33,6 @@ interface IntegrationsSettingsProps {
 	visibleItems?: SettingItemId[] | null;
 }
 
-interface GithubInstallation {
-	id: string;
-	accountLogin: string | null;
-	accountType: string | null;
-	suspended: boolean | null;
-	lastSyncedAt: Date | null;
-	createdAt: Date;
-}
-
 export function IntegrationsSettings({
 	visibleItems,
 }: IntegrationsSettingsProps) {
@@ -57,10 +48,6 @@ export function IntegrationsSettings({
 		[collections],
 	);
 
-	const [githubInstallation, setGithubInstallation] =
-		useState<GithubInstallation | null>(null);
-	const [isLoadingGithub, setIsLoadingGithub] = useState(true);
-
 	const hasGithubAccess = true;
 	const hasSlackAccess = true;
 
@@ -72,35 +59,13 @@ export function IntegrationsSettings({
 		hasGithubAccess &&
 		isItemVisible(SETTING_ITEM_ID.INTEGRATIONS_GITHUB, visibleItems);
 
-	const fetchGithubInstallation = useCallback(async () => {
-		try {
-			const result =
-				await vanillaElectronTrpc.data.integration.github.getInstallation.query();
-			setGithubInstallation(result);
-		} catch (err) {
-			console.error("[integrations] Failed to fetch GitHub installation:", err);
-		} finally {
-			setIsLoadingGithub(false);
-		}
-	}, []);
-
-	useEffect(() => {
-		fetchGithubInstallation();
-	}, [fetchGithubInstallation]);
-
 	const linearConnection = integrations?.find((i) => i.provider === "linear");
 	const slackConnection = integrations?.find((i) => i.provider === "slack");
 	const isLinearConnected = !!linearConnection;
 	const isSlackConnected = !!slackConnection;
-	const isGithubConnected =
-		!!githubInstallation && !githubInstallation.suspended;
 	const showSlack =
 		hasSlackAccess &&
 		isItemVisible(SETTING_ITEM_ID.INTEGRATIONS_SLACK, visibleItems);
-
-	const handleOpenApi = (_path: string) => {
-		console.warn("[integrations] OAuth flow unavailable without API server");
-	};
 
 	return (
 		<div className="p-6 max-w-4xl w-full">
@@ -119,21 +84,7 @@ export function IntegrationsSettings({
 					/>
 				)}
 
-				{showGithub && (
-					<IntegrationCard
-						name="GitHub"
-						description="Connect repos and sync pull requests"
-						icon={<FaGithub className="size-6" />}
-						isConnected={isGithubConnected}
-						connectedOrgName={githubInstallation?.accountLogin}
-						isLoading={isLoadingGithub}
-						onManage={() =>
-							isGithubConnected
-								? handleOpenApi("/api/github/install")
-								: handleOpenApi("/api/github/install")
-						}
-					/>
-				)}
+				{showGithub && <GitHubIntegrationCard />}
 
 				{showSlack && (
 					<IntegrationCard
@@ -142,11 +93,7 @@ export function IntegrationsSettings({
 						icon={<FaSlack className="size-6" />}
 						isConnected={isSlackConnected}
 						connectedOrgName={slackConnection?.externalOrgName}
-						onManage={() =>
-							isSlackConnected
-								? handleOpenApi("/api/integrations/slack/connect")
-								: handleOpenApi("/api/integrations/slack/connect")
-						}
+						comingSoon
 					/>
 				)}
 			</div>
@@ -164,6 +111,103 @@ export function IntegrationsSettings({
 				</a>
 			</p>
 		</div>
+	);
+}
+
+function GitHubIntegrationCard() {
+	const [isLoading, setIsLoading] = useState(true);
+	const [ghStatus, setGhStatus] = useState<{
+		authenticated: boolean;
+		username?: string;
+	} | null>(null);
+	const [isSyncing, setIsSyncing] = useState(false);
+
+	const fetchStatus = useCallback(async () => {
+		try {
+			const status =
+				await vanillaElectronTrpc.data.integration.github.getStatus.query();
+			setGhStatus(status);
+		} catch (err) {
+			console.error("[integrations] Failed to fetch GitHub status:", err);
+		} finally {
+			setIsLoading(false);
+		}
+	}, []);
+
+	useEffect(() => {
+		fetchStatus();
+	}, [fetchStatus]);
+
+	const isConnected = ghStatus?.authenticated ?? false;
+
+	const handleSync = async () => {
+		setIsSyncing(true);
+		try {
+			const result =
+				await vanillaElectronTrpc.data.integration.github.triggerSync.mutate();
+			toast.success(`Synced ${result.repoCount} repos, ${result.prCount} PRs`);
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : "Sync failed");
+		} finally {
+			setIsSyncing(false);
+		}
+	};
+
+	return (
+		<Card>
+			<CardHeader className="pb-3">
+				<div className="flex items-center justify-between">
+					<div className="flex items-center gap-3">
+						<div className="flex size-10 items-center justify-center rounded-lg border bg-muted/50">
+							<FaGithub className="size-6" />
+						</div>
+						<div>
+							<div className="flex items-center gap-2">
+								<span className="font-medium">GitHub</span>
+								{isLoading ? (
+									<Skeleton className="h-5 w-20" />
+								) : isConnected ? (
+									<Badge variant="default" className="gap-1">
+										<HiCheckCircle className="size-3" />
+										Connected
+									</Badge>
+								) : (
+									<Badge variant="secondary">Not Connected</Badge>
+								)}
+							</div>
+							<CardDescription className="mt-0.5">
+								Connect repos and sync pull requests via{" "}
+								<code className="text-xs">gh</code> CLI
+							</CardDescription>
+						</div>
+					</div>
+					{isConnected && (
+						<Button size="sm" onClick={handleSync} disabled={isSyncing}>
+							{isSyncing ? "Syncing..." : "Sync PRs"}
+						</Button>
+					)}
+				</div>
+			</CardHeader>
+			{isConnected && ghStatus?.username && (
+				<CardContent className="pt-0">
+					<p className="text-sm text-muted-foreground">
+						Authenticated as{" "}
+						<span className="font-medium">{ghStatus.username}</span>
+					</p>
+				</CardContent>
+			)}
+			{!isLoading && !isConnected && (
+				<CardContent className="pt-0">
+					<p className="text-sm text-muted-foreground">
+						Run{" "}
+						<code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
+							gh auth login
+						</code>{" "}
+						in your terminal to authenticate
+					</p>
+				</CardContent>
+			)}
+		</Card>
 	);
 }
 
@@ -210,12 +254,16 @@ function LinearIntegrationCard({
 				} else if (fetchedTeams.length === 1 && fetchedTeams[0]) {
 					// Auto-select if there's only one team
 					setSelectedTeamId(fetchedTeams[0].id);
-					await vanillaElectronTrpc.data.integration.linear.updateConfig.mutate({
-						newTasksTeamId: fetchedTeams[0].id,
-					});
+					await vanillaElectronTrpc.data.integration.linear.updateConfig.mutate(
+						{
+							newTasksTeamId: fetchedTeams[0].id,
+						},
+					);
 				}
 			} catch (err) {
 				console.error("[integrations] Failed to load Linear teams:", err);
+				if (!cancelled)
+					setError(err instanceof Error ? err.message : "Failed to load teams");
 			} finally {
 				if (!cancelled) setIsLoadingTeams(false);
 			}
@@ -232,9 +280,11 @@ function LinearIntegrationCard({
 		setIsConnecting(true);
 		setError(null);
 		try {
-			await vanillaElectronTrpc.data.integration.linear.connectWithToken.mutate({
-				apiToken: tokenInput.trim(),
-			});
+			await vanillaElectronTrpc.data.integration.linear.connectWithToken.mutate(
+				{
+					apiToken: tokenInput.trim(),
+				},
+			);
 			setTokenInput("");
 			setShowInput(false);
 		} catch (err) {
@@ -276,9 +326,7 @@ function LinearIntegrationCard({
 				await vanillaElectronTrpc.data.integration.linear.triggerSync.mutate();
 			toast.success(`Synced ${result.issueCount} issues from Linear`);
 		} catch (err) {
-			toast.error(
-				err instanceof Error ? err.message : "Sync failed",
-			);
+			toast.error(err instanceof Error ? err.message : "Sync failed");
 		} finally {
 			setIsSyncing(false);
 		}
@@ -366,6 +414,7 @@ function LinearIntegrationCard({
 							{isSyncing ? "Syncing..." : "Sync Issues"}
 						</Button>
 					</div>
+					{error && <p className="text-sm text-destructive">{error}</p>}
 				</CardContent>
 			)}
 
@@ -403,7 +452,7 @@ interface IntegrationCardProps {
 	isConnected: boolean;
 	connectedOrgName?: string | null;
 	isLoading?: boolean;
-	onManage: () => void;
+	onManage?: () => void;
 	comingSoon?: boolean;
 }
 

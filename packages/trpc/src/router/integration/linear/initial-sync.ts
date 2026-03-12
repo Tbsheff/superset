@@ -107,7 +107,13 @@ interface LinearIssue {
 		name: string;
 		avatarUrl: string | null;
 	} | null;
-	state: { id: string; name: string; color: string; type: string; position: number };
+	state: {
+		id: string;
+		name: string;
+		color: string;
+		type: string;
+		position: number;
+	};
 	labels: { nodes: Array<{ id: string; name: string }> };
 }
 
@@ -251,7 +257,7 @@ export async function performLinearInitialSync(
 					.select({ id: users.id, email: users.email })
 					.from(users)
 					.where(inArray(users.email, assigneeEmails))
-				: [];
+			: [];
 
 	const userByEmail = new Map(matchedUsers.map((u) => [u.email, u.id]));
 

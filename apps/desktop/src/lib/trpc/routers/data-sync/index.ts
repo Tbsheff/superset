@@ -21,7 +21,9 @@ async function selectAll(table: any): Promise<Record<string, unknown>[]> {
 	return db.select().from(table);
 }
 
-async function queryTable(tableName: string): Promise<Record<string, unknown>[]> {
+async function queryTable(
+	tableName: string,
+): Promise<Record<string, unknown>[]> {
 	switch (tableName) {
 		case "tasks":
 			return selectAll(tasks);
@@ -39,9 +41,7 @@ async function queryTable(tableName: string): Promise<Record<string, unknown>[]>
 			return selectAll(agentCommands);
 		case "integration_connections": {
 			const rows = await selectAll(integrationConnections);
-			return rows.map(
-				({ accessToken, refreshToken, ...row }) => row,
-			);
+			return rows.map(({ accessToken, refreshToken, ...row }) => row);
 		}
 		case "chat_sessions":
 			return selectAll(chatSessions);

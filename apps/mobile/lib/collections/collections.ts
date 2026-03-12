@@ -1,8 +1,5 @@
 import { snakeCamelMapper } from "@electric-sql/client";
 import type {
-	SelectInvitation,
-	SelectMember,
-	SelectOrganization,
 	SelectProject,
 	SelectTask,
 	SelectTaskStatus,
@@ -18,44 +15,26 @@ import { apiClient } from "../trpc/client";
 const columnMapper = snakeCamelMapper();
 const electricUrl = `${env.EXPO_PUBLIC_API_URL}/api/electric/v1/shape`;
 
-interface OrgCollections {
+interface Collections {
 	tasks: Collection<SelectTask>;
 	taskStatuses: Collection<SelectTaskStatus>;
 	projects: Collection<SelectProject>;
-	members: Collection<SelectMember>;
 	users: Collection<SelectUser>;
-	invitations: Collection<SelectInvitation>;
 }
 
-const collectionsCache = new Map<string, OrgCollections>();
+let collectionsInstance: Collections | null = null;
 
-// Organizations collection (global)
-const organizationsCollection = createCollection(
-	electricCollectionOptions<SelectOrganization>({
-		id: "organizations",
-		shapeOptions: {
-			url: electricUrl,
-			params: { table: "auth.organizations" },
-			headers: {
-				Cookie: () => authClient.getCookie() || "",
-			},
-			columnMapper,
-		},
-		getKey: (item) => item.id,
-	}),
-);
-
-function createOrgCollections(organizationId: string): OrgCollections {
+function createAppCollections(): Collections {
 	const headers = {
 		Cookie: () => authClient.getCookie() || "",
 	};
 
 	const tasks = createCollection(
 		electricCollectionOptions<SelectTask>({
-			id: `tasks-${organizationId}`,
+			id: "tasks",
 			shapeOptions: {
 				url: electricUrl,
-				params: { table: "tasks", organizationId },
+				params: { table: "tasks" },
 				headers,
 				columnMapper,
 			},
@@ -85,10 +64,10 @@ function createOrgCollections(organizationId: string): OrgCollections {
 
 	const taskStatuses = createCollection(
 		electricCollectionOptions<SelectTaskStatus>({
-			id: `task_statuses-${organizationId}`,
+			id: "task_statuses",
 			shapeOptions: {
 				url: electricUrl,
-				params: { table: "task_statuses", organizationId },
+				params: { table: "task_statuses" },
 				headers,
 				columnMapper,
 			},
@@ -98,23 +77,10 @@ function createOrgCollections(organizationId: string): OrgCollections {
 
 	const projects = createCollection(
 		electricCollectionOptions<SelectProject>({
-			id: `projects-${organizationId}`,
+			id: "projects",
 			shapeOptions: {
 				url: electricUrl,
-				params: { table: "projects", organizationId },
-				headers,
-				columnMapper,
-			},
-			getKey: (item) => item.id,
-		}),
-	);
-
-	const members = createCollection(
-		electricCollectionOptions<SelectMember>({
-			id: `members-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: { table: "auth.members", organizationId },
+				params: { table: "projects" },
 				headers,
 				columnMapper,
 			},
@@ -124,10 +90,10 @@ function createOrgCollections(organizationId: string): OrgCollections {
 
 	const users = createCollection(
 		electricCollectionOptions<SelectUser>({
-			id: `users-${organizationId}`,
+			id: "users",
 			shapeOptions: {
 				url: electricUrl,
-				params: { table: "auth.users", organizationId },
+				params: { table: "auth.users" },
 				headers,
 				columnMapper,
 			},
@@ -135,34 +101,12 @@ function createOrgCollections(organizationId: string): OrgCollections {
 		}),
 	);
 
-	const invitations = createCollection(
-		electricCollectionOptions<SelectInvitation>({
-			id: `invitations-${organizationId}`,
-			shapeOptions: {
-				url: electricUrl,
-				params: { table: "auth.invitations", organizationId },
-				headers,
-				columnMapper,
-			},
-			getKey: (item) => item.id,
-		}),
-	);
-
-	return { tasks, taskStatuses, projects, members, users, invitations };
+	return { tasks, taskStatuses, projects, users };
 }
 
-export function getCollections(organizationId: string) {
-	if (!collectionsCache.has(organizationId)) {
-		collectionsCache.set(organizationId, createOrgCollections(organizationId));
+export function getCollections() {
+	if (!collectionsInstance) {
+		collectionsInstance = createAppCollections();
 	}
-
-	const orgCollections = collectionsCache.get(organizationId);
-	if (!orgCollections) {
-		throw new Error(`Collections not found for org: ${organizationId}`);
-	}
-
-	return {
-		...orgCollections,
-		organizations: organizationsCollection,
-	};
+	return collectionsInstance;
 }

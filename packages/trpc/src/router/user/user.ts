@@ -1,58 +1,32 @@
 import { db } from "@superset/db/client";
-import { members, users } from "@superset/db/schema";
+import { users } from "@superset/db/schema";
 import { TRPCError, type TRPCRouterRecord } from "@trpc/server";
-import { and, desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { generateImagePathname, uploadImage } from "../../lib/upload";
-import { protectedProcedure } from "../../trpc";
+import { publicProcedure } from "../../trpc";
 
 export const userRouter = {
-	me: protectedProcedure.query(({ ctx }) => ctx.session.user),
-
-	myOrganization: protectedProcedure.query(async ({ ctx }) => {
-		const activeOrganizationId = ctx.session.session.activeOrganizationId;
-
-		const membership = await db.query.members.findFirst({
-			where: activeOrganizationId
-				? and(
-						eq(members.userId, ctx.session.user.id),
-						eq(members.organizationId, activeOrganizationId),
-					)
-				: eq(members.userId, ctx.session.user.id),
-			orderBy: desc(members.createdAt),
-			with: {
-				organization: true,
-			},
+	me: publicProcedure.query(async ({ ctx }) => {
+		const user = await db.query.users.findFirst({
+			where: eq(users.id, ctx.userId),
 		});
-
-		return membership?.organization ?? null;
+		return user ?? null;
 	}),
 
-	myOrganizations: protectedProcedure.query(async ({ ctx }) => {
-		const memberships = await db.query.members.findMany({
-			where: eq(members.userId, ctx.session.user.id),
-			orderBy: desc(members.createdAt),
-			with: {
-				organization: true,
-			},
-		});
-
-		return memberships.map((m) => m.organization);
-	}),
-
-	updateProfile: protectedProcedure
+	updateProfile: publicProcedure
 		.input(z.object({ name: z.string().min(1).max(100) }))
 		.mutation(async ({ ctx, input }) => {
 			const [updatedUser] = await db
 				.update(users)
 				.set({ name: input.name })
-				.where(eq(users.id, ctx.session.user.id))
+				.where(eq(users.id, ctx.userId))
 				.returning();
 			return updatedUser;
 		}),
 
-	uploadAvatar: protectedProcedure
+	uploadAvatar: publicProcedure
 		.input(
 			z.object({
 				fileData: z.string(),
@@ -61,7 +35,7 @@ export const userRouter = {
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const userId = ctx.session.user.id;
+			const userId = ctx.userId;
 
 			const user = await db.query.users.findFirst({
 				where: eq(users.id, userId),

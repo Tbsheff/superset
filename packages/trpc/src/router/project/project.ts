@@ -2,19 +2,17 @@ import { db } from "@superset/db/client";
 import { projects, sandboxImages } from "@superset/db/schema";
 import type { TRPCRouterRecord } from "@trpc/server";
 import { TRPCError } from "@trpc/server";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { protectedProcedure } from "../../trpc";
-import { verifyOrgAdmin, verifyOrgMembership } from "../integration/utils";
+import { publicProcedure } from "../../trpc";
 import { secretsRouter } from "./secrets";
 
 export const projectRouter = {
 	secrets: secretsRouter,
 
-	create: protectedProcedure
+	create: publicProcedure
 		.input(
 			z.object({
-				organizationId: z.string().uuid(),
 				name: z.string().min(1),
 				slug: z.string().min(1),
 				repoOwner: z.string().min(1),
@@ -24,12 +22,10 @@ export const projectRouter = {
 				githubRepositoryId: z.string().uuid().optional(),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
-			await verifyOrgMembership(ctx.session.user.id, input.organizationId);
+		.mutation(async ({ input }) => {
 			const [project] = await db
 				.insert(projects)
 				.values({
-					organizationId: input.organizationId,
 					name: input.name,
 					slug: input.slug,
 					repoOwner: input.repoOwner,
@@ -46,48 +42,33 @@ export const projectRouter = {
 				});
 			}
 			await db.insert(sandboxImages).values({
-				organizationId: input.organizationId,
 				projectId: project.id,
 			});
 			return project;
 		}),
 
-	update: protectedProcedure
+	update: publicProcedure
 		.input(
 			z.object({
 				id: z.string().uuid(),
-				organizationId: z.string().uuid(),
 				name: z.string().min(1).optional(),
 				defaultBranch: z.string().optional(),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
-			await verifyOrgMembership(ctx.session.user.id, input.organizationId);
-			const { id, organizationId, ...data } = input;
+		.mutation(async ({ input }) => {
+			const { id, ...data } = input;
 			const [updated] = await db
 				.update(projects)
 				.set(data)
-				.where(
-					and(eq(projects.id, id), eq(projects.organizationId, organizationId)),
-				)
+				.where(eq(projects.id, id))
 				.returning();
 			return updated;
 		}),
 
-	delete: protectedProcedure
-		.input(
-			z.object({ id: z.string().uuid(), organizationId: z.string().uuid() }),
-		)
-		.mutation(async ({ ctx, input }) => {
-			await verifyOrgAdmin(ctx.session.user.id, input.organizationId);
-			await db
-				.delete(projects)
-				.where(
-					and(
-						eq(projects.id, input.id),
-						eq(projects.organizationId, input.organizationId),
-					),
-				);
+	delete: publicProcedure
+		.input(z.object({ id: z.string().uuid() }))
+		.mutation(async ({ input }) => {
+			await db.delete(projects).where(eq(projects.id, input.id));
 			return { success: true };
 		}),
 } satisfies TRPCRouterRecord;

@@ -5,137 +5,69 @@ import type {
 	SelectGithubPullRequest,
 	SelectGithubRepository,
 	SelectIntegrationConnection,
-	SelectInvitation,
-	SelectMember,
-	SelectOrganization,
 	SelectProject,
 	SelectSessionHost,
-	SelectSubscription,
 	SelectTask,
 	SelectTaskStatus,
 	SelectUser,
 	SelectWorkspace,
 } from "@superset/db/schema";
-import type { AppRouter } from "@superset/trpc";
 import type { Collection } from "@tanstack/react-db";
 import { createCollection } from "@tanstack/react-db";
-import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
-import { env } from "renderer/env.renderer";
-import { getAuthToken, getJwt } from "renderer/lib/auth-client";
-import superjson from "superjson";
-import { z } from "zod";
-
-const apiKeyDisplaySchema = z.object({
-	id: z.string(),
-	name: z.string().nullable(),
-	start: z.string().nullable(),
-	createdAt: z.coerce.date(),
-	lastRequest: z.coerce.date().nullable(),
-});
-
-type ApiKeyDisplay = z.infer<typeof apiKeyDisplaySchema>;
+import { electronTrpcClient } from "renderer/lib/trpc-client";
 
 type IntegrationConnectionDisplay = Omit<
 	SelectIntegrationConnection,
 	"accessToken" | "refreshToken"
 >;
 
-interface OrgCollections {
+interface Collections {
 	tasks: Collection<SelectTask, string>;
 	taskStatuses: Collection<SelectTaskStatus, string>;
 	projects: Collection<SelectProject, string>;
 	workspaces: Collection<SelectWorkspace, string>;
-	members: Collection<SelectMember, string>;
 	users: Collection<SelectUser, string>;
-	invitations: Collection<SelectInvitation, string>;
 	agentCommands: Collection<SelectAgentCommand, string>;
 	devicePresence: Collection<SelectDevicePresence, string>;
 	integrationConnections: Collection<IntegrationConnectionDisplay, string>;
-	subscriptions: Collection<SelectSubscription, string>;
-	apiKeys: Collection<ApiKeyDisplay, string>;
 	chatSessions: Collection<SelectChatSession, string>;
 	sessionHosts: Collection<SelectSessionHost, string>;
 	githubRepositories: Collection<SelectGithubRepository, string>;
 	githubPullRequests: Collection<SelectGithubPullRequest, string>;
 }
 
-// Per-org collections cache
-const collectionsCache = new Map<string, OrgCollections>();
-
-// Singleton API client with dynamic auth headers
-const apiClient = createTRPCProxyClient<AppRouter>({
-	links: [
-		httpBatchLink({
-			url: `${env.NEXT_PUBLIC_API_URL}/api/trpc`,
-			headers: () => {
-				const token = getAuthToken();
-				return token ? { Authorization: `Bearer ${token}` } : {};
-			},
-			transformer: superjson,
-		}),
-	],
-});
-
 // ---------------------------------------------------------------------------
-// Fetch-based sync — replaces Electric SQL
+// IPC-based sync — queries local SQLite via electron tRPC
 // ---------------------------------------------------------------------------
 
-const DATA_URL = `${env.NEXT_PUBLIC_API_URL}/api/electric/v1/shape`;
 const POLL_INTERVAL = 5_000; // 5 seconds
 
-/** Convert snake_case keys to camelCase */
-function snakeToCamel(str: string): string {
-	return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-}
-
-/** Convert a snake_case row from the API to camelCase for the app */
-function mapRow<T>(row: Record<string, unknown>): T {
-	const result: Record<string, unknown> = {};
-	for (const [key, value] of Object.entries(row)) {
-		result[snakeToCamel(key)] = value;
-	}
-	return result as T;
-}
-
-/** Fetch rows from the local data API */
-async function fetchRows<T>(
-	table: string,
-	organizationId?: string,
-): Promise<T[]> {
-	const params = new URLSearchParams({ table });
-	if (organizationId) params.set("organizationId", organizationId);
-
-	const headers: Record<string, string> = {};
-	const token = getJwt();
-	if (token) headers.Authorization = `Bearer ${token}`;
-
-	const response = await fetch(`${DATA_URL}?${params}`, { headers });
-	if (!response.ok) return [];
-
-	const raw: Record<string, unknown>[] = await response.json();
-	return raw.map(mapRow<T>);
+/** Fetch rows from local SQLite via IPC */
+async function fetchRows<T>(table: string): Promise<T[]> {
+	return electronTrpcClient.dataSync.getTableRows.query({ table }) as Promise<
+		T[]
+	>;
 }
 
 /**
- * Create collection options with a fetch-based sync.
- * Loads data from the local API on mount and polls for updates.
+ * Create collection options with an IPC-based sync.
+ * Loads data from local SQLite on mount and polls for updates.
  */
 function fetchCollectionOptions<T extends object>(config: {
 	id: string;
 	table: string;
-	organizationId?: string;
 	getKey: (item: T) => string;
 	onInsert?: (params: {
 		transaction: { mutations: Array<{ modified: T }> };
-	}) => Promise<{ txid: number } | void>;
+	}) => Promise<{ txid: number } | undefined>;
 	onUpdate?: (params: {
 		transaction: {
 			mutations: Array<{ original: T; changes: Partial<T> }>;
 		};
-	}) => Promise<{ txid: number } | void>;
+	}) => Promise<{ txid: number } | undefined>;
 	onDelete?: (params: {
 		transaction: { mutations: Array<{ original: T }> };
-	}) => Promise<{ txid: number } | void>;
+	}) => Promise<{ txid: number } | undefined>;
 }) {
 	return {
 		id: config.id,
@@ -165,10 +97,7 @@ function fetchCollectionOptions<T extends object>(config: {
 
 				async function load() {
 					try {
-						const rows = await fetchRows<T>(
-							config.table,
-							config.organizationId,
-						);
+						const rows = await fetchRows<T>(config.table);
 						if (stopped) return;
 						begin();
 						for (const row of rows) {
@@ -208,32 +137,25 @@ function fetchCollectionOptions<T extends object>(config: {
 }
 
 // ---------------------------------------------------------------------------
-// Collection factories
+// Collection factories — lazy singleton
 // ---------------------------------------------------------------------------
 
-const organizationsCollection = createCollection(
-	fetchCollectionOptions<SelectOrganization>({
-		id: "organizations",
-		table: "auth.organizations",
-		getKey: (item) => item.id,
-	}),
-);
+let collectionsInstance: Collections | null = null;
 
-function createOrgCollections(organizationId: string): OrgCollections {
+function createCollections(): Collections {
 	const tasks = createCollection(
 		fetchCollectionOptions<SelectTask>({
-			id: `tasks-${organizationId}`,
+			id: "tasks",
 			table: "tasks",
-			organizationId,
 			getKey: (item) => item.id,
 			onInsert: async ({ transaction }) => {
 				const item = transaction.mutations[0].modified;
-				const result = await apiClient.task.create.mutate(item);
+				const result = await electronTrpcClient.data.task.create.mutate(item);
 				return { txid: result.txid };
 			},
 			onUpdate: async ({ transaction }) => {
 				const { original, changes } = transaction.mutations[0];
-				const result = await apiClient.task.update.mutate({
+				const result = await electronTrpcClient.data.task.update.mutate({
 					...changes,
 					id: original.id,
 				});
@@ -241,7 +163,9 @@ function createOrgCollections(organizationId: string): OrgCollections {
 			},
 			onDelete: async ({ transaction }) => {
 				const item = transaction.mutations[0].original;
-				const result = await apiClient.task.delete.mutate(item.id);
+				const result = await electronTrpcClient.data.task.delete.mutate(
+					item.id,
+				);
 				return { txid: result.txid };
 			},
 		}),
@@ -249,70 +173,49 @@ function createOrgCollections(organizationId: string): OrgCollections {
 
 	const taskStatuses = createCollection(
 		fetchCollectionOptions<SelectTaskStatus>({
-			id: `task_statuses-${organizationId}`,
+			id: "task_statuses",
 			table: "task_statuses",
-			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const projects = createCollection(
 		fetchCollectionOptions<SelectProject>({
-			id: `projects-${organizationId}`,
+			id: "projects",
 			table: "projects",
-			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const workspaces = createCollection(
 		fetchCollectionOptions<SelectWorkspace>({
-			id: `workspaces-${organizationId}`,
+			id: "workspaces",
 			table: "workspaces",
-			organizationId,
-			getKey: (item) => item.id,
-		}),
-	);
-
-	const members = createCollection(
-		fetchCollectionOptions<SelectMember>({
-			id: `members-${organizationId}`,
-			table: "auth.members",
-			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const users = createCollection(
 		fetchCollectionOptions<SelectUser>({
-			id: `users-${organizationId}`,
+			id: "users",
 			table: "auth.users",
-			organizationId,
-			getKey: (item) => item.id,
-		}),
-	);
-
-	const invitations = createCollection(
-		fetchCollectionOptions<SelectInvitation>({
-			id: `invitations-${organizationId}`,
-			table: "auth.invitations",
-			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const agentCommands = createCollection(
 		fetchCollectionOptions<SelectAgentCommand>({
-			id: `agent_commands-${organizationId}`,
+			id: "agent_commands",
 			table: "agent_commands",
-			organizationId,
 			getKey: (item) => item.id,
 			onUpdate: async ({ transaction }) => {
 				const { original, changes } = transaction.mutations[0];
-				const result = await apiClient.agent.updateCommand.mutate({
-					...changes,
-					id: original.id,
-				});
+				const result = await electronTrpcClient.data.agent.updateCommand.mutate(
+					{
+						...changes,
+						id: original.id,
+					},
+				);
 				return { txid: result.txid };
 			},
 		}),
@@ -320,72 +223,48 @@ function createOrgCollections(organizationId: string): OrgCollections {
 
 	const devicePresence = createCollection(
 		fetchCollectionOptions<SelectDevicePresence>({
-			id: `device_presence-${organizationId}`,
+			id: "device_presence",
 			table: "device_presence",
-			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const integrationConnections = createCollection(
 		fetchCollectionOptions<IntegrationConnectionDisplay>({
-			id: `integration_connections-${organizationId}`,
+			id: "integration_connections",
 			table: "integration_connections",
-			organizationId,
-			getKey: (item) => item.id,
-		}),
-	);
-
-	const subscriptions = createCollection(
-		fetchCollectionOptions<SelectSubscription>({
-			id: `subscriptions-${organizationId}`,
-			table: "subscriptions",
-			organizationId,
-			getKey: (item) => item.id,
-		}),
-	);
-
-	const apiKeys = createCollection(
-		fetchCollectionOptions<ApiKeyDisplay>({
-			id: `apikeys-${organizationId}`,
-			table: "auth.apikeys",
-			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const chatSessions = createCollection(
 		fetchCollectionOptions<SelectChatSession>({
-			id: `chat_sessions-${organizationId}`,
+			id: "chat_sessions",
 			table: "chat_sessions",
-			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const sessionHosts = createCollection(
 		fetchCollectionOptions<SelectSessionHost>({
-			id: `session_hosts-${organizationId}`,
+			id: "session_hosts",
 			table: "session_hosts",
-			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const githubRepositories = createCollection(
 		fetchCollectionOptions<SelectGithubRepository>({
-			id: `github_repositories-${organizationId}`,
+			id: "github_repositories",
 			table: "github_repositories",
-			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
 
 	const githubPullRequests = createCollection(
 		fetchCollectionOptions<SelectGithubPullRequest>({
-			id: `github_pull_requests-${organizationId}`,
+			id: "github_pull_requests",
 			table: "github_pull_requests",
-			organizationId,
 			getKey: (item) => item.id,
 		}),
 	);
@@ -395,14 +274,10 @@ function createOrgCollections(organizationId: string): OrgCollections {
 		taskStatuses,
 		projects,
 		workspaces,
-		members,
 		users,
-		invitations,
 		agentCommands,
 		devicePresence,
 		integrationConnections,
-		subscriptions,
-		apiKeys,
 		chatSessions,
 		sessionHosts,
 		githubRepositories,
@@ -411,46 +286,26 @@ function createOrgCollections(organizationId: string): OrgCollections {
 }
 
 /**
- * Preload collections for an organization by starting sync.
+ * Preload collections by starting sync.
  * Collections are lazy — they don't fetch data until subscribed or preloaded.
  */
-export async function preloadCollections(
-	organizationId: string,
-	options?: {
-		includeChatCollections?: boolean;
-	},
-): Promise<void> {
-	const { chatSessions, sessionHosts, ...collections } =
-		getCollections(organizationId);
-	const includeChatCollections = options?.includeChatCollections ?? true;
-	const orgCollections = Object.entries(collections)
-		.filter(([name]) => name !== "organizations")
-		.map(([, collection]) => collection as Collection<object>);
-	const collectionsToPreload = includeChatCollections
-		? [...orgCollections, chatSessions, sessionHosts]
-		: orgCollections;
+export async function preloadCollections(): Promise<void> {
+	const { chatSessions, sessionHosts, ...rest } = getCollections();
+	const allCollections = [
+		...Object.values(rest),
+		chatSessions,
+		sessionHosts,
+	] as Collection<object>[];
 
-	await Promise.allSettled(
-		collectionsToPreload.map((c) => (c as Collection<object>).preload()),
-	);
+	await Promise.allSettled(allCollections.map((c) => c.preload()));
 }
 
 /**
- * Get collections for an organization, creating them if needed.
- * Collections are cached per org for instant switching.
+ * Get the singleton collections instance, creating it if needed.
  */
-export function getCollections(organizationId: string) {
-	if (!collectionsCache.has(organizationId)) {
-		collectionsCache.set(organizationId, createOrgCollections(organizationId));
+export function getCollections(): Collections {
+	if (!collectionsInstance) {
+		collectionsInstance = createCollections();
 	}
-
-	const orgCollections = collectionsCache.get(organizationId);
-	if (!orgCollections) {
-		throw new Error(`Collections not found for org: ${organizationId}`);
-	}
-
-	return {
-		...orgCollections,
-		organizations: organizationsCollection,
-	};
+	return collectionsInstance;
 }

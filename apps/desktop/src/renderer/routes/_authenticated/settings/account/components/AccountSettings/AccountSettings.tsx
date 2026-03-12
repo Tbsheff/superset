@@ -6,9 +6,9 @@ import { toast } from "@superset/ui/sonner";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useEffect, useState } from "react";
 import { HiOutlinePencil } from "react-icons/hi2";
-import { apiTrpcClient } from "renderer/lib/api-trpc-client";
 import { authClient } from "renderer/lib/auth-client";
 import { electronTrpc } from "renderer/lib/electron-trpc";
+import { vanillaElectronTrpc } from "renderer/lib/vanilla-electron-trpc";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 import {
 	isItemVisible,
@@ -68,11 +68,12 @@ export function AccountSettings({ visibleItems }: AccountSettingsProps) {
 			const mimeType = mimeMatch?.[1] || "image/png";
 			const ext = mimeType.split("/")[1] || "png";
 
-			const uploadResult = await apiTrpcClient.user.uploadAvatar.mutate({
-				fileData: result.dataUrl,
-				fileName: `avatar.${ext}`,
-				mimeType,
-			});
+			const uploadResult =
+				await vanillaElectronTrpc.data.user.uploadAvatar.mutate({
+					fileData: result.dataUrl,
+					fileName: `avatar.${ext}`,
+					mimeType,
+				});
 
 			setAvatarPreview(uploadResult.url);
 			toast.success("Avatar updated!");
@@ -90,7 +91,9 @@ export function AccountSettings({ visibleItems }: AccountSettingsProps) {
 		}
 
 		try {
-			await apiTrpcClient.user.updateProfile.mutate({ name: nameValue });
+			await vanillaElectronTrpc.data.user.updateProfile.mutate({
+				name: nameValue,
+			});
 			toast.success("Name updated!");
 		} catch {
 			toast.error("Failed to update name");

@@ -9,7 +9,9 @@ export function generateConnectUrl({
 	teamId: string;
 }): string {
 	if (!env.SLACK_SIGNING_SECRET) {
-		throw new Error("Slack integration not configured: SLACK_SIGNING_SECRET missing");
+		throw new Error(
+			"Slack integration not configured: SLACK_SIGNING_SECRET missing",
+		);
 	}
 
 	const payload = JSON.stringify({

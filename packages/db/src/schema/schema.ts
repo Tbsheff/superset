@@ -8,7 +8,7 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-import { organizations, users } from "./auth";
+import { users } from "./auth";
 import type {
 	CommandStatus,
 	DeviceType,
@@ -26,9 +26,6 @@ export const taskStatuses = sqliteTable(
 		id: text("id")
 			.primaryKey()
 			.$defaultFn(() => crypto.randomUUID()),
-		organizationId: text("organization_id")
-			.notNull()
-			.references(() => organizations.id, { onDelete: "cascade" }),
 
 		name: text("name").notNull(),
 		color: text("color").notNull(),
@@ -49,10 +46,8 @@ export const taskStatuses = sqliteTable(
 			.$onUpdate(() => new Date()),
 	},
 	(table) => [
-		index("task_statuses_organization_id_idx").on(table.organizationId),
 		index("task_statuses_type_idx").on(table.type),
-		unique("task_statuses_org_external_unique").on(
-			table.organizationId,
+		unique("task_statuses_external_unique").on(
 			table.externalProvider,
 			table.externalId,
 		),
@@ -79,9 +74,6 @@ export const tasks = sqliteTable(
 		priority: text("priority").notNull().default("none").$type<TaskPriority>(),
 
 		// Ownership
-		organizationId: text("organization_id")
-			.notNull()
-			.references(() => organizations.id, { onDelete: "cascade" }),
 		assigneeId: text("assignee_id").references(() => users.id, {
 			onDelete: "set null",
 		}),
@@ -126,7 +118,6 @@ export const tasks = sqliteTable(
 	},
 	(table) => [
 		index("tasks_slug_idx").on(table.slug),
-		index("tasks_organization_id_idx").on(table.organizationId),
 		index("tasks_assignee_id_idx").on(table.assigneeId),
 		index("tasks_creator_id_idx").on(table.creatorId),
 		index("tasks_status_id_idx").on(table.statusId),
@@ -134,11 +125,10 @@ export const tasks = sqliteTable(
 		index("tasks_external_provider_idx").on(table.externalProvider),
 		index("tasks_assignee_external_id_idx").on(table.assigneeExternalId),
 		unique("tasks_external_unique").on(
-			table.organizationId,
 			table.externalProvider,
 			table.externalId,
 		),
-		unique("tasks_org_slug_unique").on(table.organizationId, table.slug),
+		unique("tasks_slug_unique").on(table.slug),
 	],
 );
 
@@ -151,9 +141,6 @@ export const integrationConnections = sqliteTable(
 		id: text("id")
 			.primaryKey()
 			.$defaultFn(() => crypto.randomUUID()),
-		organizationId: text("organization_id")
-			.notNull()
-			.references(() => organizations.id, { onDelete: "cascade" }),
 		connectedByUserId: text("connected_by_user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
@@ -178,61 +165,13 @@ export const integrationConnections = sqliteTable(
 			.$defaultFn(() => new Date())
 			.$onUpdate(() => new Date()),
 	},
-	(table) => [
-		unique("integration_connections_unique").on(
-			table.organizationId,
-			table.provider,
-		),
-		index("integration_connections_org_idx").on(table.organizationId),
-	],
+	(table) => [unique("integration_connections_unique").on(table.provider)],
 );
 
 export type InsertIntegrationConnection =
 	typeof integrationConnections.$inferInsert;
 export type SelectIntegrationConnection =
 	typeof integrationConnections.$inferSelect;
-
-export const subscriptions = sqliteTable(
-	"subscriptions",
-	{
-		id: text("id")
-			.primaryKey()
-			.$defaultFn(() => crypto.randomUUID()),
-		plan: text("plan").notNull(),
-		referenceId: text("reference_id")
-			.notNull()
-			.references(() => organizations.id, { onDelete: "cascade" }),
-		stripeCustomerId: text("stripe_customer_id"),
-		stripeSubscriptionId: text("stripe_subscription_id"),
-		status: text("status").default("incomplete").notNull(),
-		periodStart: integer("period_start", { mode: "timestamp" }),
-		periodEnd: integer("period_end", { mode: "timestamp" }),
-		trialStart: integer("trial_start", { mode: "timestamp" }),
-		trialEnd: integer("trial_end", { mode: "timestamp" }),
-		cancelAtPeriodEnd: integer("cancel_at_period_end", {
-			mode: "boolean",
-		}).default(false),
-		cancelAt: integer("cancel_at", { mode: "timestamp" }),
-		canceledAt: integer("canceled_at", { mode: "timestamp" }),
-		endedAt: integer("ended_at", { mode: "timestamp" }),
-		seats: integer("seats"),
-		createdAt: integer("created_at", { mode: "timestamp" })
-			.notNull()
-			.$defaultFn(() => new Date()),
-		updatedAt: integer("updated_at", { mode: "timestamp" })
-			.notNull()
-			.$defaultFn(() => new Date())
-			.$onUpdate(() => new Date()),
-	},
-	(table) => [
-		index("subscriptions_reference_id_idx").on(table.referenceId),
-		index("subscriptions_stripe_customer_id_idx").on(table.stripeCustomerId),
-		index("subscriptions_status_idx").on(table.status),
-	],
-);
-
-export type InsertSubscription = typeof subscriptions.$inferInsert;
-export type SelectSubscription = typeof subscriptions.$inferSelect;
 
 export const devicePresence = sqliteTable(
 	"device_presence",
@@ -243,9 +182,6 @@ export const devicePresence = sqliteTable(
 		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
-		organizationId: text("organization_id")
-			.notNull()
-			.references(() => organizations.id, { onDelete: "cascade" }),
 		deviceId: text("device_id").notNull(),
 		deviceName: text("device_name").notNull(),
 		deviceType: text("device_type").notNull().$type<DeviceType>(),
@@ -257,10 +193,7 @@ export const devicePresence = sqliteTable(
 			.$defaultFn(() => new Date()),
 	},
 	(table) => [
-		index("device_presence_user_org_idx").on(
-			table.userId,
-			table.organizationId,
-		),
+		index("device_presence_user_idx").on(table.userId),
 		uniqueIndex("device_presence_user_device_idx").on(
 			table.userId,
 			table.deviceId,
@@ -281,9 +214,6 @@ export const agentCommands = sqliteTable(
 		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
-		organizationId: text("organization_id")
-			.notNull()
-			.references(() => organizations.id, { onDelete: "cascade" }),
 		targetDeviceId: text("target_device_id"),
 		targetDeviceType: text("target_device_type"),
 		tool: text("tool").notNull(),
@@ -304,10 +234,7 @@ export const agentCommands = sqliteTable(
 			table.targetDeviceId,
 			table.status,
 		),
-		index("agent_commands_org_created_idx").on(
-			table.organizationId,
-			table.createdAt,
-		),
+		index("agent_commands_created_idx").on(table.createdAt),
 	],
 );
 
@@ -325,9 +252,6 @@ export const usersSlackUsers = sqliteTable(
 		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
-		organizationId: text("organization_id")
-			.notNull()
-			.references(() => organizations.id, { onDelete: "cascade" }),
 		modelPreference: text("model_preference"),
 		createdAt: integer("created_at", { mode: "timestamp" })
 			.notNull()
@@ -336,7 +260,6 @@ export const usersSlackUsers = sqliteTable(
 	(table) => [
 		unique("users__slack_users_unique").on(table.slackUserId, table.teamId),
 		index("users__slack_users_user_idx").on(table.userId),
-		index("users__slack_users_org_idx").on(table.organizationId),
 	],
 );
 
@@ -349,9 +272,6 @@ export const projects = sqliteTable(
 		id: text("id")
 			.primaryKey()
 			.$defaultFn(() => crypto.randomUUID()),
-		organizationId: text("organization_id")
-			.notNull()
-			.references(() => organizations.id, { onDelete: "cascade" }),
 		name: text("name").notNull(),
 		slug: text("slug").notNull(),
 		githubRepositoryId: text("github_repository_id").references(
@@ -370,10 +290,7 @@ export const projects = sqliteTable(
 			.$defaultFn(() => new Date())
 			.$onUpdate(() => new Date()),
 	},
-	(table) => [
-		index("projects_organization_id_idx").on(table.organizationId),
-		unique("projects_org_slug_unique").on(table.organizationId, table.slug),
-	],
+	(table) => [unique("projects_slug_unique").on(table.slug)],
 );
 
 export type InsertProject = typeof projects.$inferInsert;
@@ -385,9 +302,6 @@ export const secrets = sqliteTable(
 		id: text("id")
 			.primaryKey()
 			.$defaultFn(() => crypto.randomUUID()),
-		organizationId: text("organization_id")
-			.notNull()
-			.references(() => organizations.id, { onDelete: "cascade" }),
 		projectId: text("project_id")
 			.notNull()
 			.references(() => projects.id, { onDelete: "cascade" }),
@@ -410,7 +324,6 @@ export const secrets = sqliteTable(
 	(table) => [
 		unique("secrets_project_key_unique").on(table.projectId, table.key),
 		index("secrets_project_id_idx").on(table.projectId),
-		index("secrets_organization_id_idx").on(table.organizationId),
 	],
 );
 
@@ -423,9 +336,6 @@ export const sandboxImages = sqliteTable(
 		id: text("id")
 			.primaryKey()
 			.$defaultFn(() => crypto.randomUUID()),
-		organizationId: text("organization_id")
-			.notNull()
-			.references(() => organizations.id, { onDelete: "cascade" }),
 		projectId: text("project_id")
 			.notNull()
 			.references(() => projects.id, { onDelete: "cascade" }),
@@ -444,10 +354,7 @@ export const sandboxImages = sqliteTable(
 			.$defaultFn(() => new Date())
 			.$onUpdate(() => new Date()),
 	},
-	(table) => [
-		unique("sandbox_images_project_unique").on(table.projectId),
-		index("sandbox_images_organization_id_idx").on(table.organizationId),
-	],
+	(table) => [unique("sandbox_images_project_unique").on(table.projectId)],
 );
 
 export type InsertSandboxImage = typeof sandboxImages.$inferInsert;
@@ -459,9 +366,6 @@ export const workspaces = sqliteTable(
 		id: text("id")
 			.primaryKey()
 			.$defaultFn(() => crypto.randomUUID()),
-		organizationId: text("organization_id")
-			.notNull()
-			.references(() => organizations.id, { onDelete: "cascade" }),
 		projectId: text("project_id")
 			.notNull()
 			.references(() => projects.id, { onDelete: "cascade" }),
@@ -481,7 +385,6 @@ export const workspaces = sqliteTable(
 	},
 	(table) => [
 		index("workspaces_project_id_idx").on(table.projectId),
-		index("workspaces_organization_id_idx").on(table.organizationId),
 		index("workspaces_type_idx").on(table.type),
 	],
 );
@@ -495,9 +398,6 @@ export const chatSessions = sqliteTable(
 		id: text("id")
 			.primaryKey()
 			.$defaultFn(() => crypto.randomUUID()),
-		organizationId: text("organization_id")
-			.notNull()
-			.references(() => organizations.id, { onDelete: "cascade" }),
 		createdBy: text("created_by")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
@@ -517,7 +417,6 @@ export const chatSessions = sqliteTable(
 			.$onUpdate(() => new Date()),
 	},
 	(table) => [
-		index("chat_sessions_org_idx").on(table.organizationId),
 		index("chat_sessions_created_by_idx").on(table.createdBy),
 		index("chat_sessions_last_active_idx").on(table.lastActiveAt),
 	],
@@ -535,9 +434,6 @@ export const sessionHosts = sqliteTable(
 		sessionId: text("session_id")
 			.notNull()
 			.references(() => chatSessions.id, { onDelete: "cascade" }),
-		organizationId: text("organization_id")
-			.notNull()
-			.references(() => organizations.id, { onDelete: "cascade" }),
 		deviceId: text("device_id").notNull(),
 		createdAt: integer("created_at", { mode: "timestamp" })
 			.notNull()
@@ -545,7 +441,6 @@ export const sessionHosts = sqliteTable(
 	},
 	(table) => [
 		index("session_hosts_session_id_idx").on(table.sessionId),
-		index("session_hosts_org_idx").on(table.organizationId),
 		index("session_hosts_device_id_idx").on(table.deviceId),
 	],
 );

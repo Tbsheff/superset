@@ -1,0 +1,1 @@
+export { createDataRouter } from "./data";

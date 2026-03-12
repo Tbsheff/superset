@@ -75,6 +75,14 @@ export const createAuthRouter = () => {
 			.input(z.object({ provider: z.enum(AUTH_PROVIDERS) }))
 			.mutation(async ({ input }) => {
 				try {
+					if (!env.NEXT_PUBLIC_API_URL) {
+						return {
+							success: false,
+							error:
+								"API URL not configured — OAuth sign-in unavailable in local-only mode",
+						};
+					}
+
 					const state = crypto.randomBytes(32).toString("base64url");
 					stateStore.set(state, Date.now());
 

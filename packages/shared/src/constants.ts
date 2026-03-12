@@ -1,3 +1,6 @@
+// Local single-user mode
+export const LOCAL_USER_ID = "00000000-0000-0000-0000-000000000001";
+
 // Auth
 export const AUTH_PROVIDERS = ["github"] as const;
 export type AuthProvider = (typeof AUTH_PROVIDERS)[number];

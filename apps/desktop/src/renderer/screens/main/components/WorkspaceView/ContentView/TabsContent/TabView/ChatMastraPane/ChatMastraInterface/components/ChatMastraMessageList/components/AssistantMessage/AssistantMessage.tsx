@@ -260,7 +260,6 @@ export function AssistantMessage({
 					})}
 					workspaceId={workspaceId}
 					sessionId={sessionId}
-	
 					workspaceCwd={workspaceCwd}
 				/>,
 			);
@@ -283,7 +282,6 @@ export function AssistantMessage({
 					part={toToolPartFromResult(part)}
 					workspaceId={workspaceId}
 					sessionId={sessionId}
-	
 					workspaceCwd={workspaceCwd}
 				/>,
 			);
@@ -312,7 +310,6 @@ export function AssistantMessage({
 				part={previewPart}
 				workspaceId={workspaceId}
 				sessionId={sessionId}
-
 				workspaceCwd={workspaceCwd}
 			/>,
 		);

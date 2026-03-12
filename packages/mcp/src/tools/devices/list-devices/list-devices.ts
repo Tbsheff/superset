@@ -32,7 +32,7 @@ export function register(server: McpServer) {
 			},
 		},
 		async (args, extra) => {
-			const ctx = getMcpContext(extra);
+			const _ctx = getMcpContext(extra);
 			const includeOffline = args.includeOffline as boolean;
 			const threshold = new Date(Date.now() - DEVICE_ONLINE_THRESHOLD_MS);
 			const offlineThreshold = new Date(

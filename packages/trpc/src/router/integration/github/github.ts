@@ -9,17 +9,13 @@ import { TRPCError } from "@trpc/server";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { env } from "../../../env";
-import { protectedProcedure } from "../../../trpc";
-import { verifyOrgAdmin, verifyOrgMembership } from "../utils";
+import { publicProcedure } from "../../../trpc";
 
 export const githubRouter = {
-	getInstallation: protectedProcedure
-		.input(z.object({ organizationId: z.string().uuid() }))
-		.query(async ({ ctx, input }) => {
-			await verifyOrgMembership(ctx.session.user.id, input.organizationId);
-
+	getInstallation: publicProcedure
+		.input(z.object({}).optional())
+		.query(async () => {
 			const installation = await db.query.githubInstallations.findFirst({
-				where: eq(githubInstallations.organizationId, input.organizationId),
 				columns: {
 					id: true,
 					accountLogin: true,
@@ -33,14 +29,12 @@ export const githubRouter = {
 			return installation ?? null;
 		}),
 
-	disconnect: protectedProcedure
-		.input(z.object({ organizationId: z.string().uuid() }))
-		.mutation(async ({ ctx, input }) => {
-			await verifyOrgAdmin(ctx.session.user.id, input.organizationId);
-
+	disconnect: publicProcedure
+		.input(z.object({ installationId: z.string().uuid() }))
+		.mutation(async ({ input }) => {
 			const result = await db
 				.delete(githubInstallations)
-				.where(eq(githubInstallations.organizationId, input.organizationId))
+				.where(eq(githubInstallations.id, input.installationId))
 				.returning({ id: githubInstallations.id });
 
 			if (result.length === 0) {
@@ -50,13 +44,10 @@ export const githubRouter = {
 			return { success: true };
 		}),
 
-	triggerSync: protectedProcedure
-		.input(z.object({ organizationId: z.string().uuid() }))
-		.mutation(async ({ ctx, input }) => {
-			await verifyOrgMembership(ctx.session.user.id, input.organizationId);
-
+	triggerSync: publicProcedure
+		.input(z.object({}).optional())
+		.mutation(async () => {
 			const installation = await db.query.githubInstallations.findFirst({
-				where: eq(githubInstallations.organizationId, input.organizationId),
 				columns: { id: true },
 			});
 
@@ -70,7 +61,6 @@ export const githubRouter = {
 			const syncUrl = `${env.NEXT_PUBLIC_API_URL}/api/github/jobs/initial-sync`;
 			const syncBody = {
 				installationDbId: installation.id,
-				organizationId: input.organizationId,
 			};
 
 			fetch(syncUrl, {
@@ -84,13 +74,10 @@ export const githubRouter = {
 			return { success: true };
 		}),
 
-	listRepositories: protectedProcedure
-		.input(z.object({ organizationId: z.string().uuid() }))
-		.query(async ({ ctx, input }) => {
-			await verifyOrgMembership(ctx.session.user.id, input.organizationId);
-
+	listRepositories: publicProcedure
+		.input(z.object({}).optional())
+		.query(async () => {
 			const installation = await db.query.githubInstallations.findFirst({
-				where: eq(githubInstallations.organizationId, input.organizationId),
 				columns: { id: true },
 			});
 
@@ -104,19 +91,17 @@ export const githubRouter = {
 			});
 		}),
 
-	listPullRequests: protectedProcedure
+	listPullRequests: publicProcedure
 		.input(
-			z.object({
-				organizationId: z.string().uuid(),
-				repositoryId: z.string().uuid().optional(),
-				state: z.enum(["open", "closed", "all"]).optional().default("open"),
-			}),
+			z
+				.object({
+					repositoryId: z.string().uuid().optional(),
+					state: z.enum(["open", "closed", "all"]).optional().default("open"),
+				})
+				.optional(),
 		)
-		.query(async ({ ctx, input }) => {
-			await verifyOrgMembership(ctx.session.user.id, input.organizationId);
-
+		.query(async ({ input }) => {
 			const installation = await db.query.githubInstallations.findFirst({
-				where: eq(githubInstallations.organizationId, input.organizationId),
 				columns: { id: true },
 			});
 
@@ -125,7 +110,7 @@ export const githubRouter = {
 			}
 
 			const repos = await db.query.githubRepositories.findMany({
-				where: input.repositoryId
+				where: input?.repositoryId
 					? and(
 							eq(githubRepositories.installationId, installation.id),
 							eq(githubRepositories.id, input.repositoryId),
@@ -145,8 +130,9 @@ export const githubRouter = {
 				conditions.push(inArray(githubPullRequests.repositoryId, repoIds));
 			}
 
-			if (input.state !== "all") {
-				conditions.push(eq(githubPullRequests.state, input.state));
+			const state = input?.state ?? "open";
+			if (state !== "all") {
+				conditions.push(eq(githubPullRequests.state, state));
 			}
 
 			return db.query.githubPullRequests.findMany({
@@ -166,64 +152,59 @@ export const githubRouter = {
 			});
 		}),
 
-	getStats: protectedProcedure
-		.input(z.object({ organizationId: z.string().uuid() }))
-		.query(async ({ ctx, input }) => {
-			await verifyOrgMembership(ctx.session.user.id, input.organizationId);
+	getStats: publicProcedure.input(z.object({}).optional()).query(async () => {
+		const installation = await db.query.githubInstallations.findFirst({
+			columns: { id: true },
+		});
 
-			const installation = await db.query.githubInstallations.findFirst({
-				where: eq(githubInstallations.organizationId, input.organizationId),
-				columns: { id: true },
-			});
-
-			if (!installation) {
-				return {
-					repositoryCount: 0,
-					openPullRequestCount: 0,
-					pendingChecksCount: 0,
-					failedChecksCount: 0,
-				};
-			}
-
-			const repos = await db.query.githubRepositories.findMany({
-				where: eq(githubRepositories.installationId, installation.id),
-				columns: { id: true },
-			});
-
-			if (repos.length === 0) {
-				return {
-					repositoryCount: 0,
-					openPullRequestCount: 0,
-					pendingChecksCount: 0,
-					failedChecksCount: 0,
-				};
-			}
-
-			const repoIds = repos.map((r) => r.id);
-
-			const openPrs = await db.query.githubPullRequests.findMany({
-				where: and(
-					eq(githubPullRequests.state, "open"),
-					inArray(githubPullRequests.repositoryId, repoIds),
-				),
-				columns: {
-					id: true,
-					checksStatus: true,
-				},
-			});
-
-			const pendingChecksCount = openPrs.filter(
-				(pr) => pr.checksStatus === "pending",
-			).length;
-			const failedChecksCount = openPrs.filter(
-				(pr) => pr.checksStatus === "failure",
-			).length;
-
+		if (!installation) {
 			return {
-				repositoryCount: repos.length,
-				openPullRequestCount: openPrs.length,
-				pendingChecksCount,
-				failedChecksCount,
+				repositoryCount: 0,
+				openPullRequestCount: 0,
+				pendingChecksCount: 0,
+				failedChecksCount: 0,
 			};
-		}),
+		}
+
+		const repos = await db.query.githubRepositories.findMany({
+			where: eq(githubRepositories.installationId, installation.id),
+			columns: { id: true },
+		});
+
+		if (repos.length === 0) {
+			return {
+				repositoryCount: 0,
+				openPullRequestCount: 0,
+				pendingChecksCount: 0,
+				failedChecksCount: 0,
+			};
+		}
+
+		const repoIds = repos.map((r) => r.id);
+
+		const openPrs = await db.query.githubPullRequests.findMany({
+			where: and(
+				eq(githubPullRequests.state, "open"),
+				inArray(githubPullRequests.repositoryId, repoIds),
+			),
+			columns: {
+				id: true,
+				checksStatus: true,
+			},
+		});
+
+		const pendingChecksCount = openPrs.filter(
+			(pr) => pr.checksStatus === "pending",
+		).length;
+		const failedChecksCount = openPrs.filter(
+			(pr) => pr.checksStatus === "failure",
+		).length;
+
+		return {
+			repositoryCount: repos.length,
+			openPullRequestCount: openPrs.length,
+			pendingChecksCount,
+			failedChecksCount,
+		};
+	}),
 } satisfies TRPCRouterRecord;

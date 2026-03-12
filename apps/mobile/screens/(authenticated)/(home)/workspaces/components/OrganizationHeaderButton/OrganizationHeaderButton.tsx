@@ -2,11 +2,7 @@ import { Stack } from "expo-router";
 import { View } from "react-native";
 import { Text } from "@/components/ui/text";
 
-export function OrganizationHeaderButton({
-	name,
-}: {
-	name?: string;
-}) {
+export function OrganizationHeaderButton({ name }: { name?: string }) {
 	return (
 		<>
 			<Stack.Toolbar placement="left">

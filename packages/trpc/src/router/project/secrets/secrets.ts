@@ -2,10 +2,9 @@ import { db } from "@superset/db/client";
 import { secrets } from "@superset/db/schema";
 import type { TRPCRouterRecord } from "@trpc/server";
 import { TRPCError } from "@trpc/server";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { protectedProcedure } from "../../../trpc";
-import { verifyOrgMembership } from "../../integration/utils";
+import { publicProcedure } from "../../../trpc";
 import { decryptSecret, encryptSecret } from "./utils/crypto";
 import {
 	MAX_SECRETS_PER_PROJECT,
@@ -15,19 +14,16 @@ import {
 } from "./utils/secrets-validation";
 
 export const secretsRouter = {
-	upsert: protectedProcedure
+	upsert: publicProcedure
 		.input(
 			z.object({
 				projectId: z.string().uuid(),
-				organizationId: z.string().uuid(),
 				key: z.string(),
 				value: z.string(),
 				sensitive: z.boolean().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			await verifyOrgMembership(ctx.session.user.id, input.organizationId);
-
 			const keyValidation = validateSecretKey(input.key);
 			if (!keyValidation.valid) {
 				throw new TRPCError({
@@ -45,10 +41,7 @@ export const secretsRouter = {
 			}
 
 			const existing = await db.query.secrets.findMany({
-				where: and(
-					eq(secrets.projectId, input.projectId),
-					eq(secrets.organizationId, input.organizationId),
-				),
+				where: eq(secrets.projectId, input.projectId),
 			});
 
 			const isUpdate = existing.some((s) => s.key === input.key);
@@ -77,11 +70,10 @@ export const secretsRouter = {
 				.insert(secrets)
 				.values({
 					projectId: input.projectId,
-					organizationId: input.organizationId,
 					key: input.key,
 					encryptedValue,
 					sensitive: input.sensitive ?? false,
-					createdByUserId: ctx.session.user.id,
+					createdByUserId: ctx.userId,
 				})
 				.onConflictDoUpdate({
 					target: [secrets.projectId, secrets.key],
@@ -94,37 +86,22 @@ export const secretsRouter = {
 			return result;
 		}),
 
-	delete: protectedProcedure
-		.input(
-			z.object({ id: z.string().uuid(), organizationId: z.string().uuid() }),
-		)
-		.mutation(async ({ ctx, input }) => {
-			await verifyOrgMembership(ctx.session.user.id, input.organizationId);
-			await db
-				.delete(secrets)
-				.where(
-					and(
-						eq(secrets.id, input.id),
-						eq(secrets.organizationId, input.organizationId),
-					),
-				);
+	delete: publicProcedure
+		.input(z.object({ id: z.string().uuid() }))
+		.mutation(async ({ input }) => {
+			await db.delete(secrets).where(eq(secrets.id, input.id));
 			return { success: true };
 		}),
 
-	getDecrypted: protectedProcedure
+	getDecrypted: publicProcedure
 		.input(
 			z.object({
 				projectId: z.string().uuid(),
-				organizationId: z.string().uuid(),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
-			await verifyOrgMembership(ctx.session.user.id, input.organizationId);
+		.query(async ({ input }) => {
 			const rows = await db.query.secrets.findMany({
-				where: and(
-					eq(secrets.projectId, input.projectId),
-					eq(secrets.organizationId, input.organizationId),
-				),
+				where: eq(secrets.projectId, input.projectId),
 				with: {
 					createdBy: { columns: { id: true, name: true, image: true } },
 				},

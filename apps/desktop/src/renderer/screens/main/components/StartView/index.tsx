@@ -4,7 +4,6 @@ import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { LuFolderOpen, LuPlus, LuX } from "react-icons/lu";
 import { useOpenProject } from "renderer/react-query/projects";
-import { SupersetLogo } from "renderer/routes/sign-in/components/SupersetLogo";
 
 export function StartView() {
 	const navigate = useNavigate();
@@ -129,12 +128,14 @@ export function StartView() {
 				onDrop={handleDrop}
 			>
 				<div className="flex flex-col items-center w-full max-w-md px-6">
-					<SupersetLogo
+					<span
 						className={cn(
-							"h-8 w-auto mb-12 transition-opacity duration-200 opacity-80",
+							"text-2xl font-bold mb-12 transition-opacity duration-200 opacity-80",
 							isDragOver && "opacity-0",
 						)}
-					/>
+					>
+						Superset
+					</span>
 
 					<div className="w-full flex flex-col gap-4">
 						<div>

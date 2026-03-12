@@ -1,5 +1,5 @@
 import { db } from "@superset/db/client";
-import { integrationConnections, tasks } from "@superset/db/schema";
+import { tasks } from "@superset/db/schema";
 import { eq } from "drizzle-orm";
 import { syncTaskToLinearById } from "../../../router/integration/linear/sync";
 
@@ -13,7 +13,7 @@ const PROVIDER_SYNC: Record<
 export async function syncTask(taskId: string) {
 	const task = await db.query.tasks.findFirst({
 		where: eq(tasks.id, taskId),
-		columns: { organizationId: true, externalProvider: true },
+		columns: { externalProvider: true },
 	});
 
 	if (!task) {
@@ -21,7 +21,6 @@ export async function syncTask(taskId: string) {
 	}
 
 	const connections = await db.query.integrationConnections.findMany({
-		where: eq(integrationConnections.organizationId, task.organizationId),
 		columns: { provider: true },
 	});
 

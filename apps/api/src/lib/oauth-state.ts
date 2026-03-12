@@ -17,11 +17,7 @@ const statePayloadSchema = z.object({
  * The signature is an HMAC-SHA256 of the payload, preventing forgery.
  * A timestamp is included to prevent replay attacks (10 minute TTL).
  */
-export function createSignedState({
-	userId,
-}: {
-	userId: string;
-}): string {
+export function createSignedState({ userId }: { userId: string }): string {
 	const payload = { userId, timestamp: Date.now() };
 	const payloadB64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
 	const signature = createHmac("sha256", env.BETTER_AUTH_SECRET)
@@ -34,9 +30,7 @@ export function createSignedState({
  * Verifies and extracts payload from a signed state token.
  * Returns null if invalid, expired, or signature doesn't match.
  */
-export function verifySignedState(
-	state: string,
-): { userId: string } | null {
+export function verifySignedState(state: string): { userId: string } | null {
 	const [payloadB64, providedSig] = state.split(".");
 	if (!payloadB64 || !providedSig) {
 		console.error("[oauth-state] Invalid state format");

@@ -44,7 +44,6 @@ export default defineConfig({
 			),
 			"process.env.NEXT_PUBLIC_API_URL": defineEnv(
 				process.env.NEXT_PUBLIC_API_URL,
-				"https://api.superset.sh",
 			),
 			"process.env.NEXT_PUBLIC_STREAMS_URL": defineEnv(
 				process.env.NEXT_PUBLIC_STREAMS_URL,
@@ -115,10 +114,7 @@ export default defineConfig({
 		plugins: [
 			tsconfigPaths,
 			externalizeDepsPlugin({
-				exclude: [
-					"trpc-electron",
-					...workspaceDependencies,
-				],
+				exclude: ["trpc-electron", ...workspaceDependencies],
 			}),
 		],
 
@@ -151,7 +147,6 @@ export default defineConfig({
 			"process.platform": defineEnv(process.platform),
 			"process.env.NEXT_PUBLIC_API_URL": defineEnv(
 				process.env.NEXT_PUBLIC_API_URL,
-				"https://api.superset.sh",
 			),
 			"process.env.NEXT_PUBLIC_WEB_URL": defineEnv(
 				process.env.NEXT_PUBLIC_WEB_URL,

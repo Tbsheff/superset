@@ -21,9 +21,7 @@ export function useCollections(): Collections {
 		throw new Error("useCollections must be used within CollectionsProvider");
 	}
 	if (!context) {
-		throw new Error(
-			"Collections not available - user must be signed in",
-		);
+		throw new Error("Collections not available - user must be signed in");
 	}
 	return context;
 }

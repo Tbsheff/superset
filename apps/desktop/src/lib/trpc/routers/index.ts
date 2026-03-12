@@ -10,6 +10,8 @@ import { createChangesRouter } from "./changes";
 import { createChatMastraServiceRouter } from "./chat-mastra-service";
 import { createChatServiceRouter } from "./chat-service";
 import { createConfigRouter } from "./config";
+import { createDataRouter } from "./data";
+import { createDataSyncRouter } from "./data-sync";
 import { createExternalRouter } from "./external";
 import { createFilesystemRouter } from "./filesystem";
 import { createHostServiceManagerRouter } from "./host-service-manager";
@@ -54,6 +56,8 @@ export const createAppRouter = (getWindow: () => BrowserWindow | null) => {
 		external: createExternalRouter(),
 		settings: createSettingsRouter(),
 		config: createConfigRouter(),
+		data: createDataRouter(),
+		dataSync: createDataSyncRouter(),
 		uiState: createUiStateRouter(),
 		ringtone: createRingtoneRouter(getWindow),
 		hostServiceManager: createHostServiceManagerRouter(),

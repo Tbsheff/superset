@@ -11,13 +11,9 @@ import { Skeleton } from "@superset/ui/skeleton";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useCallback, useEffect, useState } from "react";
 import { FaGithub, FaSlack } from "react-icons/fa";
-import {
-	HiCheckCircle,
-	HiOutlineArrowTopRightOnSquare,
-} from "react-icons/hi2";
+import { HiCheckCircle, HiOutlineArrowTopRightOnSquare } from "react-icons/hi2";
 import { SiLinear } from "react-icons/si";
-import { env } from "renderer/env.renderer";
-import { apiTrpcClient } from "renderer/lib/api-trpc-client";
+import { vanillaElectronTrpc } from "renderer/lib/vanilla-electron-trpc";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 import {
 	isItemVisible,
@@ -71,7 +67,7 @@ export function IntegrationsSettings({
 	const fetchGithubInstallation = useCallback(async () => {
 		try {
 			const result =
-				await apiTrpcClient.integration.github.getInstallation.query();
+				await vanillaElectronTrpc.data.integration.github.getInstallation.query();
 			setGithubInstallation(result);
 		} catch (err) {
 			console.error("[integrations] Failed to fetch GitHub installation:", err);
@@ -94,8 +90,8 @@ export function IntegrationsSettings({
 		hasSlackAccess &&
 		isItemVisible(SETTING_ITEM_ID.INTEGRATIONS_SLACK, visibleItems);
 
-	const handleOpenApi = (path: string) => {
-		window.open(`${env.NEXT_PUBLIC_API_URL}${path}`, "_blank");
+	const handleOpenApi = (_path: string) => {
+		console.warn("[integrations] OAuth flow unavailable without API server");
 	};
 
 	return (
@@ -180,15 +176,15 @@ function LinearIntegrationCard({
 		setIsConnecting(true);
 		setError(null);
 		try {
-			await apiTrpcClient.integration.linear.connectWithToken.mutate({
-				apiToken: tokenInput.trim(),
-			});
+			await vanillaElectronTrpc.data.integration.linear.connectWithToken.mutate(
+				{
+					apiToken: tokenInput.trim(),
+				},
+			);
 			setTokenInput("");
 			setShowInput(false);
 		} catch (err) {
-			setError(
-				err instanceof Error ? err.message : "Failed to connect",
-			);
+			setError(err instanceof Error ? err.message : "Failed to connect");
 		} finally {
 			setIsConnecting(false);
 		}
@@ -196,7 +192,7 @@ function LinearIntegrationCard({
 
 	const handleDisconnect = async () => {
 		try {
-			await apiTrpcClient.integration.linear.disconnect.mutate();
+			await vanillaElectronTrpc.data.integration.linear.disconnect.mutate();
 		} catch (err) {
 			console.error("[integrations] Failed to disconnect Linear:", err);
 		}
@@ -228,11 +224,7 @@ function LinearIntegrationCard({
 						</div>
 					</div>
 					{isConnected ? (
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={handleDisconnect}
-						>
+						<Button variant="outline" size="sm" onClick={handleDisconnect}>
 							Disconnect
 						</Button>
 					) : (
@@ -249,8 +241,7 @@ function LinearIntegrationCard({
 			{isConnected && connectedOrgName && (
 				<CardContent className="pt-0">
 					<p className="text-sm text-muted-foreground">
-						Connected to{" "}
-						<span className="font-medium">{connectedOrgName}</span>
+						Connected to <span className="font-medium">{connectedOrgName}</span>
 					</p>
 				</CardContent>
 			)}
@@ -273,9 +264,7 @@ function LinearIntegrationCard({
 							{isConnecting ? "Connecting..." : "Save"}
 						</Button>
 					</div>
-					{error && (
-						<p className="mt-2 text-sm text-destructive">{error}</p>
-					)}
+					{error && <p className="mt-2 text-sm text-destructive">{error}</p>}
 				</CardContent>
 			)}
 		</Card>
@@ -347,8 +336,7 @@ function IntegrationCard({
 			{isConnected && connectedOrgName && (
 				<CardContent className="pt-0">
 					<p className="text-sm text-muted-foreground">
-						Connected to{" "}
-						<span className="font-medium">{connectedOrgName}</span>
+						Connected to <span className="font-medium">{connectedOrgName}</span>
 					</p>
 				</CardContent>
 			)}

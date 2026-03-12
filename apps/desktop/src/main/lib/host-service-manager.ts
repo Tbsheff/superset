@@ -86,9 +86,7 @@ class HostServiceManager {
 		this.instance = instance;
 
 		child.stderr?.on("data", (data: Buffer) => {
-			console.error(
-				`[host-service] ${data.toString().trim()}`,
-			);
+			console.error(`[host-service] ${data.toString().trim()}`);
 		});
 
 		child.on("exit", (code) => {
@@ -133,9 +131,7 @@ class HostServiceManager {
 					const parsed = JSON.parse(line) as { port: number };
 					instance.port = parsed.port;
 					instance.status = "running";
-					console.log(
-						`[host-service] listening on port ${parsed.port}`,
-					);
+					console.log(`[host-service] listening on port ${parsed.port}`);
 					resolve(parsed.port);
 				} catch {
 					reject(new Error(`Failed to parse port from host-service: ${line}`));
@@ -170,10 +166,7 @@ class HostServiceManager {
 			if (this.instance?.status === "crashed") {
 				this.instance = null;
 				this.spawn().catch((err) => {
-					console.error(
-						"[host-service] restart failed:",
-						err,
-					);
+					console.error("[host-service] restart failed:", err);
 				});
 			}
 		}, delay);

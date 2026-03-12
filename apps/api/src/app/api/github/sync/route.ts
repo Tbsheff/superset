@@ -39,10 +39,7 @@ export async function POST(request: Request) {
 		return Response.json({ error: "Invalid payload" }, { status: 400 });
 	}
 
-	const [installation] = await db
-		.select()
-		.from(githubInstallations)
-		.limit(1);
+	const [installation] = await db.select().from(githubInstallations).limit(1);
 
 	if (!installation) {
 		return Response.json({ error: "Installation not found" }, { status: 404 });

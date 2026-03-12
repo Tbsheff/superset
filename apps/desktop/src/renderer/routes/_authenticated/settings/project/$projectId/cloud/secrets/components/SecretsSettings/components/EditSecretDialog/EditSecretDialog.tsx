@@ -10,7 +10,7 @@ import {
 import { Input } from "@superset/ui/input";
 import { toast } from "@superset/ui/sonner";
 import { useEffect, useState } from "react";
-import { apiTrpcClient } from "renderer/lib/api-trpc-client";
+import { vanillaElectronTrpc } from "renderer/lib/vanilla-electron-trpc";
 
 interface EditSecretDialogProps {
 	open: boolean;
@@ -47,7 +47,7 @@ export function EditSecretDialog({
 
 		setIsSaving(true);
 		try {
-			await apiTrpcClient.project.secrets.upsert.mutate({
+			await vanillaElectronTrpc.data.project.secrets.upsert.mutate({
 				projectId,
 				key: secret.key,
 				value: value.trim(),

@@ -15,9 +15,7 @@ export function WorkspacesScreen() {
 
 	return (
 		<>
-			<OrganizationHeaderButton
-				name={organizationName}
-			/>
+			<OrganizationHeaderButton name={organizationName} />
 			<ScrollView
 				className="flex-1 bg-background"
 				contentInsetAdjustmentBehavior="automatic"

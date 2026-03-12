@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db } from "@superset/db/client";
 import { taskStatuses, tasks } from "@superset/db/schema";
-import { and, eq, like, or } from "drizzle-orm";
+import { eq, like, or } from "drizzle-orm";
 import { z } from "zod";
 import { getMcpContext } from "../../utils";
 

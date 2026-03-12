@@ -1,8 +1,5 @@
 import { db } from "@superset/db/client";
-import {
-	integrationConnections,
-	usersSlackUsers,
-} from "@superset/db/schema";
+import { integrationConnections, usersSlackUsers } from "@superset/db/schema";
 import { and, eq } from "drizzle-orm";
 import { posthog } from "@/lib/analytics";
 import { generateConnectUrl } from "../utils/generate-connect-url";

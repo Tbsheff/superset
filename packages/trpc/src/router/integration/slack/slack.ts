@@ -1,57 +1,39 @@
 import { db } from "@superset/db/client";
 import { integrationConnections } from "@superset/db/schema";
 import type { TRPCRouterRecord } from "@trpc/server";
-import { and, eq } from "drizzle-orm";
-import { z } from "zod";
-import { protectedProcedure } from "../../../trpc";
-import { verifyOrgAdmin, verifyOrgMembership } from "../utils";
+import { eq } from "drizzle-orm";
+import { publicProcedure } from "../../../trpc";
 
 export const slackRouter = {
-	getConnection: protectedProcedure
-		.input(z.object({ organizationId: z.uuid() }))
-		.query(async ({ ctx, input }) => {
-			await verifyOrgMembership(ctx.session.user.id, input.organizationId);
+	getConnection: publicProcedure.query(async () => {
+		const connection = await db.query.integrationConnections.findFirst({
+			where: eq(integrationConnections.provider, "slack"),
+			columns: {
+				id: true,
+				externalOrgName: true,
+				createdAt: true,
+			},
+		});
 
-			const connection = await db.query.integrationConnections.findFirst({
-				where: and(
-					eq(integrationConnections.organizationId, input.organizationId),
-					eq(integrationConnections.provider, "slack"),
-				),
-				columns: {
-					id: true,
-					externalOrgName: true,
-					createdAt: true,
-				},
-			});
+		if (!connection) return null;
 
-			if (!connection) return null;
+		return {
+			id: connection.id,
+			externalOrgName: connection.externalOrgName,
+			connectedAt: connection.createdAt,
+		};
+	}),
 
-			return {
-				id: connection.id,
-				externalOrgName: connection.externalOrgName,
-				connectedAt: connection.createdAt,
-			};
-		}),
+	disconnect: publicProcedure.mutation(async () => {
+		const result = await db
+			.delete(integrationConnections)
+			.where(eq(integrationConnections.provider, "slack"))
+			.returning({ id: integrationConnections.id });
 
-	disconnect: protectedProcedure
-		.input(z.object({ organizationId: z.uuid() }))
-		.mutation(async ({ ctx, input }) => {
-			await verifyOrgAdmin(ctx.session.user.id, input.organizationId);
+		if (result.length === 0) {
+			return { success: false, error: "No connection found" };
+		}
 
-			const result = await db
-				.delete(integrationConnections)
-				.where(
-					and(
-						eq(integrationConnections.organizationId, input.organizationId),
-						eq(integrationConnections.provider, "slack"),
-					),
-				)
-				.returning({ id: integrationConnections.id });
-
-			if (result.length === 0) {
-				return { success: false, error: "No connection found" };
-			}
-
-			return { success: true };
-		}),
+		return { success: true };
+	}),
 } satisfies TRPCRouterRecord;

@@ -20,7 +20,7 @@ const SLACK_SCOPES = [
 	"links:write",
 ].join(",");
 
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
 	if (!env.SLACK_CLIENT_ID) {
 		return Response.json(
 			{ error: "Slack integration not configured" },

@@ -3,7 +3,7 @@ import { chatSessions } from "@superset/db/schema";
 import type { TRPCRouterRecord } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { protectedProcedure } from "../../trpc";
+import { publicProcedure } from "../../trpc";
 
 const AVAILABLE_MODELS = [
 	{
@@ -34,11 +34,11 @@ const AVAILABLE_MODELS = [
 ];
 
 export const chatRouter = {
-	getModels: protectedProcedure.query(() => {
+	getModels: publicProcedure.query(() => {
 		return { models: AVAILABLE_MODELS };
 	}),
 
-	updateTitle: protectedProcedure
+	updateTitle: publicProcedure
 		.input(z.object({ sessionId: z.uuid(), title: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const [updated] = await db
@@ -47,7 +47,7 @@ export const chatRouter = {
 				.where(
 					and(
 						eq(chatSessions.id, input.sessionId),
-						eq(chatSessions.createdBy, ctx.session.user.id),
+						eq(chatSessions.createdBy, ctx.userId),
 					),
 				)
 				.returning({ id: chatSessions.id });

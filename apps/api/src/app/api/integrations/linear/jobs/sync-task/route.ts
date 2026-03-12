@@ -30,8 +30,7 @@ export async function POST(request: Request) {
 		return Response.json({ error: "Task not found", skipped: true });
 	}
 
-	const resolvedTeamId =
-		teamId ?? (await getNewTasksTeamId());
+	const resolvedTeamId = teamId ?? (await getNewTasksTeamId());
 	if (!resolvedTeamId) {
 		return Response.json({ error: "No team configured", skipped: true });
 	}

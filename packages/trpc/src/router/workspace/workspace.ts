@@ -7,16 +7,14 @@ import {
 } from "@superset/db/schema";
 import type { TRPCRouterRecord } from "@trpc/server";
 import { TRPCError } from "@trpc/server";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { protectedProcedure } from "../../trpc";
-import { verifyOrgAdmin, verifyOrgMembership } from "../integration/utils";
+import { publicProcedure } from "../../trpc";
 
 export const workspaceRouter = {
-	ensure: protectedProcedure
+	ensure: publicProcedure
 		.input(
 			z.object({
-				organizationId: z.string().uuid(),
 				project: z.object({
 					name: z.string().min(1),
 					slug: z.string().min(1),
@@ -34,14 +32,10 @@ export const workspaceRouter = {
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			await verifyOrgMembership(ctx.session.user.id, input.organizationId);
-
 			const result = await db.transaction(async (tx) => {
-				// Upsert project by (organizationId, slug) unique constraint
 				const [upsertedProject] = await tx
 					.insert(projects)
 					.values({
-						organizationId: input.organizationId,
 						name: input.project.name,
 						slug: input.project.slug,
 						repoOwner: input.project.repoOwner,
@@ -50,22 +44,16 @@ export const workspaceRouter = {
 						defaultBranch: input.project.defaultBranch,
 					})
 					.onConflictDoNothing({
-						target: [projects.organizationId, projects.slug],
+						target: [projects.slug],
 					})
 					.returning();
 
-				// If conflict, SELECT existing project
 				const projectRow =
 					upsertedProject ??
 					(await tx
 						.select()
 						.from(projects)
-						.where(
-							and(
-								eq(projects.organizationId, input.organizationId),
-								eq(projects.slug, input.project.slug),
-							),
-						)
+						.where(eq(projects.slug, input.project.slug))
 						.then((rows) => rows[0]));
 
 				if (!projectRow) {
@@ -75,17 +63,15 @@ export const workspaceRouter = {
 					});
 				}
 
-				// Upsert workspace by id
 				await tx
 					.insert(workspaces)
 					.values({
 						id: input.workspace.id,
-						organizationId: input.organizationId,
 						projectId: projectRow.id,
 						name: input.workspace.name,
 						type: input.workspace.type,
 						config: input.workspace.config,
-						createdByUserId: ctx.session.user.id,
+						createdByUserId: ctx.userId,
 					})
 					.onConflictDoNothing({ target: [workspaces.id] });
 
@@ -99,46 +85,33 @@ export const workspaceRouter = {
 			return result;
 		}),
 
-	create: protectedProcedure
+	create: publicProcedure
 		.input(
 			z.object({
 				projectId: z.string().uuid(),
-				organizationId: z.string().uuid(),
 				name: z.string().min(1),
 				type: workspaceTypeEnum,
 				config: workspaceConfigSchema,
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			await verifyOrgMembership(ctx.session.user.id, input.organizationId);
 			const [workspace] = await db
 				.insert(workspaces)
 				.values({
 					projectId: input.projectId,
-					organizationId: input.organizationId,
 					name: input.name,
 					type: input.type,
 					config: input.config,
-					createdByUserId: ctx.session.user.id,
+					createdByUserId: ctx.userId,
 				})
 				.returning();
 			return workspace;
 		}),
 
-	delete: protectedProcedure
-		.input(
-			z.object({ id: z.string().uuid(), organizationId: z.string().uuid() }),
-		)
-		.mutation(async ({ ctx, input }) => {
-			await verifyOrgAdmin(ctx.session.user.id, input.organizationId);
-			await db
-				.delete(workspaces)
-				.where(
-					and(
-						eq(workspaces.id, input.id),
-						eq(workspaces.organizationId, input.organizationId),
-					),
-				);
+	delete: publicProcedure
+		.input(z.object({ id: z.string().uuid() }))
+		.mutation(async ({ input }) => {
+			await db.delete(workspaces).where(eq(workspaces.id, input.id));
 			return { success: true };
 		}),
 } satisfies TRPCRouterRecord;

@@ -15,7 +15,7 @@ const envSchema = z.object({
 	NODE_ENV: z
 		.enum(["development", "production", "test"])
 		.default("development"),
-	NEXT_PUBLIC_API_URL: z.url().default("https://api.superset.sh"),
+	NEXT_PUBLIC_API_URL: z.url().optional(),
 	NEXT_PUBLIC_WEB_URL: z.url().default("https://app.superset.sh"),
 	NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),
 	NEXT_PUBLIC_POSTHOG_HOST: z.string().default("https://us.i.posthog.com"),

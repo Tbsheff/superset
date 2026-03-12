@@ -2,7 +2,7 @@ import { LinearClient } from "@linear/sdk";
 import { db } from "@superset/db/client";
 import type { TaskPriority } from "@superset/db/enums";
 import { integrationConnections } from "@superset/db/schema";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 export function mapPriorityToLinear(priority: string): number {
 	switch (priority) {
@@ -35,13 +35,10 @@ export function mapPriorityFromLinear(linearPriority: number): TaskPriority {
 }
 
 export async function getLinearClient(
-	organizationId: string,
+	_organizationId?: string,
 ): Promise<LinearClient | null> {
 	const connection = await db.query.integrationConnections.findFirst({
-		where: and(
-			eq(integrationConnections.organizationId, organizationId),
-			eq(integrationConnections.provider, "linear"),
-		),
+		where: eq(integrationConnections.provider, "linear"),
 	});
 
 	if (!connection) {

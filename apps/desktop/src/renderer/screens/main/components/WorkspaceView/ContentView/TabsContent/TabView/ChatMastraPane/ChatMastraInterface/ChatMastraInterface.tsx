@@ -14,8 +14,8 @@ import { useQuery } from "@tanstack/react-query";
 import type { ChatStatus } from "ai";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { apiTrpcClient } from "renderer/lib/api-trpc-client";
 import { posthog } from "renderer/lib/posthog";
+import { vanillaElectronTrpc } from "renderer/lib/vanilla-electron-trpc";
 import { useChatPreferencesStore } from "renderer/stores/chat-preferences";
 import { ChatInputFooter } from "../../ChatPane/ChatInterface/components/ChatInputFooter";
 import { useSlashCommandExecutor } from "../../ChatPane/ChatInterface/hooks/useSlashCommandExecutor";
@@ -128,7 +128,7 @@ function useAvailableModels(): {
 } {
 	const { data } = useQuery({
 		queryKey: ["chat", "models"],
-		queryFn: () => apiTrpcClient.chat.getModels.query(),
+		queryFn: () => vanillaElectronTrpc.data.chat.getModels.query(),
 		staleTime: Number.POSITIVE_INFINITY,
 	});
 	const models = data?.models ?? [];

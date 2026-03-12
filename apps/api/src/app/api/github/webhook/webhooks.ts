@@ -103,7 +103,7 @@ if (webhooks) {
 					.insert(githubRepositories)
 					.values({
 						installationId: installation.id,
-						
+
 						repoId: String(repo.id),
 						owner: owner ?? "",
 						name: name ?? repo.name,
@@ -115,7 +115,7 @@ if (webhooks) {
 						target: [githubRepositories.repoId],
 						set: {
 							installationId: installation.id,
-							
+
 							owner: owner ?? "",
 							name: name ?? repo.name,
 							fullName: repo.full_name,

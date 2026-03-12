@@ -1,4 +1,4 @@
-import { auth } from "@superset/auth/server";
+import { LOCAL_USER_ID } from "@superset/shared/constants";
 import { createTRPCContext } from "@superset/trpc";
 
 export const createContext = async ({
@@ -7,12 +7,8 @@ export const createContext = async ({
 	req: Request;
 	resHeaders: Headers;
 }) => {
-	const session = await auth.api.getSession({
-		headers: req.headers,
-	});
 	return createTRPCContext({
-		session,
-		auth,
+		userId: LOCAL_USER_ID,
 		headers: req.headers,
 	});
 };

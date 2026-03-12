@@ -38,9 +38,7 @@ export async function POST(request: Request) {
 	return Response.json({ success: true });
 }
 
-export async function performLinearInitialSync(
-	creatorUserId: string,
-) {
+export async function performLinearInitialSync(creatorUserId: string) {
 	const connection = await db.query.integrationConnections.findFirst({
 		where: eq(integrationConnections.provider, "linear"),
 	});
@@ -86,12 +84,7 @@ export async function performLinearInitialSync(
 	const userByEmail = new Map(matchedUsers.map((u) => [u.email, u.id]));
 
 	const taskValues = issues.map((issue) =>
-		mapIssueToTask(
-			issue,
-			creatorUserId,
-			userByEmail,
-			statusByExternalId,
-		),
+		mapIssueToTask(issue, creatorUserId, userByEmail, statusByExternalId),
 	);
 
 	const batches = chunk(taskValues, BATCH_SIZE);
@@ -101,10 +94,7 @@ export async function performLinearInitialSync(
 			.insert(tasks)
 			.values(batch)
 			.onConflictDoUpdate({
-				target: [
-					tasks.externalProvider,
-					tasks.externalId,
-				],
+				target: [tasks.externalProvider, tasks.externalId],
 				set: {
 					...buildConflictUpdateColumns(tasks, [
 						"slug",

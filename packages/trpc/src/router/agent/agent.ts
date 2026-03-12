@@ -3,13 +3,10 @@ import { agentCommands, commandStatusValues } from "@superset/db/schema";
 import { TRPCError, type TRPCRouterRecord } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { protectedProcedure } from "../../trpc";
+import { publicProcedure } from "../../trpc";
 
 export const agentRouter = {
-	/**
-	 * Update a command's status (called by device executors via Electric sync)
-	 */
-	updateCommand: protectedProcedure
+	updateCommand: publicProcedure
 		.input(
 			z.object({
 				id: z.string().uuid(),
@@ -20,14 +17,6 @@ export const agentRouter = {
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const organizationId = ctx.session.session.activeOrganizationId;
-			if (!organizationId) {
-				throw new TRPCError({
-					code: "BAD_REQUEST",
-					message: "No active organization selected",
-				});
-			}
-
 			const { id, ...changes } = input;
 
 			const result = await db.transaction(async (tx) => {
@@ -35,11 +24,7 @@ export const agentRouter = {
 					.select()
 					.from(agentCommands)
 					.where(
-						and(
-							eq(agentCommands.id, id),
-							eq(agentCommands.organizationId, organizationId),
-							eq(agentCommands.userId, ctx.session.user.id),
-						),
+						and(eq(agentCommands.id, id), eq(agentCommands.userId, ctx.userId)),
 					);
 
 				if (!existingCommand) {

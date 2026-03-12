@@ -17,7 +17,7 @@ import {
 	HiLockClosed,
 	HiOutlineCodeBracket,
 } from "react-icons/hi2";
-import { apiTrpcClient } from "renderer/lib/api-trpc-client";
+import { vanillaElectronTrpc } from "renderer/lib/vanilla-electron-trpc";
 
 interface SecretRowProps {
 	secret: {
@@ -33,11 +33,7 @@ interface SecretRowProps {
 	onDeleted: () => void;
 }
 
-export function SecretRow({
-	secret,
-	onEdit,
-	onDeleted,
-}: SecretRowProps) {
+export function SecretRow({ secret, onEdit, onDeleted }: SecretRowProps) {
 	const [isRevealed, setIsRevealed] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [copied, setCopied] = useState(false);
@@ -47,7 +43,7 @@ export function SecretRow({
 		if (!confirm(`Delete environment variable "${secret.key}"?`)) return;
 		setIsDeleting(true);
 		try {
-			await apiTrpcClient.project.secrets.delete.mutate({
+			await vanillaElectronTrpc.data.project.secrets.delete.mutate({
 				id: secret.id,
 			});
 			onDeleted();

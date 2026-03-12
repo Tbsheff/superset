@@ -1,18 +1,14 @@
 import { db } from "@superset/db/client";
 import { devicePresence, deviceTypeValues, users } from "@superset/db/schema";
-import { TRPCError, type TRPCRouterRecord } from "@trpc/server";
-import { and, eq, gt } from "drizzle-orm";
+import type { TRPCRouterRecord } from "@trpc/server";
+import { eq, gt } from "drizzle-orm";
 import { z } from "zod";
-import { protectedProcedure } from "../../trpc";
+import { publicProcedure } from "../../trpc";
 
 const OFFLINE_THRESHOLD_MS = 60_000;
 
 export const deviceRouter = {
-	/**
-	 * Register or update device presence (heartbeat)
-	 * Called by desktop/mobile apps to indicate they're online
-	 */
-	heartbeat: protectedProcedure
+	heartbeat: publicProcedure
 		.input(
 			z.object({
 				deviceId: z.string().min(1),
@@ -21,22 +17,13 @@ export const deviceRouter = {
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const organizationId = ctx.session.session.activeOrganizationId;
-			if (!organizationId) {
-				throw new TRPCError({
-					code: "BAD_REQUEST",
-					message: "No active organization selected",
-				});
-			}
-
-			const userId = ctx.session.user.id;
+			const userId = ctx.userId;
 			const now = new Date();
 
 			const [device] = await db
 				.insert(devicePresence)
 				.values({
 					userId,
-					organizationId,
 					deviceId: input.deviceId,
 					deviceName: input.deviceName,
 					deviceType: input.deviceType,
@@ -49,7 +36,6 @@ export const deviceRouter = {
 						deviceName: input.deviceName,
 						deviceType: input.deviceType,
 						lastSeenAt: now,
-						organizationId,
 					},
 				})
 				.returning();
@@ -57,15 +43,7 @@ export const deviceRouter = {
 			return { device, timestamp: now };
 		}),
 
-	/**
-	 * List online devices in the organization
-	 */
-	listOnlineDevices: protectedProcedure.query(async ({ ctx }) => {
-		const organizationId = ctx.session.session.activeOrganizationId;
-		if (!organizationId) {
-			return [];
-		}
-
+	listOnlineDevices: publicProcedure.query(async () => {
 		const threshold = new Date(Date.now() - OFFLINE_THRESHOLD_MS);
 
 		const devices = await db
@@ -82,12 +60,7 @@ export const deviceRouter = {
 			})
 			.from(devicePresence)
 			.innerJoin(users, eq(devicePresence.userId, users.id))
-			.where(
-				and(
-					eq(devicePresence.organizationId, organizationId),
-					gt(devicePresence.lastSeenAt, threshold),
-				),
-			);
+			.where(gt(devicePresence.lastSeenAt, threshold));
 
 		return devices;
 	}),

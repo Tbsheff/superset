@@ -49,9 +49,7 @@ export async function POST(request: Request) {
 	}
 }
 
-export async function performGitHubInitialSync(
-	installationDbId: string,
-) {
+export async function performGitHubInitialSync(installationDbId: string) {
 	if (!githubApp) {
 		throw new Error("GitHub App not configured");
 	}

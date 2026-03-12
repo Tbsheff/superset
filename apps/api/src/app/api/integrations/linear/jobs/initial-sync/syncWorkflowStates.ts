@@ -43,10 +43,7 @@ export async function syncWorkflowStates({
 				.insert(taskStatuses)
 				.values(values)
 				.onConflictDoUpdate({
-					target: [
-						taskStatuses.externalProvider,
-						taskStatuses.externalId,
-					],
+					target: [taskStatuses.externalProvider, taskStatuses.externalId],
 					set: {
 						...buildConflictUpdateColumns(taskStatuses, [
 							"name",

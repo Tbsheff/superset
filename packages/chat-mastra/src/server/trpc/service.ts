@@ -59,6 +59,7 @@ function resolveOmModelFromAuth(): string | undefined {
 export interface ChatMastraServiceOptions {
 	headers: () => Record<string, string> | Promise<Record<string, string>>;
 	apiUrl: string;
+	apiClient?: ReturnType<typeof createTRPCClient<AppRouter>>;
 }
 
 export class ChatMastraService {
@@ -70,17 +71,21 @@ export class ChatMastraService {
 	private readonly apiClient: ReturnType<typeof createTRPCClient<AppRouter>>;
 
 	constructor(readonly opts: ChatMastraServiceOptions) {
-		this.apiClient = createTRPCClient<AppRouter>({
-			links: [
-				httpBatchLink({
-					url: `${opts.apiUrl}/api/trpc`,
-					transformer: superjson,
-					async headers() {
-						return opts.headers();
-					},
-				}),
-			],
-		});
+		if (opts.apiClient) {
+			this.apiClient = opts.apiClient;
+		} else {
+			this.apiClient = createTRPCClient<AppRouter>({
+				links: [
+					httpBatchLink({
+						url: `${opts.apiUrl}/api/trpc`,
+						transformer: superjson,
+						async headers() {
+							return opts.headers();
+						},
+					}),
+				],
+			});
+		}
 	}
 
 	private async getOrCreateRuntime(

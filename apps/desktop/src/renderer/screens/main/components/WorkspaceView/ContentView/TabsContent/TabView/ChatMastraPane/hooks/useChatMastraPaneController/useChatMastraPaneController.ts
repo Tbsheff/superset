@@ -2,11 +2,9 @@ import { toast } from "@superset/ui/sonner";
 import { eq } from "@tanstack/db";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { env } from "renderer/env.renderer";
-import { apiTrpcClient } from "renderer/lib/api-trpc-client";
-import { getAuthToken } from "renderer/lib/auth-client";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { posthog } from "renderer/lib/posthog";
+import { vanillaElectronTrpc } from "renderer/lib/vanilla-electron-trpc";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 import { useTabsStore } from "renderer/stores/tabs/store";
 import type { ChatMastraLaunchConfig } from "shared/tabs-types";
@@ -14,7 +12,6 @@ import type { StartFreshSessionResult } from "../../../ChatPane/ChatInterface/ty
 import { reportChatMastraError } from "../../utils/reportChatMastraError";
 import { createSessionInitRunner } from "../../utils/session-init-runner";
 
-const apiUrl = env.NEXT_PUBLIC_API_URL;
 const SESSION_INIT_RETRY_DELAY_MS = 1500;
 const SESSION_INIT_MAX_RETRIES = 3;
 
@@ -64,54 +61,18 @@ function toSessionSelectorItem(session: {
 	};
 }
 
-async function getHttpErrorDetail(response: Response): Promise<string> {
-	const errorBody = await response
-		.text()
-		.then((text) => text.trim())
-		.catch(() => "");
-	const statusText = response.statusText ? ` ${response.statusText}` : "";
-	const detail = errorBody ? ` - ${errorBody.slice(0, 500)}` : "";
-	return `${response.status}${statusText}${detail}`;
-}
-
 async function createSessionRecord(input: {
 	sessionId: string;
 	workspaceId: string;
 }): Promise<void> {
-	const token = getAuthToken();
-	const response = await fetch(`${apiUrl}/api/chat/${input.sessionId}`, {
-		method: "PUT",
-		headers: {
-			"Content-Type": "application/json",
-			...(token ? { Authorization: `Bearer ${token}` } : {}),
-		},
-		body: JSON.stringify({
-			workspaceId: input.workspaceId,
-		}),
+	await vanillaElectronTrpc.data.chat.createSession.mutate({
+		sessionId: input.sessionId,
+		workspaceId: input.workspaceId,
 	});
-
-	if (!response.ok) {
-		const detail = await getHttpErrorDetail(response);
-		console.warn("[chat-sessions] create session failed", {
-			sessionId: input.sessionId,
-			workspaceId: input.workspaceId,
-			detail,
-		});
-		throw new Error(`Failed to create session ${input.sessionId}: ${detail}`);
-	}
 }
 
 async function deleteSessionRecord(sessionId: string): Promise<void> {
-	const token = getAuthToken();
-	const response = await fetch(`${apiUrl}/api/chat/${sessionId}/stream`, {
-		method: "DELETE",
-		headers: token ? { Authorization: `Bearer ${token}` } : {},
-	});
-
-	if (!response.ok) {
-		const detail = await getHttpErrorDetail(response);
-		throw new Error(`Failed to delete session ${sessionId}: ${detail}`);
-	}
+	await vanillaElectronTrpc.data.chat.deleteSession.mutate({ sessionId });
 }
 
 export function useChatMastraPaneController({
@@ -160,7 +121,7 @@ export function useChatMastraPaneController({
 
 		ensuredRef.current = workspaceId;
 
-		apiTrpcClient.workspace.ensure
+		vanillaElectronTrpc.data.workspace.ensure
 			.mutate({
 				project: {
 					name: project.name,

@@ -6,7 +6,7 @@ import {
 	unique,
 } from "drizzle-orm/sqlite-core";
 
-import { organizations, users } from "./auth";
+import { users } from "./auth";
 
 /**
  * GitHub App installations linked to Superset organizations.
@@ -19,10 +19,6 @@ export const githubInstallations = sqliteTable(
 			.primaryKey()
 			.$defaultFn(() => crypto.randomUUID()),
 
-		// Link to Superset organization
-		organizationId: text("organization_id")
-			.notNull()
-			.references(() => organizations.id, { onDelete: "cascade" }),
 		connectedByUserId: text("connected_by_user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
@@ -56,7 +52,6 @@ export const githubInstallations = sqliteTable(
 			.$onUpdate(() => new Date()),
 	},
 	(table) => [
-		unique("github_installations_org_unique").on(table.organizationId),
 		index("github_installations_installation_id_idx").on(table.installationId),
 	],
 );
@@ -78,11 +73,6 @@ export const githubRepositories = sqliteTable(
 		installationId: text("installation_id")
 			.notNull()
 			.references(() => githubInstallations.id, { onDelete: "cascade" }),
-
-		// Link to organization
-		organizationId: text("organization_id")
-			.notNull()
-			.references(() => organizations.id, { onDelete: "cascade" }),
 
 		// GitHub repo info
 		repoId: text("repo_id").notNull().unique(),
@@ -106,7 +96,6 @@ export const githubRepositories = sqliteTable(
 	(table) => [
 		index("github_repositories_installation_id_idx").on(table.installationId),
 		index("github_repositories_full_name_idx").on(table.fullName),
-		index("github_repositories_org_id_idx").on(table.organizationId),
 	],
 );
 
@@ -127,11 +116,6 @@ export const githubPullRequests = sqliteTable(
 		repositoryId: text("repository_id")
 			.notNull()
 			.references(() => githubRepositories.id, { onDelete: "cascade" }),
-
-		// Link to organization
-		organizationId: text("organization_id")
-			.notNull()
-			.references(() => organizations.id, { onDelete: "cascade" }),
 
 		// PR identification
 		prNumber: integer("pr_number").notNull(),
@@ -195,7 +179,6 @@ export const githubPullRequests = sqliteTable(
 		index("github_pull_requests_repository_id_idx").on(table.repositoryId),
 		index("github_pull_requests_state_idx").on(table.state),
 		index("github_pull_requests_head_branch_idx").on(table.headBranch),
-		index("github_pull_requests_org_id_idx").on(table.organizationId),
 	],
 );
 

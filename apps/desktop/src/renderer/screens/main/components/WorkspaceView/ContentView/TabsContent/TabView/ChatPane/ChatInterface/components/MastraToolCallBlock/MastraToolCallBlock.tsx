@@ -100,18 +100,12 @@ export function MastraToolCallBlock({
 			posthog.capture("chat_file_opened_from_tool", {
 				workspace_id: workspaceId,
 				session_id: sessionId ?? null,
-	
+
 				tool_name: toolName,
 				open_target: "view",
 			});
 		},
-		[
-			addFileViewerPane,
-			normalizeFilePath,
-			sessionId,
-			toolName,
-			workspaceId,
-		],
+		[addFileViewerPane, normalizeFilePath, sessionId, toolName, workspaceId],
 	);
 	const workspaceDiffPaneByFilePath = useMemo(() => {
 		if (!workspaceId) return new Map<string, DiffPaneTarget>();
@@ -165,7 +159,7 @@ export function MastraToolCallBlock({
 			posthog.capture("chat_file_opened_from_tool", {
 				workspace_id: workspaceId,
 				session_id: sessionId ?? null,
-	
+
 				tool_name: toolName,
 				open_target: "diff",
 			});

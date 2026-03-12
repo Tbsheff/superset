@@ -15,11 +15,7 @@ import { alias } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 import { executeOnDevice, getMcpContext } from "../../utils";
 
-async function fetchTask({
-	taskId,
-}: {
-	taskId: string;
-}) {
+async function fetchTask({ taskId }: { taskId: string }) {
 	const status = alias(taskStatuses, "status");
 	const [task] = await db
 		.select({
@@ -33,12 +29,7 @@ async function fetchTask({
 		})
 		.from(tasks)
 		.leftJoin(status, eq(tasks.statusId, status.id))
-		.where(
-			and(
-				eq(tasks.id, taskId),
-				isNull(tasks.deletedAt),
-			),
-		)
+		.where(and(eq(tasks.id, taskId), isNull(tasks.deletedAt)))
 		.limit(1);
 
 	return task ?? null;

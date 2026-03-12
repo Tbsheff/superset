@@ -42,7 +42,7 @@ export function register(server: McpServer) {
 			},
 		},
 		async (args, extra) => {
-			const ctx = getMcpContext(extra);
+			const _ctx = getMcpContext(extra);
 			const taskId = args.taskId as string;
 			const isUuid = z.string().uuid().safeParse(taskId).success;
 

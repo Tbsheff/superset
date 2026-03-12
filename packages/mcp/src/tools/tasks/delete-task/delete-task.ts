@@ -22,7 +22,7 @@ export function register(server: McpServer) {
 			},
 		},
 		async (args, extra) => {
-			const ctx = getMcpContext(extra);
+			const _ctx = getMcpContext(extra);
 			const taskIds = args.taskIds as string[];
 
 			const resolvedTasks: { id: string; identifier: string }[] = [];

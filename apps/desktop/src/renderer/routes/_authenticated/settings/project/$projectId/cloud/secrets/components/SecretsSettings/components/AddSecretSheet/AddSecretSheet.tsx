@@ -20,7 +20,7 @@ import {
 	HiOutlineTrash,
 	HiPlus,
 } from "react-icons/hi2";
-import { apiTrpcClient } from "renderer/lib/api-trpc-client";
+import { vanillaElectronTrpc } from "renderer/lib/vanilla-electron-trpc";
 import { parseEnvContent, validateEnvContent } from "../../utils/env-file";
 
 interface SecretEntry {
@@ -200,7 +200,7 @@ export function AddSecretSheet({
 		setIsSaving(true);
 		try {
 			for (const entry of validEntries) {
-				await apiTrpcClient.project.secrets.upsert.mutate({
+				await vanillaElectronTrpc.data.project.secrets.upsert.mutate({
 					projectId,
 					key: entry.key.trim(),
 					value: entry.value.trim(),

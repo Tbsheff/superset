@@ -2,8 +2,8 @@ import { Button } from "@superset/ui/button";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { HiOutlineCloud } from "react-icons/hi2";
-import { apiTrpcClient } from "renderer/lib/api-trpc-client";
 import { electronTrpc } from "renderer/lib/electron-trpc";
+import { vanillaElectronTrpc } from "renderer/lib/vanilla-electron-trpc";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 import { SettingsSection } from "../../../../components/ProjectSettings";
 import { AddSecretSheet } from "./components/AddSecretSheet";
@@ -83,13 +83,15 @@ export function SecretsSettings({ projectId }: SecretsSettingsProps) {
 
 		setIsCreatingCloud(true);
 		try {
-			const cloudProject = await apiTrpcClient.project.create.mutate({
-				name: project.name,
-				slug: repoName.toLowerCase(),
-				repoOwner: project.githubOwner,
-				repoName,
-				repoUrl: `https://github.com/${project.githubOwner}/${repoName}`,
-			});
+			const cloudProject = await vanillaElectronTrpc.data.project.create.mutate(
+				{
+					name: project.name,
+					slug: repoName.toLowerCase(),
+					repoOwner: project.githubOwner,
+					repoName,
+					repoUrl: `https://github.com/${project.githubOwner}/${repoName}`,
+				},
+			);
 			linkToNeon.mutate({
 				id: projectId,
 				neonProjectId: cloudProject.id,

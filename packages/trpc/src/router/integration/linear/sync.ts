@@ -3,22 +3,16 @@ import { db } from "@superset/db/client";
 import type { LinearConfig, SelectTask } from "@superset/db/schema";
 import {
 	integrationConnections,
-	members,
 	taskStatuses,
 	tasks,
 	users,
 } from "@superset/db/schema";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getLinearClient, mapPriorityToLinear } from "./utils";
 
-export async function getNewTasksTeamId(
-	organizationId: string,
-): Promise<string | null> {
+export async function getNewTasksTeamId(): Promise<string | null> {
 	const connection = await db.query.integrationConnections.findFirst({
-		where: and(
-			eq(integrationConnections.organizationId, organizationId),
-			eq(integrationConnections.provider, "linear"),
-		),
+		where: eq(integrationConnections.provider, "linear"),
 	});
 
 	if (!connection?.config) {
@@ -44,16 +38,12 @@ async function findLinearState(
 
 async function resolveLinearAssigneeId(
 	client: LinearClient,
-	organizationId: string,
 	userId: string,
 ): Promise<string | undefined> {
 	const matchedUser = await db
 		.select({ email: users.email })
 		.from(users)
-		.innerJoin(members, eq(members.userId, users.id))
-		.where(
-			and(eq(users.id, userId), eq(members.organizationId, organizationId)),
-		)
+		.where(eq(users.id, userId))
 		.limit(1)
 		.then((rows) => rows[0]);
 	if (!matchedUser?.email) return undefined;
@@ -78,7 +68,7 @@ export async function syncTaskToLinear(
 	externalUrl?: string;
 	error?: string;
 }> {
-	const client = await getLinearClient(task.organizationId);
+	const client = await getLinearClient();
 
 	if (!client) {
 		return { success: false, error: "No Linear connection found" };
@@ -101,11 +91,7 @@ export async function syncTaskToLinear(
 				linearAssigneeId = null;
 			} else if (task.assigneeId) {
 				linearAssigneeId =
-					(await resolveLinearAssigneeId(
-						client,
-						task.organizationId,
-						task.assigneeId,
-					)) ?? undefined;
+					(await resolveLinearAssigneeId(client, task.assigneeId)) ?? undefined;
 			}
 
 			const result = await client.updateIssue(task.externalId, {
@@ -144,11 +130,7 @@ export async function syncTaskToLinear(
 		}
 
 		const createAssigneeId = task.assigneeId
-			? await resolveLinearAssigneeId(
-					client,
-					task.organizationId,
-					task.assigneeId,
-				)
+			? await resolveLinearAssigneeId(client, task.assigneeId)
 			: undefined;
 
 		const result = await client.createIssue({
@@ -202,10 +184,6 @@ export async function syncTaskToLinear(
 	}
 }
 
-/**
- * Sync a task to Linear by taskId. Resolves the team and task, then syncs.
- * This is the main entry point used by the task sync system.
- */
 export async function syncTaskToLinearById(taskId: string): Promise<{
 	success: boolean;
 	externalId?: string;
@@ -220,7 +198,7 @@ export async function syncTaskToLinearById(taskId: string): Promise<{
 		return { success: false, error: "Task not found" };
 	}
 
-	const resolvedTeamId = await getNewTasksTeamId(task.organizationId);
+	const resolvedTeamId = await getNewTasksTeamId();
 	if (!resolvedTeamId) {
 		return { success: false, error: "No team configured" };
 	}

@@ -1,9 +1,5 @@
 import { useRouter } from "expo-router";
-import {
-	ChevronRight,
-	LogOut,
-	Settings,
-} from "lucide-react-native";
+import { ChevronRight, LogOut, Settings } from "lucide-react-native";
 import { Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";

@@ -5,7 +5,7 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 import { syncTask } from "../../lib/integrations/sync";
-import { protectedProcedure, publicProcedure } from "../../trpc";
+import { publicProcedure } from "../../trpc";
 import { createTaskSchema, updateTaskSchema } from "./schema";
 
 export const taskRouter = {
@@ -34,16 +34,6 @@ export const taskRouter = {
 			.orderBy(desc(tasks.createdAt));
 	}),
 
-	byOrganization: publicProcedure
-		.input(z.string().uuid())
-		.query(({ input }) => {
-			return db
-				.select()
-				.from(tasks)
-				.where(and(eq(tasks.organizationId, input), isNull(tasks.deletedAt)))
-				.orderBy(desc(tasks.createdAt));
-		}),
-
 	byId: publicProcedure.input(z.string().uuid()).query(async ({ input }) => {
 		const [task] = await db
 			.select()
@@ -62,7 +52,7 @@ export const taskRouter = {
 		return task ?? null;
 	}),
 
-	create: protectedProcedure
+	create: publicProcedure
 		.input(createTaskSchema)
 		.mutation(async ({ ctx, input }) => {
 			const result = await db.transaction(async (tx) => {
@@ -70,7 +60,7 @@ export const taskRouter = {
 					.insert(tasks)
 					.values({
 						...input,
-						creatorId: ctx.session.user.id,
+						creatorId: ctx.userId,
 						labels: input.labels ?? [],
 					})
 					.returning();
@@ -85,7 +75,7 @@ export const taskRouter = {
 			return result;
 		}),
 
-	update: protectedProcedure
+	update: publicProcedure
 		.input(updateTaskSchema)
 		.mutation(async ({ input }) => {
 			const { id, ...data } = input;
@@ -115,7 +105,7 @@ export const taskRouter = {
 			return result;
 		}),
 
-	delete: protectedProcedure
+	delete: publicProcedure
 		.input(z.string().uuid())
 		.mutation(async ({ input }) => {
 			const result = await db.transaction(async (tx) => {

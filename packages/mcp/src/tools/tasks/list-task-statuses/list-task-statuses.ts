@@ -1,7 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db } from "@superset/db/client";
 import { taskStatuses } from "@superset/db/schema";
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { getMcpContext } from "../../utils";
 
@@ -24,7 +23,7 @@ export function register(server: McpServer) {
 			},
 		},
 		async (_args, extra) => {
-			const ctx = getMcpContext(extra);
+			const _ctx = getMcpContext(extra);
 
 			const statuses = await db
 				.select({

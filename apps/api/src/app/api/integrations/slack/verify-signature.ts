@@ -19,7 +19,9 @@ export function verifySlackSignature({
 	}
 
 	if (!env.SLACK_SIGNING_SECRET) {
-		console.error("[slack/verify-signature] SLACK_SIGNING_SECRET not configured");
+		console.error(
+			"[slack/verify-signature] SLACK_SIGNING_SECRET not configured",
+		);
 		return false;
 	}
 

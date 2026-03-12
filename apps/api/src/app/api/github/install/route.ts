@@ -3,7 +3,7 @@ import { LOCAL_USER_ID } from "@superset/shared/constants";
 import { env } from "@/env";
 import { createSignedState } from "@/lib/oauth-state";
 
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
 	if (!env.GH_APP_ID) {
 		return Response.json(
 			{ error: "GitHub App not configured" },

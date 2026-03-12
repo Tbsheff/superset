@@ -86,9 +86,7 @@ function applyColumnRestrictions(
 	return filtered;
 }
 
-function queryTable(
-	tableName: string,
-): Record<string, unknown>[] {
+function queryTable(tableName: string): Record<string, unknown>[] {
 	// biome-ignore lint/suspicious/noExplicitAny: drizzle cross-package type issues
 	const selectAll = (table: any) => db.select().from(table).all();
 

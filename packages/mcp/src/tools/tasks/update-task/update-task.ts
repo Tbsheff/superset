@@ -52,7 +52,7 @@ export function register(server: McpServer) {
 			},
 		},
 		async (args, extra) => {
-			const ctx = getMcpContext(extra);
+			const _ctx = getMcpContext(extra);
 			const updates = args.updates as UpdateInput[];
 
 			const resolvedUpdates: {

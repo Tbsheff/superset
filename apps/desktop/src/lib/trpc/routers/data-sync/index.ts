@@ -17,11 +17,11 @@ import { z } from "zod";
 import { publicProcedure, router } from "../..";
 
 // biome-ignore lint/suspicious/noExplicitAny: drizzle cross-package type issues
-function selectAll(table: any): Record<string, unknown>[] {
-	return db.select().from(table).all();
+async function selectAll(table: any): Promise<Record<string, unknown>[]> {
+	return db.select().from(table);
 }
 
-function queryTable(tableName: string): Record<string, unknown>[] {
+async function queryTable(tableName: string): Promise<Record<string, unknown>[]> {
 	switch (tableName) {
 		case "tasks":
 			return selectAll(tasks);
@@ -37,10 +37,12 @@ function queryTable(tableName: string): Record<string, unknown>[] {
 			return selectAll(devicePresence);
 		case "agent_commands":
 			return selectAll(agentCommands);
-		case "integration_connections":
-			return selectAll(integrationConnections).map(
+		case "integration_connections": {
+			const rows = await selectAll(integrationConnections);
+			return rows.map(
 				({ accessToken, refreshToken, ...row }) => row,
 			);
+		}
 		case "chat_sessions":
 			return selectAll(chatSessions);
 		case "session_hosts":

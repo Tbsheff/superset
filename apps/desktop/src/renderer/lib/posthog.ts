@@ -5,6 +5,8 @@ export const posthog = {
 	reset: () => {},
 	reloadFeatureFlags: () => {},
 	register: (_props: Record<string, unknown>) => {},
+	opt_in_capturing: () => {},
+	opt_out_capturing: () => {},
 };
 
 export function initPostHog() {}

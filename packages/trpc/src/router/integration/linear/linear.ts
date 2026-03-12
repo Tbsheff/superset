@@ -13,7 +13,7 @@ export const linearRouter = {
 	connectWithToken: publicProcedure
 		.input(z.object({ apiToken: z.string().min(1) }))
 		.mutation(async ({ input }) => {
-			const client = new LinearClient({ accessToken: input.apiToken });
+			const client = new LinearClient({ apiKey: input.apiToken });
 			try {
 				const viewer = await client.viewer;
 				const org = await viewer.organization;

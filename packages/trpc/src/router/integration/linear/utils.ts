@@ -45,5 +45,5 @@ export async function getLinearClient(
 		return null;
 	}
 
-	return new LinearClient({ accessToken: connection.accessToken });
+	return new LinearClient({ apiKey: connection.accessToken });
 }

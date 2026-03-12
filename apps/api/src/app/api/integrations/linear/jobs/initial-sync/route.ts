@@ -47,7 +47,7 @@ export async function performLinearInitialSync(creatorUserId: string) {
 		throw new Error("No Linear connection found");
 	}
 
-	const client = new LinearClient({ accessToken: connection.accessToken });
+	const client = new LinearClient({ apiKey: connection.accessToken });
 
 	await syncWorkflowStates({ client });
 

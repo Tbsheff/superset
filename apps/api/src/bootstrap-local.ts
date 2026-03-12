@@ -28,7 +28,7 @@ export async function bootstrapLinearToken() {
 
 	// Verify token works and get org info
 	try {
-		const client = new LinearClient({ accessToken: token });
+		const client = new LinearClient({ apiKey: token });
 		const viewer = await client.viewer;
 		const org = await viewer.organization;
 

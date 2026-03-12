@@ -91,6 +91,24 @@ export function createDataRouter() {
 				disconnect: publicProcedure.mutation(() =>
 					getCaller().integration.linear.disconnect(),
 				),
+
+				getConnection: publicProcedure.query(() =>
+					getCaller().integration.linear.getConnection(),
+				),
+
+				getTeams: publicProcedure.query(() =>
+					getCaller().integration.linear.getTeams(),
+				),
+
+				updateConfig: publicProcedure
+					.input(z.object({ newTasksTeamId: z.string() }))
+					.mutation(({ input }) =>
+						getCaller().integration.linear.updateConfig(input),
+					),
+
+				triggerSync: publicProcedure.mutation(() =>
+					getCaller().integration.linear.triggerSync(),
+				),
 			}),
 		}),
 

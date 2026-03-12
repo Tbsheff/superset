@@ -6,6 +6,7 @@ import { TRPCError, type TRPCRouterRecord } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { publicProcedure } from "../../../trpc";
+import { performLinearInitialSync } from "./initial-sync";
 import { getLinearClient } from "./utils";
 
 export const linearRouter = {
@@ -37,10 +38,12 @@ export const linearRouter = {
 					});
 
 				return { success: true, orgName: org.name };
-			} catch {
+			} catch (err) {
+				console.error("[linear] connectWithToken failed:", err);
+				const detail = err instanceof Error ? err.message : String(err);
 				throw new TRPCError({
 					code: "BAD_REQUEST",
-					message: "Invalid API token. Check your Linear personal API key.",
+					message: `Linear connection failed: ${detail}`,
 				});
 			}
 		}),
@@ -102,5 +105,12 @@ export const linearRouter = {
 				.where(eq(integrationConnections.provider, "linear"));
 
 			return { success: true };
+		}),
+
+	triggerSync: publicProcedure
+		.input(z.object({}).optional())
+		.mutation(async () => {
+			const result = await performLinearInitialSync(LOCAL_USER_ID);
+			return { success: true, issueCount: result.issueCount };
 		}),
 } satisfies TRPCRouterRecord;

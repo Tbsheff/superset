@@ -5,7 +5,7 @@ import {
 	performGitHubSync,
 } from "../../lib/trpc/routers/data/github-sync";
 
-const SYNC_INTERVAL = 3 * 60 * 1000; // 3 minutes
+const SYNC_INTERVAL = 15 * 60 * 1000; // 15 minutes
 const BOOT_DELAY = 10_000; // 10 seconds
 
 let linearSyncRunning = false;

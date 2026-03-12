@@ -84,12 +84,25 @@ interface GhCheckRun {
 // ---------------------------------------------------------------------------
 
 const MAX_BUFFER = 10 * 1024 * 1024; // 10 MB
+const MAX_REPOS_FOR_PR_SYNC = 20;
+const RATE_LIMIT_FLOOR = 200;
 
 async function ghApi<T>(endpoint: string): Promise<T> {
 	const { stdout } = await execWithShellEnv("gh", ["api", endpoint], {
 		maxBuffer: MAX_BUFFER,
 	});
 	return JSON.parse(stdout) as T;
+}
+
+async function getRateLimitRemaining(): Promise<number> {
+	try {
+		const data = await ghApi<{ resources: { core: { remaining: number } } }>(
+			"rate_limit",
+		);
+		return data.resources.core.remaining;
+	} catch {
+		return Number.POSITIVE_INFINITY;
+	}
 }
 
 async function ensureInstallation(username: string): Promise<string> {
@@ -128,6 +141,14 @@ export async function performGitHubSync(): Promise<{
 		return { repoCount: 0, prCount: 0 };
 	}
 
+	const remaining = await getRateLimitRemaining();
+	if (remaining < RATE_LIMIT_FLOOR) {
+		console.warn(
+			`[github-sync] Skipping sync — only ${remaining} API calls remaining`,
+		);
+		return { repoCount: 0, prCount: 0 };
+	}
+
 	const installationId = await ensureInstallation(username);
 
 	// Fetch repos (user's repos, sorted by most recently pushed)
@@ -161,12 +182,11 @@ export async function performGitHubSync(): Promise<{
 			});
 	}
 
-	// Fetch PRs for each repo (last 30 days, all states)
-	const thirtyDaysAgo = new Date();
-	thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+	// Only fetch PRs for the most recently pushed repos to limit API calls
+	const reposForPrSync = repos.slice(0, MAX_REPOS_FOR_PR_SYNC);
 	let totalPrCount = 0;
 
-	for (const repo of repos) {
+	for (const repo of reposForPrSync) {
 		const [dbRepo] = await db
 			.select({ id: githubRepositories.id })
 			.from(githubRepositories)
@@ -177,17 +197,14 @@ export async function performGitHubSync(): Promise<{
 		let prs: GhPR[];
 		try {
 			prs = await ghApi<GhPR[]>(
-				`repos/${repo.full_name}/pulls?state=all&sort=updated&direction=desc&per_page=100`,
+				`repos/${repo.full_name}/pulls?state=all&sort=updated&direction=desc&per_page=30`,
 			);
 		} catch {
 			continue;
 		}
 
-		// Filter to last 30 days
-		prs = prs.filter((pr) => new Date(pr.updated_at) >= thirtyDaysAgo);
-
 		for (const pr of prs) {
-			// Fetch check runs for the PR head SHA
+			// Only fetch check-runs for open PRs to reduce API calls
 			let checks: Array<{
 				name: string;
 				status: string;
@@ -196,30 +213,32 @@ export async function performGitHubSync(): Promise<{
 			}> = [];
 			let checksStatus = "none";
 
-			try {
-				const checksData = await ghApi<{ check_runs: GhCheckRun[] }>(
-					`repos/${repo.full_name}/commits/${pr.head.sha}/check-runs`,
-				);
-				checks = checksData.check_runs.map((c) => ({
-					name: c.name,
-					status: c.status,
-					conclusion: c.conclusion,
-					detailsUrl: c.details_url ?? undefined,
-				}));
-
-				if (checks.length > 0) {
-					const hasFailure = checks.some(
-						(c) => c.conclusion === "failure" || c.conclusion === "timed_out",
+			if (pr.state === "open") {
+				try {
+					const checksData = await ghApi<{ check_runs: GhCheckRun[] }>(
+						`repos/${repo.full_name}/commits/${pr.head.sha}/check-runs`,
 					);
-					const hasPending = checks.some((c) => c.status !== "completed");
-					checksStatus = hasFailure
-						? "failure"
-						: hasPending
-							? "pending"
-							: "success";
+					checks = checksData.check_runs.map((c) => ({
+						name: c.name,
+						status: c.status,
+						conclusion: c.conclusion,
+						detailsUrl: c.details_url ?? undefined,
+					}));
+
+					if (checks.length > 0) {
+						const hasFailure = checks.some(
+							(c) => c.conclusion === "failure" || c.conclusion === "timed_out",
+						);
+						const hasPending = checks.some((c) => c.status !== "completed");
+						checksStatus = hasFailure
+							? "failure"
+							: hasPending
+								? "pending"
+								: "success";
+					}
+				} catch {
+					// Check runs may fail for some repos (permissions), continue
 				}
-			} catch {
-				// Check runs may fail for some repos (permissions), continue
 			}
 
 			await db

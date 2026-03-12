@@ -13,6 +13,7 @@ import {
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { usePresets } from "renderer/react-query/presets";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
+import { useSidebarStore } from "renderer/stores/sidebar-state";
 import { useTabsStore } from "renderer/stores/tabs/store";
 import { useTabsWithPresets } from "renderer/stores/tabs/useTabsWithPresets";
 import {
@@ -24,6 +25,7 @@ import {
 	DEFAULT_USE_COMPACT_TERMINAL_ADD_BUTTON,
 } from "shared/constants";
 import { type ActivePaneStatus, pickHigherStatus } from "shared/tabs-types";
+import { SidebarControl } from "../../../../SidebarControl";
 import { AddTabButton } from "./components/AddTabButton";
 import { GroupItem } from "./GroupItem";
 
@@ -31,6 +33,7 @@ const NO_WORKSPACE_MATCH = "__no_workspace__";
 
 export function GroupStrip() {
 	const { workspaceId: activeWorkspaceId } = useParams({ strict: false });
+	const isSidebarOpen = useSidebarStore((s) => s.isSidebarOpen);
 
 	const allTabs = useTabsStore((s) => s.tabs);
 	const panes = useTabsStore((s) => s.panes);
@@ -378,6 +381,11 @@ export function GroupStrip() {
 			</div>
 			{hasHorizontalOverflow && (
 				<div className="shrink-0 bg-background/95 pr-1">{plusControl}</div>
+			)}
+			{!isSidebarOpen && (
+				<div className="flex items-center shrink-0 px-2">
+					<SidebarControl />
+				</div>
 			)}
 		</div>
 	);

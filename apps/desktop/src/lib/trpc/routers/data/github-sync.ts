@@ -83,12 +83,12 @@ interface GhCheckRun {
 // Core sync logic
 // ---------------------------------------------------------------------------
 
+const MAX_BUFFER = 10 * 1024 * 1024; // 10 MB
+
 async function ghApi<T>(endpoint: string): Promise<T> {
-	const { stdout } = await execWithShellEnv("gh", [
-		"api",
-		endpoint,
-		"--paginate",
-	]);
+	const { stdout } = await execWithShellEnv("gh", ["api", endpoint], {
+		maxBuffer: MAX_BUFFER,
+	});
 	return JSON.parse(stdout) as T;
 }
 

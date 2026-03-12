@@ -247,7 +247,7 @@ export function FileViewerContent({
 	};
 
 	useEffect(() => {
-		if (viewMode !== "raw") return;
+		if (viewMode !== "raw" && viewMode !== "rendered") return;
 		if (isLoadingRaw) return;
 		if (!rawFileData?.ok) return;
 		if (draftContentRef.current !== null) return;

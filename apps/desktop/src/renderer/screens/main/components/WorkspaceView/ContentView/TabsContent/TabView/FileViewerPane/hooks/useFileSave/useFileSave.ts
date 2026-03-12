@@ -91,18 +91,27 @@ export function useFileSave({
 
 	const handleSaveRaw = useCallback(
 		async (options?: { force?: boolean }) => {
-			if (!editorRef.current || !filePath || !worktreePath) return;
-			savingFromRawRef.current = true;
+			const content =
+				editorRef.current?.getValue() ?? draftContentRef.current;
+			if (!content || !filePath || !worktreePath) return;
+			savingFromRawRef.current = !!editorRef.current;
 			return saveFileMutation.mutateAsync({
 				worktreePath,
 				absolutePath: filePath,
-				content: editorRef.current.getValue(),
+				content,
 				expectedContent: options?.force
 					? undefined
 					: originalContentRef.current,
 			});
 		},
-		[filePath, worktreePath, saveFileMutation, editorRef, originalContentRef],
+		[
+			filePath,
+			worktreePath,
+			saveFileMutation,
+			editorRef,
+			draftContentRef,
+			originalContentRef,
+		],
 	);
 
 	return {

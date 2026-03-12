@@ -7,7 +7,15 @@ import {
 	CardHeader,
 } from "@superset/ui/card";
 import { Input } from "@superset/ui/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@superset/ui/select";
 import { Skeleton } from "@superset/ui/skeleton";
+import { toast } from "@superset/ui/sonner";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useCallback, useEffect, useState } from "react";
 import { FaGithub, FaSlack } from "react-icons/fa";
@@ -159,6 +167,12 @@ export function IntegrationsSettings({
 	);
 }
 
+interface LinearTeam {
+	id: string;
+	name: string;
+	key: string;
+}
+
 function LinearIntegrationCard({
 	isConnected,
 	connectedOrgName,
@@ -171,16 +185,56 @@ function LinearIntegrationCard({
 	const [error, setError] = useState<string | null>(null);
 	const [showInput, setShowInput] = useState(false);
 
+	// Team selection + sync state
+	const [teams, setTeams] = useState<LinearTeam[]>([]);
+	const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+	const [isLoadingTeams, setIsLoadingTeams] = useState(false);
+	const [isSyncing, setIsSyncing] = useState(false);
+
+	// Load teams + current config when connected
+	useEffect(() => {
+		if (!isConnected) return;
+		let cancelled = false;
+
+		async function load() {
+			setIsLoadingTeams(true);
+			try {
+				const [fetchedTeams, connection] = await Promise.all([
+					vanillaElectronTrpc.data.integration.linear.getTeams.query(),
+					vanillaElectronTrpc.data.integration.linear.getConnection.query(),
+				]);
+				if (cancelled) return;
+				setTeams(fetchedTeams);
+				if (connection?.config?.newTasksTeamId) {
+					setSelectedTeamId(connection.config.newTasksTeamId);
+				} else if (fetchedTeams.length === 1 && fetchedTeams[0]) {
+					// Auto-select if there's only one team
+					setSelectedTeamId(fetchedTeams[0].id);
+					await vanillaElectronTrpc.data.integration.linear.updateConfig.mutate({
+						newTasksTeamId: fetchedTeams[0].id,
+					});
+				}
+			} catch (err) {
+				console.error("[integrations] Failed to load Linear teams:", err);
+			} finally {
+				if (!cancelled) setIsLoadingTeams(false);
+			}
+		}
+
+		void load();
+		return () => {
+			cancelled = true;
+		};
+	}, [isConnected]);
+
 	const handleConnect = async () => {
 		if (!tokenInput.trim()) return;
 		setIsConnecting(true);
 		setError(null);
 		try {
-			await vanillaElectronTrpc.data.integration.linear.connectWithToken.mutate(
-				{
-					apiToken: tokenInput.trim(),
-				},
-			);
+			await vanillaElectronTrpc.data.integration.linear.connectWithToken.mutate({
+				apiToken: tokenInput.trim(),
+			});
 			setTokenInput("");
 			setShowInput(false);
 		} catch (err) {
@@ -193,8 +247,40 @@ function LinearIntegrationCard({
 	const handleDisconnect = async () => {
 		try {
 			await vanillaElectronTrpc.data.integration.linear.disconnect.mutate();
+			setTeams([]);
+			setSelectedTeamId(null);
 		} catch (err) {
 			console.error("[integrations] Failed to disconnect Linear:", err);
+		}
+	};
+
+	const handleTeamChange = async (teamId: string) => {
+		setSelectedTeamId(teamId);
+		try {
+			await vanillaElectronTrpc.data.integration.linear.updateConfig.mutate({
+				newTasksTeamId: teamId,
+			});
+		} catch (err) {
+			console.error("[integrations] Failed to save team config:", err);
+		}
+	};
+
+	const handleSync = async () => {
+		if (!selectedTeamId) {
+			toast.error("Select a team first");
+			return;
+		}
+		setIsSyncing(true);
+		try {
+			const result =
+				await vanillaElectronTrpc.data.integration.linear.triggerSync.mutate();
+			toast.success(`Synced ${result.issueCount} issues from Linear`);
+		} catch (err) {
+			toast.error(
+				err instanceof Error ? err.message : "Sync failed",
+			);
+		} finally {
+			setIsSyncing(false);
 		}
 	};
 
@@ -238,13 +324,52 @@ function LinearIntegrationCard({
 					)}
 				</div>
 			</CardHeader>
-			{isConnected && connectedOrgName && (
-				<CardContent className="pt-0">
-					<p className="text-sm text-muted-foreground">
-						Connected to <span className="font-medium">{connectedOrgName}</span>
-					</p>
+
+			{/* Connected state: org name + team picker + sync */}
+			{isConnected && (
+				<CardContent className="pt-0 space-y-3">
+					{connectedOrgName && (
+						<p className="text-sm text-muted-foreground">
+							Connected to{" "}
+							<span className="font-medium">{connectedOrgName}</span>
+						</p>
+					)}
+
+					<div className="flex items-center gap-2">
+						{isLoadingTeams ? (
+							<Skeleton className="h-9 w-48" />
+						) : teams.length > 0 ? (
+							<Select
+								value={selectedTeamId ?? undefined}
+								onValueChange={handleTeamChange}
+							>
+								<SelectTrigger className="w-48">
+									<SelectValue placeholder="Select team..." />
+								</SelectTrigger>
+								<SelectContent>
+									{teams.map((team) => (
+										<SelectItem key={team.id} value={team.id}>
+											{team.key} — {team.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						) : (
+							<p className="text-sm text-muted-foreground">No teams found</p>
+						)}
+
+						<Button
+							size="sm"
+							onClick={handleSync}
+							disabled={isSyncing || !selectedTeamId}
+						>
+							{isSyncing ? "Syncing..." : "Sync Issues"}
+						</Button>
+					</div>
 				</CardContent>
 			)}
+
+			{/* Not connected: token input */}
 			{!isConnected && showInput && (
 				<CardContent className="pt-0">
 					<div className="flex gap-2">

@@ -44,17 +44,16 @@ export function ResizablePanel({
 	clampWidth = true,
 	onDoubleClickHandle,
 }: ResizablePanelProps) {
+	const containerRef = useRef<HTMLDivElement>(null);
 	const startXRef = useRef(0);
 	const startWidthRef = useRef(0);
-	const pendingWidthRef = useRef<number | null>(null);
+	const latestWidthRef = useRef(width);
 	const rafIdRef = useRef<number | null>(null);
 
-	const flushPendingWidth = useCallback(() => {
-		const pendingWidth = pendingWidthRef.current;
-		pendingWidthRef.current = null;
-		if (pendingWidth === null) return;
-		onWidthChange(pendingWidth);
-	}, [onWidthChange]);
+	// Keep latestWidthRef in sync with prop when not dragging
+	if (!isResizing) {
+		latestWidthRef.current = width;
+	}
 
 	const handleMouseDown = useCallback(
 		(e: React.MouseEvent) => {
@@ -68,37 +67,35 @@ export function ResizablePanel({
 
 	const handleMouseMove = useCallback(
 		(e: MouseEvent) => {
-			if (!isResizing) return;
-
 			const delta = e.clientX - startXRef.current;
-			// For left handle, dragging left increases width (invert delta)
-			// For right handle, dragging right increases width (normal delta)
 			const adjustedDelta = handleSide === "left" ? -delta : delta;
 			const newWidth = startWidthRef.current + adjustedDelta;
 			const finalWidth = clampWidth
 				? Math.max(minWidth, Math.min(maxWidth, newWidth))
 				: newWidth;
-			pendingWidthRef.current = finalWidth;
+			latestWidthRef.current = finalWidth;
 
 			if (rafIdRef.current !== null) return;
 			rafIdRef.current = requestAnimationFrame(() => {
 				rafIdRef.current = null;
-				flushPendingWidth();
+				// Apply directly to DOM — bypasses React for smooth 60fps resize
+				if (containerRef.current) {
+					containerRef.current.style.width = `${latestWidthRef.current}px`;
+				}
 			});
 		},
-		[isResizing, minWidth, maxWidth, handleSide, clampWidth, flushPendingWidth],
+		[minWidth, maxWidth, handleSide, clampWidth],
 	);
 
 	const handleMouseUp = useCallback(() => {
-		if (!isResizing) return;
-
 		if (rafIdRef.current !== null) {
 			cancelAnimationFrame(rafIdRef.current);
 			rafIdRef.current = null;
 		}
-		flushPendingWidth();
+		// Commit final width to React state in a single update
+		onWidthChange(latestWidthRef.current);
 		onResizingChange(false);
-	}, [isResizing, onResizingChange, flushPendingWidth]);
+	}, [onWidthChange, onResizingChange]);
 
 	useEffect(() => {
 		if (isResizing) {
@@ -117,12 +114,12 @@ export function ResizablePanel({
 				cancelAnimationFrame(rafIdRef.current);
 				rafIdRef.current = null;
 			}
-			pendingWidthRef.current = null;
 		};
 	}, [isResizing, handleMouseMove, handleMouseUp]);
 
 	return (
 		<div
+			ref={containerRef}
 			className={cn(
 				"relative h-full shrink-0 overflow-hidden border-border",
 				handleSide === "right" ? "border-r" : "border-l",

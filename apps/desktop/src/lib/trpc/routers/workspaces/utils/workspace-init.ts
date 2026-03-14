@@ -13,6 +13,7 @@ import {
 	createWorktreeFromExistingBranch,
 	fetchDefaultBranch,
 	hasOriginRemote,
+	pullBaseBranchIfCurrent,
 	refExistsLocally,
 	refreshDefaultBranch,
 	removeWorktree,
@@ -408,6 +409,9 @@ export async function initializeWorkspaceWorktree({
 		if (hasRemote) {
 			try {
 				await fetchDefaultBranch(mainRepoPath, effectiveBaseBranch);
+				// Fast-forward local base branch so gitignored files (node_modules, etc.)
+				// stay in sync with the latest remote code before being copied to the worktree
+				await pullBaseBranchIfCurrent(mainRepoPath, effectiveBaseBranch);
 			} catch (fetchError) {
 				const originRef = `origin/${effectiveBaseBranch}`;
 				if (!(await refExistsLocally(mainRepoPath, originRef))) {

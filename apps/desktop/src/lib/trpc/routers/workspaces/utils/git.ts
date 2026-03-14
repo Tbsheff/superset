@@ -914,6 +914,47 @@ export async function fetchDefaultBranch(
 }
 
 /**
+ * Fast-forward the local base branch to match origin, if the main repo
+ * currently has that branch checked out. This ensures gitignored files
+ * (node_modules, build artifacts) are in sync with the latest remote code
+ * before they get copied to new worktrees.
+ *
+ * Non-fatal: silently skips if the branch isn't checked out, if the working
+ * tree is dirty, or if a fast-forward isn't possible.
+ */
+export async function pullBaseBranchIfCurrent(
+	mainRepoPath: string,
+	baseBranch: string,
+): Promise<boolean> {
+	const git = await getSimpleGitWithShellPath(mainRepoPath);
+	try {
+		const current = await git.revparse(["--abbrev-ref", "HEAD"]);
+		if (current.trim() !== baseBranch) {
+			return false;
+		}
+		const status = await git.status();
+		if (
+			status.modified.length > 0 ||
+			status.staged.length > 0 ||
+			status.conflicted.length > 0
+		) {
+			console.log(
+				`[git] Skipping pull of ${baseBranch}: working tree has changes`,
+			);
+			return false;
+		}
+		await git.pull("origin", baseBranch, ["--ff-only"]);
+		console.log(`[git] Fast-forwarded local ${baseBranch} to origin`);
+		return true;
+	} catch (error) {
+		console.log(
+			`[git] Could not fast-forward ${baseBranch}: ${error instanceof Error ? error.message : String(error)}`,
+		);
+		return false;
+	}
+}
+
+/**
  * Refreshes the local origin/HEAD symref from the remote and returns the current default branch.
  * This detects when the remote repository's default branch has changed (e.g., master -> main).
  * @param mainRepoPath - Path to the main repository

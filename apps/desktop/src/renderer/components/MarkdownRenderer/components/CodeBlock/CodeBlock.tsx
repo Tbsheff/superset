@@ -1,14 +1,13 @@
-import { mermaid } from "@streamdown/mermaid";
-import type { ReactNode } from "react";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import {
-	oneDark,
-	oneLight,
-} from "react-syntax-highlighter/dist/esm/styles/prism";
-import { useTheme } from "renderer/stores";
-import { Streamdown } from "streamdown";
+import "./code-highlight.css";
 
-const mermaidPlugins = { mermaid };
+import { toHtml } from "hast-util-to-html";
+import { lazy, type ReactNode, Suspense, useMemo } from "react";
+import { lowlight } from "renderer/lib/lowlight";
+import { useTheme } from "renderer/stores";
+
+const MermaidBlock = lazy(() =>
+	import("./MermaidBlock").then((m) => ({ default: m.MermaidBlock })),
+);
 
 interface CodeNode {
 	position?: {
@@ -26,7 +25,6 @@ interface CodeBlockProps {
 export function CodeBlock({ children, className, node }: CodeBlockProps) {
 	const theme = useTheme();
 	const isDark = theme?.type !== "light";
-	const syntaxStyle = isDark ? oneDark : oneLight;
 
 	const match = /language-(\w+)/.exec(className || "");
 	const language = match ? match[1] : undefined;
@@ -45,24 +43,56 @@ export function CodeBlock({ children, className, node }: CodeBlockProps) {
 
 	if (language === "mermaid") {
 		return (
-			<Streamdown
-				mode="static"
-				plugins={mermaidPlugins}
-				mermaid={{ config: { theme: isDark ? "dark" : "default" } }}
+			<Suspense
+				fallback={
+					<pre className="rounded-md text-sm p-4 bg-muted overflow-x-auto">
+						<code>{codeString}</code>
+					</pre>
+				}
 			>
-				{`\`\`\`mermaid\n${codeString}\n\`\`\``}
-			</Streamdown>
+				<MermaidBlock code={codeString} isDark={isDark} />
+			</Suspense>
 		);
 	}
 
 	return (
-		<SyntaxHighlighter
-			style={syntaxStyle as Record<string, React.CSSProperties>}
-			language={language ?? "text"}
-			PreTag="div"
-			className="rounded-md text-sm"
+		<HighlightedCode code={codeString} language={language} isDark={isDark} />
+	);
+}
+
+function HighlightedCode({
+	code,
+	language,
+	isDark,
+}: {
+	code: string;
+	language: string | undefined;
+	isDark: boolean;
+}) {
+	const html = useMemo(() => {
+		try {
+			const tree = language
+				? lowlight.highlight(language, code)
+				: lowlight.highlightAuto(code);
+			return toHtml(tree);
+		} catch {
+			// Language not registered — fall back to unhighlighted
+			const tree = lowlight.highlightAuto(code);
+			return toHtml(tree);
+		}
+	}, [code, language]);
+
+	return (
+		<div
+			className={`rounded-md text-sm overflow-x-auto ${isDark ? "hljs-dark" : "hljs-light"}`}
 		>
-			{codeString}
-		</SyntaxHighlighter>
+			<pre className="p-4 m-0">
+				<code
+					className="hljs"
+					// biome-ignore lint/security/noDangerouslySetInnerHtml: lowlight produces safe HTML from code tokens
+					dangerouslySetInnerHTML={{ __html: html }}
+				/>
+			</pre>
+		</div>
 	);
 }

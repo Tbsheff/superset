@@ -35,6 +35,8 @@ export const SETTING_ITEM_ID = {
 	INTEGRATIONS_GITHUB: "integrations-github",
 	INTEGRATIONS_SLACK: "integrations-slack",
 
+	REMOTE_HOSTS_LIST: "remote-hosts-list",
+
 	PROJECT_NAME: "project-name",
 	PROJECT_PATH: "project-path",
 	PROJECT_SCRIPTS: "project-scripts",
@@ -525,6 +527,23 @@ export const SETTINGS_ITEMS: SettingsItem[] = [
 			"connect",
 			"connected",
 			"communication",
+		],
+	},
+	{
+		id: SETTING_ITEM_ID.REMOTE_HOSTS_LIST,
+		section: "remote-hosts",
+		title: "Remote Hosts",
+		description: "Configure SSH hosts for remote terminal sessions",
+		keywords: [
+			"remote",
+			"hosts",
+			"ssh",
+			"server",
+			"connection",
+			"terminal",
+			"cloud",
+			"sandbox",
+			"machine",
 		],
 	},
 	{

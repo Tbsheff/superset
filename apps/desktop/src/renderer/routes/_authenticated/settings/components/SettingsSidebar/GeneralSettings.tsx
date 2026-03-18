@@ -6,6 +6,7 @@ import {
 	HiOutlineDevicePhoneMobile,
 	HiOutlinePaintBrush,
 	HiOutlinePuzzlePiece,
+	HiOutlineServerStack,
 	HiOutlineShieldCheck,
 	HiOutlineSparkles,
 	HiOutlineUser,
@@ -29,6 +30,7 @@ type SettingsRoute =
 	| "/settings/models"
 	| "/settings/integrations"
 	| "/settings/devices"
+	| "/settings/remote-hosts"
 	| "/settings/permissions";
 
 interface SectionItem {
@@ -117,6 +119,12 @@ const SECTION_GROUPS: SectionGroup[] = [
 				section: "devices",
 				label: "Devices",
 				icon: <HiOutlineDevicePhoneMobile className="h-4 w-4" />,
+			},
+			{
+				id: "/settings/remote-hosts",
+				section: "remote-hosts",
+				label: "Remote Hosts",
+				icon: <HiOutlineServerStack className="h-4 w-4" />,
 			},
 		],
 	},

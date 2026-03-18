@@ -7,6 +7,8 @@ import type {
 	FileOpenMode,
 	GitHubStatus,
 	GitStatus,
+	RemoteHostType,
+	SshAuthMethod,
 	TerminalLinkBehavior,
 	TerminalPreset,
 	WorkspaceType,
@@ -85,6 +87,37 @@ export type InsertWorktree = typeof worktrees.$inferInsert;
 export type SelectWorktree = typeof worktrees.$inferSelect;
 
 /**
+ * Remote hosts table - represents SSH or cloud sandbox remote machines
+ */
+export const remoteHosts = sqliteTable(
+	"remote_hosts",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => uuidv4()),
+		name: text("name").notNull(),
+		type: text("type").notNull().$type<RemoteHostType>(),
+		hostname: text("hostname"),
+		port: integer("port").default(22),
+		username: text("username"),
+		authMethod: text("auth_method").$type<SshAuthMethod>(),
+		privateKeyPath: text("private_key_path"),
+		defaultCwd: text("default_cwd"),
+		lastConnectedAt: integer("last_connected_at"),
+		createdAt: integer("created_at")
+			.notNull()
+			.$defaultFn(() => Date.now()),
+		updatedAt: integer("updated_at")
+			.notNull()
+			.$defaultFn(() => Date.now()),
+	},
+	(table) => [index("remote_hosts_type_idx").on(table.type)],
+);
+
+export type InsertRemoteHost = typeof remoteHosts.$inferInsert;
+export type SelectRemoteHost = typeof remoteHosts.$inferSelect;
+
+/**
  * Workspaces table - represents an active workspace (worktree or branch-based)
  */
 export const workspaces = sqliteTable(
@@ -122,6 +155,9 @@ export const workspaces = sqliteTable(
 		// Each workspace gets a range of 10 ports starting from this base.
 		portBase: integer("port_base"),
 		sectionId: text("section_id").references(() => workspaceSections.id, {
+			onDelete: "set null",
+		}),
+		remoteHostId: text("remote_host_id").references(() => remoteHosts.id, {
 			onDelete: "set null",
 		}),
 	},

@@ -28,6 +28,7 @@ const SECTION_ORDER: SettingsSection[] = [
 	"models",
 	"integrations",
 	"devices",
+	"remote-hosts",
 	"permissions",
 ];
 
@@ -41,6 +42,7 @@ function getSectionFromPath(pathname: string): SettingsSection | null {
 	if (pathname.includes("/settings/terminal")) return "terminal";
 	if (pathname.includes("/settings/models")) return "models";
 	if (pathname.includes("/settings/integrations")) return "integrations";
+	if (pathname.includes("/settings/remote-hosts")) return "remote-hosts";
 	if (pathname.includes("/settings/permissions")) return "permissions";
 	if (pathname.includes("/settings/project")) return "project";
 	return null;
@@ -66,6 +68,8 @@ function getPathFromSection(section: SettingsSection): string {
 			return "/settings/models";
 		case "integrations":
 			return "/settings/integrations";
+		case "remote-hosts":
+			return "/settings/remote-hosts";
 		case "permissions":
 			return "/settings/permissions";
 		default:

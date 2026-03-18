@@ -166,3 +166,9 @@ export type BranchPrefixMode = (typeof BRANCH_PREFIX_MODES)[number];
 export const FILE_OPEN_MODES = ["split-pane", "new-tab"] as const;
 
 export type FileOpenMode = (typeof FILE_OPEN_MODES)[number];
+
+export const REMOTE_HOST_TYPES = ["ssh", "cloud-sandbox"] as const;
+export type RemoteHostType = (typeof REMOTE_HOST_TYPES)[number];
+
+export const SSH_AUTH_METHODS = ["key", "agent", "password"] as const;
+export type SshAuthMethod = (typeof SSH_AUTH_METHODS)[number];

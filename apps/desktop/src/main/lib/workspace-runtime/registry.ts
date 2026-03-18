@@ -5,15 +5,19 @@
  * The registry is cached for the lifetime of the process.
  *
  * Current behavior:
- * - All workspaces use the LocalWorkspaceRuntime
- * - The runtime is selected once based on settings (requires restart to change)
+ * - Workspaces with a remoteHostId use SshWorkspaceRuntime (cached per host)
+ * - Workspaces without remoteHostId use LocalWorkspaceRuntime
  *
  * Future behavior (cloud readiness):
  * - Per-workspace selection based on workspace metadata (cloudWorkspaceId, etc.)
  * - Local + cloud workspaces can coexist
  */
 
+import { remoteHosts, workspaces } from "@superset/local-db";
+import { eq } from "drizzle-orm";
+import { localDb } from "main/lib/local-db";
 import { LocalWorkspaceRuntime } from "./local";
+import { SshWorkspaceRuntime } from "./ssh-workspace-runtime";
 import type { WorkspaceRuntime, WorkspaceRuntimeRegistry } from "./types";
 
 // =============================================================================
@@ -23,22 +27,61 @@ import type { WorkspaceRuntime, WorkspaceRuntimeRegistry } from "./types";
 /**
  * Default registry implementation.
  *
- * Currently returns the same LocalWorkspaceRuntime for all workspaces.
- * The interface supports per-workspace selection for future cloud work.
+ * Returns LocalWorkspaceRuntime for workspaces without a remoteHostId.
+ * Returns a cached SshWorkspaceRuntime for workspaces with a remoteHostId.
  */
 class DefaultWorkspaceRuntimeRegistry implements WorkspaceRuntimeRegistry {
 	private localRuntime: LocalWorkspaceRuntime | null = null;
+	private sshRuntimes = new Map<string, SshWorkspaceRuntime>();
 
 	/**
 	 * Get the runtime for a specific workspace.
 	 *
-	 * Currently always returns the local runtime.
-	 * Future: will check workspace metadata to select local vs cloud.
+	 * Looks up remoteHostId from local-db. If set, returns a cached
+	 * SshWorkspaceRuntime for that host. Otherwise returns local runtime.
 	 */
-	getForWorkspaceId(_workspaceId: string): WorkspaceRuntime {
-		// Currently all workspaces use the local runtime
-		// Future: check workspace metadata for cloudWorkspaceId to select cloud runtime
-		return this.getDefault();
+	getForWorkspaceId(workspaceId: string): WorkspaceRuntime {
+		// Look up workspace to check for remote host assignment
+		const workspace = localDb
+			.select({ remoteHostId: workspaces.remoteHostId })
+			.from(workspaces)
+			.where(eq(workspaces.id, workspaceId))
+			.get();
+
+		if (!workspace?.remoteHostId) {
+			return this.getDefault();
+		}
+
+		// Check cache first
+		const cached = this.sshRuntimes.get(workspace.remoteHostId);
+		if (cached) {
+			return cached;
+		}
+
+		// Look up host config
+		const host = localDb
+			.select()
+			.from(remoteHosts)
+			.where(eq(remoteHosts.id, workspace.remoteHostId))
+			.get();
+
+		if (!host || !host.hostname || !host.username) {
+			// Fallback to local if host config is incomplete
+			return this.getDefault();
+		}
+
+		const runtime = new SshWorkspaceRuntime({
+			id: host.id,
+			hostname: host.hostname,
+			port: host.port ?? 22,
+			username: host.username,
+			authMethod: (host.authMethod as "key" | "agent" | "password") ?? "agent",
+			privateKeyPath: host.privateKeyPath ?? undefined,
+			defaultCwd: host.defaultCwd ?? undefined,
+		});
+
+		this.sshRuntimes.set(host.id, runtime);
+		return runtime;
 	}
 
 	/**

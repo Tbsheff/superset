@@ -19,6 +19,16 @@ export {
 	resetWorkspaceRuntimeRegistry,
 } from "./registry";
 export type {
+	SshConnectionStatus,
+	SshHostConfig,
+} from "./ssh-connection-manager";
+export {
+	getSshConnectionManager,
+	SshConnectionManager,
+} from "./ssh-connection-manager";
+export { SshTerminalRuntime } from "./ssh-terminal-runtime";
+export { SshWorkspaceRuntime } from "./ssh-workspace-runtime";
+export type {
 	TerminalCapabilities,
 	TerminalEventSource,
 	TerminalManagement,

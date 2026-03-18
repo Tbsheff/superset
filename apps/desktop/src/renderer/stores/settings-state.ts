@@ -12,6 +12,7 @@ export type SettingsSection =
 	| "models"
 	| "integrations"
 	| "devices"
+	| "remote-hosts"
 	| "permissions"
 	| "project";
 

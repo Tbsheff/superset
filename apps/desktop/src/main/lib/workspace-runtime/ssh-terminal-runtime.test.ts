@@ -11,12 +11,7 @@ function createMockChannel() {
 		write: mock((_data: any) => {}),
 		close: mock(() => {}),
 		setWindow: mock(
-			(
-				_rows: number,
-				_cols: number,
-				_height: number,
-				_width: number,
-			) => {},
+			(_rows: number, _cols: number, _height: number, _width: number) => {},
 		),
 		stderr: {
 			on: mock((_event: string, _cb: (...args: any[]) => void) => {}),
@@ -138,8 +133,8 @@ describe("SshTerminalRuntime", () => {
 		await runtime.createOrAttach({ paneId: "pane-1", workspaceId: "ws-1" });
 		const session = runtime.getSession("pane-1");
 		expect(session).not.toBeNull();
-		expect(session!.isAlive).toBe(true);
-		expect(typeof session!.lastActive).toBe("number");
+		expect(session?.isAlive).toBe(true);
+		expect(typeof session?.lastActive).toBe("number");
 	});
 
 	test("getSession returns null for unknown pane", () => {
@@ -161,7 +156,10 @@ describe("SshTerminalRuntime", () => {
 				cb(null, mockChannel);
 			}),
 		};
-		await runtime.createOrAttach({ paneId: "pane-1", workspaceId: "ws-target" });
+		await runtime.createOrAttach({
+			paneId: "pane-1",
+			workspaceId: "ws-target",
+		});
 
 		const ch2 = createMockChannel();
 		mockClient = {

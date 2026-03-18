@@ -1,11 +1,11 @@
 import { describe, expect, it, test } from "bun:test";
 import {
-	SETTING_ITEM_ID,
-	SETTINGS_ITEMS,
-	type SettingsItem,
 	getMatchCountBySection,
 	getMatchingItemsForSection,
 	isItemVisible,
+	SETTING_ITEM_ID,
+	SETTINGS_ITEMS,
+	type SettingsItem,
 	searchSettings,
 } from "./settings-search";
 

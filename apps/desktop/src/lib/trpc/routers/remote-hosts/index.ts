@@ -97,129 +97,64 @@ async function parseConfigHosts(): Promise<
 	}
 }
 
-async function parseKnownHosts(): Promise<
-	Array<{ hostname: string; port: number }>
-> {
-	const knownHostsPath = join(homedir(), ".ssh", "known_hosts");
-	try {
-		const content = await readFile(knownHostsPath, "utf-8");
-		const seen = new Set<string>();
-		const hosts: Array<{ hostname: string; port: number }> = [];
-
-		for (const line of content.split("\n")) {
-			const trimmed = line.trim();
-			if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith("|")) {
-				continue;
-			}
-
-			const hostField = trimmed.split(/\s+/)[0];
-			if (!hostField) continue;
-
-			for (const entry of hostField.split(",")) {
-				let hostname = entry;
-				let port = 22;
-
-				const bracketMatch = hostname.match(/^\[(.+?)\]:(\d+)$/);
-				if (bracketMatch) {
-					hostname = bracketMatch[1];
-					port = Number.parseInt(bracketMatch[2], 10);
-				}
-
-				if (
-					hostname === "localhost" ||
-					hostname === "127.0.0.1" ||
-					hostname === "::1"
-				) {
-					continue;
-				}
-
-				hostname = sanitize(hostname.trim());
-				const key = `${hostname}:${port}`;
-				if (!seen.has(key)) {
-					seen.add(key);
-					hosts.push({ hostname, port });
-				}
-			}
-		}
-
-		return hosts;
-	} catch {
-		return [];
-	}
-}
-
-async function parseHistoryHosts(): Promise<
-	Array<{ hostname: string; username: string | null; port: number }>
-> {
-	const hosts: Array<{
-		hostname: string;
-		username: string | null;
-		port: number;
-	}> = [];
-	const seen = new Set<string>();
-
-	const historyPaths = [
-		join(homedir(), ".zsh_history"),
-		join(homedir(), ".bash_history"),
-	];
-
-	for (const histPath of historyPaths) {
-		try {
-			const content = await readFile(histPath, "utf-8");
-			for (const line of content.split("\n")) {
-				const command = line.replace(/^:\s*\d+:\d+;/, "").trim();
-				if (!command.startsWith("ssh ")) continue;
-
-				// Strip options and flags to find user@host
-				// Remove known flag-value pairs: -p port, -i key, -l user, -o option, etc.
-				let rest = command.slice(4).trim();
-
-				// Extract -p port if present
-				let port = 22;
-				const portMatch = rest.match(/(?:^|\s)-p\s+(\d+)/);
-				if (portMatch) {
-					port = Number.parseInt(portMatch[1], 10);
-					rest = rest.replace(portMatch[0], " ");
-				}
-
-				// Strip remaining flags (single-char flags with optional value)
-				rest = rest.replace(/-[a-zA-Z](?:\s+\S+)?/g, "").trim();
-
-				// Last non-option token is [user@]host
-				const tokens = rest.split(/\s+/).filter((t) => t && !t.startsWith("-"));
-				const target = tokens[tokens.length - 1];
-				if (!target) continue;
-
-				let username: string | null = null;
-				let hostname = sanitize(target);
-				if (hostname.includes("@")) {
-					const atIdx = hostname.indexOf("@");
-					username = sanitize(hostname.slice(0, atIdx));
-					hostname = sanitize(hostname.slice(atIdx + 1));
-				}
-
-				if (
-					!hostname ||
-					hostname.startsWith("-") ||
-					hostname.includes("/") ||
-					hostname === "localhost" ||
-					hostname === "127.0.0.1"
-				) {
-					continue;
-				}
-
-				const key = `${username ?? ""}@${hostname}:${port}`;
-				if (!seen.has(key)) {
-					seen.add(key);
-					hosts.push({ hostname, username, port });
-				}
-			}
-		} catch {
-			// History file not found, skip
-		}
+/** Parse an SSH command string into connection parameters */
+function parseSshCommand(command: string): {
+	hostname: string;
+	username: string | null;
+	port: number;
+	identityFile: string | null;
+} {
+	let rest = command.trim();
+	// Strip leading "ssh " if present
+	if (rest.toLowerCase().startsWith("ssh ")) {
+		rest = rest.slice(4).trim();
 	}
 
-	return hosts;
+	// Extract -p port
+	let port = 22;
+	const portMatch = rest.match(/(?:^|\s)-p\s+(\d+)/);
+	if (portMatch) {
+		port = Number.parseInt(portMatch[1], 10);
+		rest = rest.replace(portMatch[0], " ").trim();
+	}
+
+	// Extract -i identity_file
+	let identityFile: string | null = null;
+	const identityMatch = rest.match(/(?:^|\s)-i\s+(\S+)/);
+	if (identityMatch) {
+		identityFile = identityMatch[1];
+		rest = rest.replace(identityMatch[0], " ").trim();
+	}
+
+	// Strip remaining flags
+	rest = rest.replace(/-[a-zA-Z](?:\s+\S+)?/g, "").trim();
+
+	// Last non-option token is [user@]host or [user@]host:port
+	const tokens = rest.split(/\s+/).filter((t) => t && !t.startsWith("-"));
+	const target = tokens[tokens.length - 1] ?? "";
+
+	let username: string | null = null;
+	let hostname = target;
+
+	if (hostname.includes("@")) {
+		const atIdx = hostname.indexOf("@");
+		username = hostname.slice(0, atIdx);
+		hostname = hostname.slice(atIdx + 1);
+	}
+
+	// Handle host:port format (but not IPv6)
+	const colonMatch = hostname.match(/^([^:]+):(\d+)$/);
+	if (colonMatch && !hostname.includes("::")) {
+		hostname = colonMatch[1];
+		port = Number.parseInt(colonMatch[2], 10);
+	}
+
+	return {
+		hostname: sanitize(hostname),
+		username: username ? sanitize(username) : null,
+		port,
+		identityFile: identityFile ? sanitize(identityFile) : null,
+	};
 }
 
 export const createRemoteHostsRouter = () => {
@@ -376,37 +311,44 @@ export const createRemoteHostsRouter = () => {
 		}),
 
 		discoverHosts: publicProcedure.query(async () => {
-			const [configResult, knownResult, history] = await Promise.all([
-				parseConfigHosts(),
-				parseKnownHosts(),
-				parseHistoryHosts(),
-			]);
-
-			// Enrich known hosts with SSH config usernames by matching on hostname
-			const configByHostname = new Map<
-				string,
-				{ username: string | null; identityFile: string | null }
-			>();
-			for (const ch of configResult) {
-				if (ch.hostname) {
-					configByHostname.set(ch.hostname, {
-						username: ch.username,
-						identityFile: ch.identityFile,
-					});
-				}
-			}
-
-			const known = knownResult.map((kh) => {
-				const configMatch = configByHostname.get(kh.hostname);
-				return {
-					...kh,
-					username: configMatch?.username ?? null,
-					identityFile: configMatch?.identityFile ?? null,
-				};
-			});
-
-			return { config: configResult, known, history };
+			const config = await parseConfigHosts();
+			return { config };
 		}),
+
+		createFromCommand: publicProcedure
+			.input(z.object({ command: z.string().min(1) }))
+			.mutation(({ input }) => {
+				const parsed = parseSshCommand(input.command);
+				if (!parsed.hostname) {
+					throw new Error("Could not parse hostname from SSH command");
+				}
+
+				const id = uuidv4();
+				const now = Date.now();
+				const authMethod = parsed.identityFile ? "key" : "agent";
+
+				localDb
+					.insert(remoteHosts)
+					.values({
+						id,
+						name: parsed.hostname,
+						type: "ssh",
+						hostname: parsed.hostname,
+						port: parsed.port,
+						username: parsed.username ?? undefined,
+						authMethod,
+						privateKeyPath: parsed.identityFile ?? undefined,
+						createdAt: now,
+						updatedAt: now,
+					})
+					.run();
+
+				return localDb
+					.select()
+					.from(remoteHosts)
+					.where(eq(remoteHosts.id, id))
+					.get();
+			}),
 
 		importFromSshConfig: publicProcedure
 			.input(

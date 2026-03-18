@@ -6,7 +6,7 @@ import {
 } from "@superset/ui/dropdown-menu";
 import type { NodeViewProps } from "@tiptap/react";
 import { NodeViewContent, NodeViewWrapper } from "@tiptap/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HiCheck, HiChevronDown, HiOutlineClipboard } from "react-icons/hi2";
 
 const LANGUAGES = [
@@ -37,6 +37,14 @@ export function CodeBlockView({
 }: NodeViewProps) {
 	const [copied, setCopied] = useState(false);
 	const [menuOpen, setMenuOpen] = useState(false);
+	const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	useEffect(
+		() => () => {
+			if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+		},
+		[],
+	);
 
 	const attrs = node.attrs as { language?: string };
 	const htmlAttrs = extension.options.HTMLAttributes as { class?: string };
@@ -48,7 +56,8 @@ export function CodeBlockView({
 	const handleCopy = async () => {
 		await navigator.clipboard.writeText(node.textContent);
 		setCopied(true);
-		setTimeout(() => setCopied(false), 2000);
+		if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+		copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
 	};
 
 	const handleLanguageChange = (language: string) => {

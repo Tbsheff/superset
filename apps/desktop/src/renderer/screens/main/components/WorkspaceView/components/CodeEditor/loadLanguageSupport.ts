@@ -5,6 +5,9 @@ import {
 	makefileStreamLanguage,
 } from "./streamLanguages";
 
+/** Cache language extensions so they are created only once per language. */
+const languageCache = new Map<string, Extension | null>();
+
 async function loadLegacyLanguage(
 	loader: () => Promise<Record<string, unknown>>,
 	key: string,
@@ -14,6 +17,17 @@ async function loadLegacyLanguage(
 }
 
 export async function loadLanguageSupport(
+	language: string,
+): Promise<Extension | null> {
+	const cached = languageCache.get(language);
+	if (cached !== undefined) return cached;
+
+	const ext = await loadLanguageSupportUncached(language);
+	languageCache.set(language, ext);
+	return ext;
+}
+
+async function loadLanguageSupportUncached(
 	language: string,
 ): Promise<Extension | null> {
 	switch (language) {

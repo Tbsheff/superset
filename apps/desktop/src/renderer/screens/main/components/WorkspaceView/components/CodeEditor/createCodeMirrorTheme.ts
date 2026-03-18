@@ -1,3 +1,4 @@
+import type { Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import {
 	DEFAULT_CODE_EDITOR_FONT_FAMILY,
@@ -10,14 +11,19 @@ interface CodeEditorFontSettings {
 	fontSize?: number;
 }
 
+let cachedThemeKey = "";
+let cachedTheme: Extension | null = null;
+
 export function createCodeMirrorTheme(
 	fontSettings: CodeEditorFontSettings,
 	fillHeight: boolean,
 ) {
+	const key = `${fontSettings.fontFamily ?? ""}|${fontSettings.fontSize ?? ""}|${fillHeight}`;
+	if (key === cachedThemeKey && cachedTheme) return cachedTheme;
 	const fontSize = fontSettings.fontSize ?? DEFAULT_CODE_EDITOR_FONT_SIZE;
 	const lineHeight = Math.round(fontSize * 1.5);
 
-	return EditorView.theme(
+	const theme = EditorView.theme(
 		{
 			"&": {
 				height: fillHeight ? "100%" : "auto",
@@ -87,4 +93,8 @@ export function createCodeMirrorTheme(
 			dark: true,
 		},
 	);
+
+	cachedThemeKey = key;
+	cachedTheme = theme;
+	return theme;
 }

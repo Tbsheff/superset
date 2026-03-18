@@ -35,8 +35,13 @@ export function getDiffsTheme() {
 	return MIDNIGHT_DIFF_THEME;
 }
 
+let cachedSyntaxHighlighting: Extension | null = null;
+
 export function getCodeSyntaxHighlighting(): Extension {
-	return syntaxHighlighting(oneDarkHighlightStyle);
+	if (!cachedSyntaxHighlighting) {
+		cachedSyntaxHighlighting = syntaxHighlighting(oneDarkHighlightStyle);
+	}
+	return cachedSyntaxHighlighting;
 }
 
 export function getDiffViewerStyle(

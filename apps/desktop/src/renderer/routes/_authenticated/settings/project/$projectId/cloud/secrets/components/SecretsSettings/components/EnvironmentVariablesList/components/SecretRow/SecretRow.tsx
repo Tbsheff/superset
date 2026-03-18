@@ -9,7 +9,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { cn } from "@superset/ui/utils";
 import { format } from "date-fns";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	HiEllipsisHorizontal,
 	HiEye,
@@ -38,6 +38,14 @@ export function SecretRow({ secret, onEdit, onDeleted }: SecretRowProps) {
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [copied, setCopied] = useState(false);
 	const [valueHovered, setValueHovered] = useState(false);
+	const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	useEffect(
+		() => () => {
+			if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+		},
+		[],
+	);
 
 	const handleDelete = useCallback(async () => {
 		if (!confirm(`Delete environment variable "${secret.key}"?`)) return;
@@ -57,7 +65,8 @@ export function SecretRow({ secret, onEdit, onDeleted }: SecretRowProps) {
 	const handleCopy = useCallback(async () => {
 		await navigator.clipboard.writeText(secret.value);
 		setCopied(true);
-		setTimeout(() => setCopied(false), 1500);
+		if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+		copyTimerRef.current = setTimeout(() => setCopied(false), 1500);
 	}, [secret.value]);
 
 	const isEmpty = !secret.sensitive && !secret.value;

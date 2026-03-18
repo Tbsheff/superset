@@ -82,6 +82,14 @@ function findTheme(themeId: string, customThemes: Theme[]): Theme | undefined {
 
 const builtInThemeIds = new Set(builtInThemes.map((theme) => theme.id));
 
+/** Cleanup handle for the OS media-query listener (prevents leak & duplicate listeners). */
+let themeMediaQueryCleanup: (() => void) | null = null;
+
+/** Remove the OS prefers-color-scheme listener. Exported for use in tests / HMR teardown. */
+export function cleanupThemeMediaQuery(): void {
+	themeMediaQueryCleanup?.();
+}
+
 /**
  * Sync theme data to localStorage for instant access before hydration.
  * This enables flash-free terminal rendering on app start.
@@ -242,8 +250,8 @@ export const useThemeStore = create<ThemeState>()(
 						state.setTheme(DEFAULT_THEME_ID);
 					}
 
-					// Set up listener for OS theme preference changes
-					if (typeof window !== "undefined") {
+					// Set up listener for OS theme preference changes (idempotent; guard prevents duplicates)
+					if (typeof window !== "undefined" && !themeMediaQueryCleanup) {
 						const mediaQuery = window.matchMedia(
 							"(prefers-color-scheme: dark)",
 						);
@@ -255,6 +263,10 @@ export const useThemeStore = create<ThemeState>()(
 							}
 						};
 						mediaQuery.addEventListener("change", handleChange);
+						themeMediaQueryCleanup = () => {
+							mediaQuery.removeEventListener("change", handleChange);
+							themeMediaQueryCleanup = null;
+						};
 					}
 				},
 			}),

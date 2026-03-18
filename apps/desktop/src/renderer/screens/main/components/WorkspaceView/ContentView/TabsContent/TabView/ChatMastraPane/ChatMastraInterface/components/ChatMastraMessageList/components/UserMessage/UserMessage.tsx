@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTabsStore } from "renderer/stores/tabs/store";
 import type {
 	UserMessageActionPayload,
@@ -42,6 +42,15 @@ export function UserMessage({
 	const draft = getUserMessageDraft(message);
 	const fullText = draft.text;
 	const [copied, setCopied] = useState(false);
+	const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	useEffect(
+		() => () => {
+			if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+		},
+		[],
+	);
+
 	const isPersistedMessage =
 		!message.id.startsWith("optimistic-") &&
 		!message.id.startsWith("immediate-user-message-");
@@ -67,7 +76,8 @@ export function UserMessage({
 		navigator.clipboard.writeText(fullText).then(
 			() => {
 				setCopied(true);
-				setTimeout(() => setCopied(false), 1500);
+				if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+				copyTimerRef.current = setTimeout(() => setCopied(false), 1500);
 			},
 			(error) => {
 				console.warn("[UserMessage] clipboard write failed", error);

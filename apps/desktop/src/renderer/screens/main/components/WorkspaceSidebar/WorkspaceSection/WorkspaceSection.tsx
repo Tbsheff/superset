@@ -11,7 +11,7 @@ import {
 import { toast } from "@superset/ui/sonner";
 import { cn } from "@superset/ui/utils";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDrag, useDrop } from "react-dnd";
 import { HiChevronRight } from "react-icons/hi2";
 import { LuPalette, LuPencil, LuTrash2 } from "react-icons/lu";
@@ -130,6 +130,13 @@ export function WorkspaceSection({
 	});
 
 	const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	useEffect(
+		() => () => {
+			if (clickTimer.current) clearTimeout(clickTimer.current);
+		},
+		[],
+	);
 
 	const handleClick = useCallback(() => {
 		if (clickTimer.current) return;

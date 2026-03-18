@@ -277,16 +277,14 @@ export function ChangesView({
 		}
 	};
 
-	const {
-		expandedSections,
-		fileListViewMode,
-		sectionOrder,
-		selectFile,
-		getSelectedFile,
-		toggleSection,
-		moveSection,
-		setFileListViewMode,
-	} = useChangesStore();
+	const expandedSections = useChangesStore((s) => s.expandedSections);
+	const fileListViewMode = useChangesStore((s) => s.fileListViewMode);
+	const sectionOrder = useChangesStore((s) => s.sectionOrder);
+	const selectFile = useChangesStore((s) => s.selectFile);
+	const getSelectedFile = useChangesStore((s) => s.getSelectedFile);
+	const toggleSection = useChangesStore((s) => s.toggleSection);
+	const moveSection = useChangesStore((s) => s.moveSection);
+	const setFileListViewMode = useChangesStore((s) => s.setFileListViewMode);
 
 	const selectedFileState = getSelectedFile(workspaceId || "");
 	const selectedFile = selectedFileState?.file ?? null;

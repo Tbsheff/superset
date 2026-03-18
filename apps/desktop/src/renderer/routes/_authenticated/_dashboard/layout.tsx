@@ -38,16 +38,22 @@ function DashboardLayout() {
 		{ enabled: !!currentWorkspaceId },
 	);
 
-	const {
-		isOpen: isWorkspaceSidebarOpen,
-		toggleCollapsed: toggleWorkspaceSidebarCollapsed,
-		setOpen: setWorkspaceSidebarOpen,
-		width: workspaceSidebarWidth,
-		setWidth: setWorkspaceSidebarWidth,
-		isResizing: isWorkspaceSidebarResizing,
-		setIsResizing: setWorkspaceSidebarIsResizing,
-		isCollapsed: isWorkspaceSidebarCollapsed,
-	} = useWorkspaceSidebarStore();
+	const isWorkspaceSidebarOpen = useWorkspaceSidebarStore((s) => s.isOpen);
+	const toggleWorkspaceSidebarCollapsed = useWorkspaceSidebarStore(
+		(s) => s.toggleCollapsed,
+	);
+	const setWorkspaceSidebarOpen = useWorkspaceSidebarStore((s) => s.setOpen);
+	const workspaceSidebarWidth = useWorkspaceSidebarStore((s) => s.width);
+	const setWorkspaceSidebarWidth = useWorkspaceSidebarStore((s) => s.setWidth);
+	const isWorkspaceSidebarResizing = useWorkspaceSidebarStore(
+		(s) => s.isResizing,
+	);
+	const setWorkspaceSidebarIsResizing = useWorkspaceSidebarStore(
+		(s) => s.setIsResizing,
+	);
+	const isWorkspaceSidebarCollapsed = useWorkspaceSidebarStore(
+		(s) => s.isCollapsed,
+	);
 
 	// Global hotkeys for dashboard
 	useAppHotkey(

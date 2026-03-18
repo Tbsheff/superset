@@ -4,7 +4,8 @@ import { HotkeyTooltipContent } from "renderer/components/HotkeyTooltipContent";
 import { useWorkspaceSidebarStore } from "renderer/stores";
 
 export function SidebarToggle() {
-	const { isCollapsed, toggleCollapsed } = useWorkspaceSidebarStore();
+	const isCollapsed = useWorkspaceSidebarStore((s) => s.isCollapsed);
+	const toggleCollapsed = useWorkspaceSidebarStore((s) => s.toggleCollapsed);
 	const collapsed = isCollapsed();
 
 	const getToggleIcon = (isHovering: boolean) => {

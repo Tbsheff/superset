@@ -73,12 +73,12 @@ export function FileViewerPane({
 	// Use granular selector to only get this pane's fileViewer data
 	const fileViewer = useTabsStore((s) => s.panes[paneId]?.fileViewer);
 	const isFocused = useTabsStore((s) => s.focusedPaneIds[tabId] === paneId);
-	const {
-		viewMode: diffViewMode,
-		setViewMode: setDiffViewMode,
-		hideUnchangedRegions,
-		toggleHideUnchangedRegions,
-	} = useChangesStore();
+	const diffViewMode = useChangesStore((s) => s.viewMode);
+	const setDiffViewMode = useChangesStore((s) => s.setViewMode);
+	const hideUnchangedRegions = useChangesStore((s) => s.hideUnchangedRegions);
+	const toggleHideUnchangedRegions = useChangesStore(
+		(s) => s.toggleHideUnchangedRegions,
+	);
 
 	const editorRef = useRef<CodeEditorAdapter | null>(null);
 	const markdownContainerRef = useRef<HTMLDivElement>(null);

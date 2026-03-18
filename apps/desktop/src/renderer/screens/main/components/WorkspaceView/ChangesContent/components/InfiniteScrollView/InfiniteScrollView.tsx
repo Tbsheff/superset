@@ -24,17 +24,17 @@ export function InfiniteScrollView({
 	baseBranch,
 }: InfiniteScrollViewProps) {
 	const { containerRef, viewedCount } = useScrollContext();
-	const {
-		viewMode: diffViewMode,
-		setViewMode: setDiffViewMode,
-		hideUnchangedRegions,
-		toggleHideUnchangedRegions,
-		fileListViewMode,
-		sectionOrder,
-		expandedSections: expandedCategories,
-		moveSection,
-		toggleSection: toggleCategory,
-	} = useChangesStore();
+	const diffViewMode = useChangesStore((s) => s.viewMode);
+	const setDiffViewMode = useChangesStore((s) => s.setViewMode);
+	const hideUnchangedRegions = useChangesStore((s) => s.hideUnchangedRegions);
+	const toggleHideUnchangedRegions = useChangesStore(
+		(s) => s.toggleHideUnchangedRegions,
+	);
+	const fileListViewMode = useChangesStore((s) => s.fileListViewMode);
+	const sectionOrder = useChangesStore((s) => s.sectionOrder);
+	const expandedCategories = useChangesStore((s) => s.expandedSections);
+	const moveSection = useChangesStore((s) => s.moveSection);
+	const toggleCategory = useChangesStore((s) => s.toggleSection);
 	const isExpandedView = useSidebarStore(
 		(state) => state.currentMode === SidebarMode.Changes,
 	);

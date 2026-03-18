@@ -45,7 +45,8 @@ export function useFocusMode({
 }: FocusModeInput) {
 	const { focusedFileKey, setFocusedFileKey, setActiveFileKey, activeFileKey } =
 		useScrollContext();
-	const { focusMode, toggleFocusMode } = useChangesStore();
+	const focusMode = useChangesStore((s) => s.focusMode);
+	const toggleFocusMode = useChangesStore((s) => s.toggleFocusMode);
 	const orderedSections = useMemo(
 		() => getOrderedChangeSectionIds(sectionOrder),
 		[sectionOrder],

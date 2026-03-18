@@ -1,4 +1,10 @@
-import { createContext, type ReactNode, useContext, useEffect } from "react";
+import {
+	createContext,
+	type ReactNode,
+	useContext,
+	useEffect,
+	useMemo,
+} from "react";
 import { getCollections, preloadCollections } from "./collections";
 
 type CollectionsContextType = ReturnType<typeof getCollections>;
@@ -19,7 +25,7 @@ export function CollectionsProvider({ children }: { children: ReactNode }) {
 		preloadActiveOrganizationCollections();
 	}, []);
 
-	const collections = getCollections();
+	const collections = useMemo(() => getCollections(), []);
 
 	return (
 		<CollectionsContext.Provider value={collections}>

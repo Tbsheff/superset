@@ -85,7 +85,8 @@ export function FileDiffSection({
 		setActiveFileKey,
 		containerRef,
 	} = useScrollContext();
-	const { viewMode: diffViewMode, hideUnchangedRegions } = useChangesStore();
+	const diffViewMode = useChangesStore((s) => s.viewMode);
+	const hideUnchangedRegions = useChangesStore((s) => s.hideUnchangedRegions);
 	const [isCopied, setIsCopied] = useState(false);
 	const [hasBeenVisible, setHasBeenVisible] = useState(false);
 	const [isInLoadRange, setIsInLoadRange] = useState(false);

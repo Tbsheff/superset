@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { projects, workspaces, worktrees } from "@superset/local-db";
@@ -76,6 +77,15 @@ export const createTerminalRouter = () => {
 	// Track pane → workspace mapping for runtime selection
 	const paneWorkspaceMap = new Map<string, string>();
 
+	// Router-level event bridge: stream subscriptions always listen here.
+	// createOrAttach wires the actual runtime's events to this bridge so
+	// subscriptions that start before createOrAttach still receive data.
+	const streamBridge = new EventEmitter();
+	streamBridge.setMaxListeners(200);
+
+	// Track cleanup functions for per-pane runtime→bridge forwarding
+	const paneForwarders = new Map<string, () => void>();
+
 	function getTerminalForWorkspace(workspaceId: string): TerminalRuntime {
 		return registry.getForWorkspaceId(workspaceId).terminal;
 	}
@@ -83,6 +93,43 @@ export const createTerminalRouter = () => {
 	function getTerminalForPane(paneId: string): TerminalRuntime {
 		const wsId = paneWorkspaceMap.get(paneId);
 		return wsId ? getTerminalForWorkspace(wsId) : terminal;
+	}
+
+	/**
+	 * Wire a terminal runtime's events for a pane to the stream bridge.
+	 * Tears down any previous forwarding for this pane first.
+	 */
+	function wireRuntimeToBridge(paneId: string, runtime: TerminalRuntime): void {
+		// Tear down previous forwarding if any
+		const prev = paneForwarders.get(paneId);
+		if (prev) prev();
+
+		const dataEvent = `data:${paneId}`;
+		const exitEvent = `exit:${paneId}`;
+		const disconnectEvent = `disconnect:${paneId}`;
+		const errorEvent = `error:${paneId}`;
+
+		const fwdData = (...args: unknown[]) =>
+			streamBridge.emit(dataEvent, ...args);
+		const fwdExit = (...args: unknown[]) =>
+			streamBridge.emit(exitEvent, ...args);
+		const fwdDisconnect = (...args: unknown[]) =>
+			streamBridge.emit(disconnectEvent, ...args);
+		const fwdError = (...args: unknown[]) =>
+			streamBridge.emit(errorEvent, ...args);
+
+		runtime.on(dataEvent, fwdData);
+		runtime.on(exitEvent, fwdExit);
+		runtime.on(disconnectEvent, fwdDisconnect);
+		runtime.on(errorEvent, fwdError);
+
+		const cleanup = () => {
+			runtime.off(dataEvent, fwdData);
+			runtime.off(exitEvent, fwdExit);
+			runtime.off(disconnectEvent, fwdDisconnect);
+			runtime.off(errorEvent, fwdError);
+		};
+		paneForwarders.set(paneId, cleanup);
 	}
 
 	return router({
@@ -117,7 +164,12 @@ export const createTerminalRouter = () => {
 					themeType,
 				} = input;
 
-				console.log("[terminal] createOrAttach for workspace:", workspaceId, "pane:", paneId);
+				console.log(
+					"[terminal] createOrAttach for workspace:",
+					workspaceId,
+					"pane:",
+					paneId,
+				);
 				paneWorkspaceMap.set(paneId, workspaceId);
 
 				const workspace = localDb
@@ -170,7 +222,14 @@ export const createTerminalRouter = () => {
 				});
 
 				const terminalRuntime = getTerminalForWorkspace(workspaceId);
-				console.log("[terminal] Using runtime:", terminalRuntime.constructor.name || "unknown");
+				console.log(
+					"[terminal] Using runtime:",
+					terminalRuntime.constructor.name || "unknown",
+				);
+
+				// Wire runtime events to the stream bridge BEFORE creating the session,
+				// so any early data from SSH channels is forwarded to waiting subscribers.
+				wireRuntimeToBridge(paneId, terminalRuntime);
 
 				try {
 					const result = await terminalRuntime.createOrAttach({
@@ -323,6 +382,11 @@ export const createTerminalRouter = () => {
 			.mutation(async ({ input }) => {
 				await getTerminalForPane(input.paneId).kill(input);
 				paneWorkspaceMap.delete(input.paneId);
+				const cleanupForwarder = paneForwarders.get(input.paneId);
+				if (cleanupForwarder) {
+					cleanupForwarder();
+					paneForwarders.delete(input.paneId);
+				}
 			}),
 
 		detach: publicProcedure
@@ -503,7 +567,17 @@ export const createTerminalRouter = () => {
 						console.log(`[Terminal Stream] Subscribe: ${paneId}`);
 					}
 
-					const paneTerminal = getTerminalForPane(paneId);
+					// Listen on the router-level streamBridge instead of directly on a
+					// runtime instance. This decouples subscription timing from
+					// createOrAttach: the bridge is the stable target, and
+					// createOrAttach wires the real runtime → bridge when it runs.
+					// For local terminals that may already be wired (e.g., re-attach),
+					// ensure the default runtime is wired as a fallback so events
+					// aren't missed while waiting for createOrAttach.
+					if (!paneForwarders.has(paneId)) {
+						wireRuntimeToBridge(paneId, getTerminalForPane(paneId));
+					}
+
 					let firstDataReceived = false;
 
 					const onData = (data: string) => {
@@ -537,19 +611,19 @@ export const createTerminalRouter = () => {
 						});
 					};
 
-					paneTerminal.on(`data:${paneId}`, onData);
-					paneTerminal.on(`exit:${paneId}`, onExit);
-					paneTerminal.on(`disconnect:${paneId}`, onDisconnect);
-					paneTerminal.on(`error:${paneId}`, onError);
+					streamBridge.on(`data:${paneId}`, onData);
+					streamBridge.on(`exit:${paneId}`, onExit);
+					streamBridge.on(`disconnect:${paneId}`, onDisconnect);
+					streamBridge.on(`error:${paneId}`, onError);
 
 					return () => {
 						if (DEBUG_TERMINAL) {
 							console.log(`[Terminal Stream] Unsubscribe: ${paneId}`);
 						}
-						paneTerminal.off(`data:${paneId}`, onData);
-						paneTerminal.off(`exit:${paneId}`, onExit);
-						paneTerminal.off(`disconnect:${paneId}`, onDisconnect);
-						paneTerminal.off(`error:${paneId}`, onError);
+						streamBridge.off(`data:${paneId}`, onData);
+						streamBridge.off(`exit:${paneId}`, onExit);
+						streamBridge.off(`disconnect:${paneId}`, onDisconnect);
+						streamBridge.off(`error:${paneId}`, onError);
 					};
 				});
 			}),

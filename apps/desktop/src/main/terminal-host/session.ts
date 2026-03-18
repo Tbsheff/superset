@@ -496,7 +496,7 @@ export class Session {
 		// Trim oldest entries when the queue grows too large to prevent OOM
 		while (
 			this.emulatorWriteQueuedBytes >
-				TerminalDaemonSession.MAX_EMULATOR_QUEUE_BYTES &&
+				Session.MAX_EMULATOR_QUEUE_BYTES &&
 			this.emulatorWriteQueue.length > 1
 		) {
 			const dropped = this.emulatorWriteQueue.shift()!;

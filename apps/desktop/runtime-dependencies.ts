@@ -70,7 +70,16 @@ const externalizedRuntimeModules: ExternalizedRuntimeModule[] = [
 	{
 		specifier: "ssh2",
 		materialize: ["ssh2"],
-		packagedCopies: [copyWholeModule("ssh2")],
+		packagedCopies: [
+			copyWholeModule("ssh2"),
+			// ssh2 transitive dependencies:
+			// ssh2 → asn1 → safer-buffer
+			copyWholeModule("asn1"),
+			copyWholeModule("safer-buffer"),
+			// ssh2 → bcrypt-pbkdf → tweetnacl
+			copyWholeModule("bcrypt-pbkdf"),
+			copyWholeModule("tweetnacl"),
+		],
 		asarUnpackGlobs: ["**/node_modules/ssh2/**/*"],
 	},
 ];

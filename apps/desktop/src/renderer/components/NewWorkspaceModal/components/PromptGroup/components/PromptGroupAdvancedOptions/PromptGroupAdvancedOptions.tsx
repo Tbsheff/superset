@@ -14,6 +14,13 @@ import {
 import { Input } from "@superset/ui/input";
 import { Label } from "@superset/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@superset/ui/popover";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@superset/ui/select";
 import { Switch } from "@superset/ui/switch";
 import { GoGitBranch } from "react-icons/go";
 import {
@@ -22,6 +29,7 @@ import {
 	HiChevronUpDown,
 	HiOutlinePencil,
 } from "react-icons/hi2";
+import { electronTrpc } from "renderer/lib/electron-trpc";
 import { formatRelativeTime } from "renderer/lib/formatRelativeTime";
 
 interface BranchOption {
@@ -46,6 +54,8 @@ interface PromptGroupAdvancedOptionsProps {
 	onBranchSearchChange: (value: string) => void;
 	filteredBranches: BranchOption[];
 	onSelectBaseBranch: (branchName: string) => void;
+	remoteHostId: string | null;
+	onRemoteHostIdChange: (value: string | null) => void;
 	runSetupScript: boolean;
 	onRunSetupScriptChange: (checked: boolean) => void;
 }
@@ -67,9 +77,12 @@ export function PromptGroupAdvancedOptions({
 	onBranchSearchChange,
 	filteredBranches,
 	onSelectBaseBranch,
+	remoteHostId,
+	onRemoteHostIdChange,
 	runSetupScript,
 	onRunSetupScriptChange,
 }: PromptGroupAdvancedOptionsProps) {
+	const { data: remoteHosts } = electronTrpc.remoteHosts.list.useQuery();
 	return (
 		<Collapsible open={showAdvanced} onOpenChange={onShowAdvancedChange}>
 			<CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
@@ -183,6 +196,40 @@ export function PromptGroupAdvancedOptions({
 						</Popover>
 					)}
 				</div>
+
+				{remoteHosts && remoteHosts.length > 0 && (
+					<div className="space-y-1.5">
+						<Label
+							htmlFor="remote-host"
+							className="text-xs text-muted-foreground"
+						>
+							Remote Host
+						</Label>
+						<Select
+							value={remoteHostId ?? "local"}
+							onValueChange={(value) =>
+								onRemoteHostIdChange(value === "local" ? null : value)
+							}
+						>
+							<SelectTrigger id="remote-host" className="h-8 text-xs w-full">
+								<SelectValue placeholder="Local" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="local">Local</SelectItem>
+								{remoteHosts.map((host) => (
+									<SelectItem key={host.id} value={host.id}>
+										{host.name}
+										{host.username && host.hostname
+											? ` (${host.username}@${host.hostname})`
+											: host.hostname
+												? ` (${host.hostname})`
+												: ""}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+				)}
 
 				<div className="flex items-center justify-between">
 					<Label

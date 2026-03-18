@@ -59,6 +59,7 @@ export function PromptGroup({ projectId }: PromptGroupProps) {
 		branchNameEdited,
 		branchSearch,
 		prompt,
+		remoteHostId,
 		runSetupScript,
 		showAdvanced,
 	} = draft;
@@ -221,6 +222,7 @@ export function PromptGroup({ projectId }: PromptGroupProps) {
 					branchName: branchSlug || undefined,
 					baseBranch: baseBranch || undefined,
 					applyPrefix,
+					remoteHostId: remoteHostId || undefined,
 				},
 				launchRequest ? { agentLaunchRequest: launchRequest } : undefined,
 			),
@@ -328,6 +330,8 @@ export function PromptGroup({ projectId }: PromptGroupProps) {
 				onBranchSearchChange={(branchSearch) => updateDraft({ branchSearch })}
 				filteredBranches={filteredBranches}
 				onSelectBaseBranch={handleBaseBranchSelect}
+				remoteHostId={remoteHostId}
+				onRemoteHostIdChange={(remoteHostId) => updateDraft({ remoteHostId })}
 				runSetupScript={runSetupScript}
 				onRunSetupScriptChange={(runSetupScript) =>
 					updateDraft({ runSetupScript })

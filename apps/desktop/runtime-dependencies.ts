@@ -69,7 +69,7 @@ const externalizedRuntimeModules: ExternalizedRuntimeModule[] = [
 	},
 	{
 		specifier: "ssh2",
-		materialize: ["ssh2"],
+		materialize: ["ssh2", "asn1", "safer-buffer", "bcrypt-pbkdf", "tweetnacl"],
 		packagedCopies: [
 			copyWholeModule("ssh2"),
 			// ssh2 transitive dependencies:

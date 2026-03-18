@@ -1,5 +1,5 @@
 import { COMPANY } from "@superset/shared/constants";
-import { useNavigate, useRouter } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import {
 	HiArrowLeft,
 	HiArrowTopRightOnSquare,
@@ -16,18 +16,12 @@ import { ProjectsSettings } from "./ProjectsSettings";
 
 export function SettingsSidebar() {
 	const navigate = useNavigate();
-	const router = useRouter();
 	const searchQuery = useSettingsSearchQuery();
 	const setSearchQuery = useSetSettingsSearchQuery();
 	const matchCounts = searchQuery ? getMatchCountBySection(searchQuery) : null;
 
 	const handleBack = () => {
-		if (router.history.canGoBack()) {
-			router.history.back();
-			return;
-		}
-
-		void navigate({ to: "/workspace" });
+		void navigate({ to: "/" });
 	};
 
 	return (

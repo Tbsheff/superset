@@ -6,6 +6,8 @@
  */
 
 import { EventEmitter } from "node:events";
+import fs from "node:fs";
+import { getShellEnvironment } from "lib/trpc/routers/workspaces/utils/shell-env";
 import type { Client, ConnectConfig } from "ssh2";
 
 export type SshConnectionStatus =
@@ -80,6 +82,8 @@ export class SshConnectionManager extends EventEmitter {
 		this.connections.set(config.id, managed);
 		this.emit(`status:${config.id}`, "connecting" as SshConnectionStatus);
 
+		const connectConfig = await this.buildConnectConfig(config);
+
 		return new Promise<Client>((resolve, reject) => {
 			client.on("ready", () => {
 				managed.status = "connected";
@@ -115,12 +119,13 @@ export class SshConnectionManager extends EventEmitter {
 				managed.status = "disconnected";
 			});
 
-			const connectConfig = this.buildConnectConfig(config);
 			client.connect(connectConfig);
 		});
 	}
 
-	private buildConnectConfig(config: SshHostConfig): ConnectConfig {
+	private async buildConnectConfig(
+		config: SshHostConfig,
+	): Promise<ConnectConfig> {
 		const base: ConnectConfig = {
 			host: config.hostname,
 			port: config.port,
@@ -130,13 +135,18 @@ export class SshConnectionManager extends EventEmitter {
 		};
 
 		switch (config.authMethod) {
-			case "agent":
-				base.agent = process.env.SSH_AUTH_SOCK;
+			case "agent": {
+				// Electron GUI apps on macOS don't inherit SSH_AUTH_SOCK from the
+				// user's shell. Resolve the full shell environment to find it.
+				const shellEnv = await getShellEnvironment();
+				const agentSock = shellEnv.SSH_AUTH_SOCK || process.env.SSH_AUTH_SOCK;
+				if (agentSock) {
+					base.agent = agentSock;
+				}
 				break;
+			}
 			case "key":
 				if (config.privateKeyPath) {
-					// Read key file synchronously — only happens on connect
-					const fs = require("node:fs");
 					base.privateKey = fs.readFileSync(config.privateKeyPath);
 				}
 				break;

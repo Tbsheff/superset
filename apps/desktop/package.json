@@ -197,6 +197,7 @@
 		"shell-env": "^4.0.3",
 		"shell-quote": "^1.8.3",
 		"simple-git": "^3.30.0",
+		"ssh-config": "^5.1.0",
 		"ssh2": "^1.17.0",
 		"streamdown": "^2.2.0",
 		"strip-ansi": "^7.1.2",

@@ -10,6 +10,14 @@ import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import { publicProcedure, router } from "../..";
 
+/** Strip trailing backslashes (zsh line-continuation) and carriage returns from parsed values */
+function sanitize(value: string): string;
+function sanitize(value: string | null): string | null;
+function sanitize(value: string | null): string | null {
+	if (value == null) return null;
+	return value.replace(/[\r\\]+$/, "").trim();
+}
+
 async function parseConfigHosts(): Promise<
 	Array<{
 		name: string;
@@ -75,11 +83,11 @@ async function parseConfigHosts(): Promise<
 				: (rawUser ?? null);
 
 			hosts.push({
-				name: hostPattern.trim(),
-				hostname: hostname?.trim() ?? null,
+				name: sanitize(hostPattern.trim()),
+				hostname: sanitize(hostname?.trim() ?? null),
 				port,
-				username: username?.trim() ?? null,
-				identityFile: identityFile?.trim() ?? null,
+				username: sanitize(username?.trim() ?? null),
+				identityFile: sanitize(identityFile?.trim() ?? null),
 			});
 		}
 
@@ -125,7 +133,7 @@ async function parseKnownHosts(): Promise<
 					continue;
 				}
 
-				hostname = hostname.trim();
+				hostname = sanitize(hostname.trim());
 				const key = `${hostname}:${port}`;
 				if (!seen.has(key)) {
 					seen.add(key);
@@ -183,13 +191,12 @@ async function parseHistoryHosts(): Promise<
 				if (!target) continue;
 
 				let username: string | null = null;
-				let hostname = target;
-				if (target.includes("@")) {
-					const atIdx = target.indexOf("@");
-					username = target.slice(0, atIdx).trim();
-					hostname = target.slice(atIdx + 1).trim();
+				let hostname = sanitize(target);
+				if (hostname.includes("@")) {
+					const atIdx = hostname.indexOf("@");
+					username = sanitize(hostname.slice(0, atIdx));
+					hostname = sanitize(hostname.slice(atIdx + 1));
 				}
-				hostname = hostname.trim();
 
 				if (
 					!hostname ||

@@ -74,7 +74,13 @@ async function parseConfigHosts(): Promise<
 				? (rawUser[0] ?? null)
 				: (rawUser ?? null);
 
-			hosts.push({ name: hostPattern, hostname, port, username, identityFile });
+			hosts.push({
+				name: hostPattern.trim(),
+				hostname: hostname?.trim() ?? null,
+				port,
+				username: username?.trim() ?? null,
+				identityFile: identityFile?.trim() ?? null,
+			});
 		}
 
 		return hosts;
@@ -119,6 +125,7 @@ async function parseKnownHosts(): Promise<
 					continue;
 				}
 
+				hostname = hostname.trim();
 				const key = `${hostname}:${port}`;
 				if (!seen.has(key)) {
 					seen.add(key);
@@ -179,9 +186,10 @@ async function parseHistoryHosts(): Promise<
 				let hostname = target;
 				if (target.includes("@")) {
 					const atIdx = target.indexOf("@");
-					username = target.slice(0, atIdx);
-					hostname = target.slice(atIdx + 1);
+					username = target.slice(0, atIdx).trim();
+					hostname = target.slice(atIdx + 1).trim();
 				}
+				hostname = hostname.trim();
 
 				if (
 					!hostname ||
@@ -241,14 +249,14 @@ export const createRemoteHostsRouter = () => {
 					.insert(remoteHosts)
 					.values({
 						id,
-						name: input.name,
+						name: input.name.trim(),
 						type: input.type,
-						hostname: input.hostname,
+						hostname: input.hostname?.trim(),
 						port: input.port ?? 22,
-						username: input.username,
+						username: input.username?.trim(),
 						authMethod: input.authMethod,
-						privateKeyPath: input.privateKeyPath,
-						defaultCwd: input.defaultCwd,
+						privateKeyPath: input.privateKeyPath?.trim(),
+						defaultCwd: input.defaultCwd?.trim(),
 						createdAt: now,
 						updatedAt: now,
 					})
@@ -276,9 +284,20 @@ export const createRemoteHostsRouter = () => {
 			)
 			.mutation(({ input }) => {
 				const { id, ...updates } = input;
+				const trimmed = {
+					...updates,
+					...(updates.name && { name: updates.name.trim() }),
+					...(updates.hostname && { hostname: updates.hostname.trim() }),
+					...(updates.username && { username: updates.username.trim() }),
+					...(updates.privateKeyPath && {
+						privateKeyPath: updates.privateKeyPath.trim(),
+					}),
+					...(updates.defaultCwd && { defaultCwd: updates.defaultCwd.trim() }),
+					updatedAt: Date.now(),
+				};
 				localDb
 					.update(remoteHosts)
-					.set({ ...updates, updatedAt: Date.now() })
+					.set(trimmed)
 					.where(eq(remoteHosts.id, id))
 					.run();
 
@@ -317,9 +336,9 @@ export const createRemoteHostsRouter = () => {
 				try {
 					await manager.connect({
 						id: testId,
-						hostname: input.hostname,
+						hostname: input.hostname.trim(),
 						port: input.port ?? 22,
-						username: input.username,
+						username: input.username.trim(),
 						authMethod: input.authMethod,
 						privateKeyPath: input.privateKeyPath,
 						password: input.password,
@@ -403,13 +422,13 @@ export const createRemoteHostsRouter = () => {
 					.insert(remoteHosts)
 					.values({
 						id,
-						name: input.name,
+						name: input.name.trim(),
 						type: "ssh",
-						hostname: input.hostname,
+						hostname: input.hostname.trim(),
 						port: input.port ?? 22,
-						username: input.username,
+						username: input.username?.trim(),
 						authMethod,
-						privateKeyPath: input.identityFile,
+						privateKeyPath: input.identityFile?.trim(),
 						createdAt: now,
 						updatedAt: now,
 					})

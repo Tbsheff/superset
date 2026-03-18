@@ -68,6 +68,7 @@ export class SshConnectionManager extends EventEmitter {
 	private connections = new Map<string, ManagedConnection>();
 
 	async connect(config: SshHostConfig): Promise<Client> {
+		console.log("[ssh-conn] connect:", config.hostname, config.username);
 		const existing = this.connections.get(config.id);
 		if (existing?.status === "connected") {
 			return existing.client;
@@ -108,8 +109,11 @@ export class SshConnectionManager extends EventEmitter {
 
 		const connectConfig = await this.buildConnectConfig(config);
 
+		console.log("[ssh-conn] Calling client.connect with config:", { host: connectConfig.host, port: connectConfig.port, username: connectConfig.username, hasAgent: !!connectConfig.agent, hasPrivateKey: !!connectConfig.privateKey });
+
 		return new Promise<Client>((resolve, reject) => {
 			client.on("ready", () => {
+				console.log("[ssh-conn] Client ready!");
 				managed.status = "connected";
 				managed.reconnectAttempts = 0;
 				this.emit(`connected:${config.id}`);
@@ -118,6 +122,7 @@ export class SshConnectionManager extends EventEmitter {
 			});
 
 			client.on("error", (err: Error) => {
+				console.log("[ssh-conn] Client error:", err.message);
 				const wasConnecting = managed.status === "connecting";
 				managed.status = "error";
 				this.emit(`error:${config.id}`, err);

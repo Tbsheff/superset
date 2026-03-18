@@ -117,6 +117,7 @@ export const createTerminalRouter = () => {
 					themeType,
 				} = input;
 
+				console.log("[terminal] createOrAttach for workspace:", workspaceId, "pane:", paneId);
 				paneWorkspaceMap.set(paneId, workspaceId);
 
 				const workspace = localDb
@@ -168,10 +169,11 @@ export const createTerminalRouter = () => {
 					persistedThemeState: appState.data.themeState,
 				});
 
+				const terminalRuntime = getTerminalForWorkspace(workspaceId);
+				console.log("[terminal] Using runtime:", terminalRuntime.constructor.name || "unknown");
+
 				try {
-					const result = await getTerminalForWorkspace(
-						workspaceId,
-					).createOrAttach({
+					const result = await terminalRuntime.createOrAttach({
 						paneId,
 						tabId,
 						workspaceId,

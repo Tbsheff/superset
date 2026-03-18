@@ -41,6 +41,7 @@ class DefaultWorkspaceRuntimeRegistry implements WorkspaceRuntimeRegistry {
 	 * SshWorkspaceRuntime for that host. Otherwise returns local runtime.
 	 */
 	getForWorkspaceId(workspaceId: string): WorkspaceRuntime {
+		console.log("[registry] getForWorkspaceId:", workspaceId);
 		// Look up workspace to check for remote host assignment
 		const workspace = localDb
 			.select({ remoteHostId: workspaces.remoteHostId })
@@ -49,8 +50,11 @@ class DefaultWorkspaceRuntimeRegistry implements WorkspaceRuntimeRegistry {
 			.get();
 
 		if (!workspace?.remoteHostId) {
+			console.log("[registry] Falling back to local runtime");
 			return this.getDefault();
 		}
+
+		console.log("[registry] Found remoteHostId:", workspace.remoteHostId);
 
 		// Check cache first
 		const cached = this.sshRuntimes.get(workspace.remoteHostId);
@@ -65,7 +69,10 @@ class DefaultWorkspaceRuntimeRegistry implements WorkspaceRuntimeRegistry {
 			.where(eq(remoteHosts.id, workspace.remoteHostId))
 			.get();
 
+		console.log("[registry] Host config:", JSON.stringify(host));
+
 		if (!host || !host.hostname || !host.username) {
+			console.log("[registry] Falling back to local runtime");
 			// Fallback to local if host config is incomplete
 			return this.getDefault();
 		}
@@ -81,6 +88,7 @@ class DefaultWorkspaceRuntimeRegistry implements WorkspaceRuntimeRegistry {
 		});
 
 		this.sshRuntimes.set(host.id, runtime);
+		console.log("[registry] Returning SSH runtime for host:", host.id);
 		return runtime;
 	}
 

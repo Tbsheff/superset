@@ -71,6 +71,7 @@ export class SshTerminalRuntime
 	createOrAttach: TerminalRuntime["createOrAttach"] = async (
 		params: CreateSessionParams,
 	): Promise<SessionResult> => {
+		console.log("[ssh-terminal] createOrAttach:", params.paneId);
 		const { paneId, workspaceId, cols = 80, rows = 24 } = params;
 
 		// Reuse existing alive session
@@ -84,7 +85,9 @@ export class SshTerminalRuntime
 		}
 
 		const manager = getSshConnectionManager();
+		console.log("[ssh-terminal] Connecting to SSH...");
 		const client = await manager.connect(this.hostConfig);
+		console.log("[ssh-terminal] SSH connected, opening shell...");
 
 		return new Promise<SessionResult>((resolve, reject) => {
 			client.shell(
@@ -95,9 +98,11 @@ export class SshTerminalRuntime
 				},
 				(err, channel) => {
 					if (err) {
+						console.log("[ssh-terminal] Error:", err);
 						reject(err);
 						return;
 					}
+					console.log("[ssh-terminal] Shell opened for", paneId);
 
 					const cwd = params.cwd ?? this.hostConfig.defaultCwd ?? "~";
 

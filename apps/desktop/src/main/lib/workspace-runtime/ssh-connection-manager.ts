@@ -3,14 +3,25 @@
  *
  * Manages SSH connections to remote hosts. One ssh2.Client per hostId,
  * cached in a Map. Handles connect/disconnect/reconnect with exponential backoff.
+ *
+ * Mirrors OpenSSH behavior:
+ * - Parses ~/.ssh/config to resolve per-host IdentityFile, User, Port, etc.
+ * - Falls back through all default identity files (ed25519, rsa, ecdsa, dsa)
+ * - Supports keyboard-interactive auth as fallback
+ * - Reads passphrases from macOS Keychain for encrypted keys
  */
 
+import { execFile } from "node:child_process";
 import { EventEmitter } from "node:events";
 import fs from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import { getShellEnvironment } from "lib/trpc/routers/workspaces/utils/shell-env";
+import SSHConfig from "ssh-config";
 import type { Client, ConnectConfig } from "ssh2";
+
+const execFileAsync = promisify(execFile);
 
 export type SshConnectionStatus =
 	| "connected"
@@ -37,10 +48,21 @@ interface ManagedConnection {
 	reconnectTimer: ReturnType<typeof setTimeout> | null;
 }
 
+/** Resolved settings from ~/.ssh/config for a given host */
+interface ResolvedSshConfig {
+	hostname: string;
+	port: number;
+	user: string | null;
+	identityFiles: string[];
+}
+
 const MAX_RECONNECT_ATTEMPTS = 5;
 const BASE_RECONNECT_DELAY_MS = 1000;
 const KEEPALIVE_INTERVAL_MS = 15000;
 const KEEPALIVE_COUNT_MAX = 3;
+
+/** Default identity file names in OpenSSH search order */
+const DEFAULT_KEY_NAMES = ["id_ed25519", "id_rsa", "id_ecdsa", "id_dsa"];
 
 export class SshConnectionManager extends EventEmitter {
 	private connections = new Map<string, ManagedConnection>();
@@ -121,6 +143,20 @@ export class SshConnectionManager extends EventEmitter {
 				managed.status = "disconnected";
 			});
 
+			// Handle keyboard-interactive auth (e.g. password prompts from the server)
+			client.on(
+				"keyboard-interactive",
+				(_name, _instructions, _instructionsLang, prompts, finish) => {
+					// If a password was provided, send it for each prompt
+					if (config.password && prompts.length > 0) {
+						finish([config.password]);
+					} else {
+						// No password available, send empty responses
+						finish(Array(prompts.length).fill(""));
+					}
+				},
+			);
+
 			client.connect(connectConfig);
 		});
 	}
@@ -128,12 +164,17 @@ export class SshConnectionManager extends EventEmitter {
 	private async buildConnectConfig(
 		config: SshHostConfig,
 	): Promise<ConnectConfig> {
+		// Resolve SSH config for this host (parses ~/.ssh/config)
+		const resolved = await this.resolveHostConfig(config.hostname);
+
 		const base: ConnectConfig = {
 			host: config.hostname,
 			port: config.port,
 			username: config.username,
 			keepaliveInterval: KEEPALIVE_INTERVAL_MS,
 			keepaliveCountMax: KEEPALIVE_COUNT_MAX,
+			// Enable keyboard-interactive as a fallback auth method
+			tryKeyboard: true,
 		};
 
 		switch (config.authMethod) {
@@ -146,20 +187,52 @@ export class SshConnectionManager extends EventEmitter {
 					base.agent = agentSock;
 				}
 
-				// Also supply a default private key as fallback, matching OpenSSH
-				// behavior. If the agent has no identities loaded, ssh2 will try
-				// the key directly.
-				const defaultKey = this.readDefaultPrivateKey();
-				if (defaultKey) {
-					base.privateKey = defaultKey;
+				// Try keys from SSH config first, then fall back to defaults.
+				// This mirrors OpenSSH behavior of checking config-specified keys
+				// before the default identity files.
+				const privateKey = await this.readFirstAvailableKey(
+					resolved.identityFiles,
+				);
+				if (privateKey) {
+					base.privateKey = privateKey.key;
+					if (privateKey.passphrase) {
+						base.passphrase = privateKey.passphrase;
+					}
 				}
 				break;
 			}
-			case "key":
+			case "key": {
 				if (config.privateKeyPath) {
-					base.privateKey = fs.readFileSync(config.privateKeyPath);
+					const expandedPath = config.privateKeyPath.replace(/^~/, homedir());
+					try {
+						const key = fs.readFileSync(expandedPath);
+						base.privateKey = key;
+
+						// If key is encrypted, try to get passphrase from macOS Keychain
+						if (this.isEncryptedKey(key)) {
+							const passphrase =
+								await this.getPassphraseFromKeychain(expandedPath);
+							if (passphrase) {
+								base.passphrase = passphrase;
+							}
+						}
+					} catch {
+						// Key file not readable, connection will fail with clear error
+					}
+				} else {
+					// No explicit key path — try SSH config keys then defaults
+					const privateKey = await this.readFirstAvailableKey(
+						resolved.identityFiles,
+					);
+					if (privateKey) {
+						base.privateKey = privateKey.key;
+						if (privateKey.passphrase) {
+							base.passphrase = privateKey.passphrase;
+						}
+					}
 				}
 				break;
+			}
 			case "password":
 				base.password = config.password;
 				break;
@@ -169,22 +242,143 @@ export class SshConnectionManager extends EventEmitter {
 	}
 
 	/**
-	 * Reads the first available default SSH private key (~/.ssh/id_*).
-	 * Mirrors OpenSSH's default identity file search order.
+	 * Parse ~/.ssh/config and resolve settings for a given hostname.
+	 * Returns identity files (from config + defaults), resolved hostname, port, user.
 	 */
-	private readDefaultPrivateKey(): Buffer | null {
+	private async resolveHostConfig(
+		hostname: string,
+	): Promise<ResolvedSshConfig> {
 		const sshDir = join(homedir(), ".ssh");
-		const candidates = ["id_ed25519", "id_rsa", "id_ecdsa", "id_dsa"];
+		const configPath = join(sshDir, "config");
+		const identityFiles: string[] = [];
 
-		for (const name of candidates) {
-			try {
+		try {
+			const content = fs.readFileSync(configPath, "utf-8");
+			const config = SSHConfig.parse(content);
+			const computed = config.compute(hostname);
+
+			// Collect IdentityFile entries from config
+			const rawIdentityFile = computed.IdentityFile;
+			if (rawIdentityFile) {
+				const files = Array.isArray(rawIdentityFile)
+					? rawIdentityFile
+					: [rawIdentityFile];
+				for (const f of files) {
+					const expanded = f.replace(/^~/, homedir());
+					identityFiles.push(expanded);
+				}
+			}
+
+			// Collect resolved hostname, port, user
+			const resolvedHostname = Array.isArray(computed.HostName)
+				? computed.HostName[0]
+				: (computed.HostName ?? hostname);
+			const rawPort = Array.isArray(computed.Port)
+				? computed.Port[0]
+				: computed.Port;
+			const resolvedPort = rawPort ? Number.parseInt(rawPort, 10) : 22;
+			const resolvedUser = Array.isArray(computed.User)
+				? (computed.User[0] ?? null)
+				: (computed.User ?? null);
+
+			// Always append default key paths as fallbacks (OpenSSH does this)
+			for (const name of DEFAULT_KEY_NAMES) {
 				const keyPath = join(sshDir, name);
-				return fs.readFileSync(keyPath);
+				if (!identityFiles.includes(keyPath)) {
+					identityFiles.push(keyPath);
+				}
+			}
+
+			return {
+				hostname: resolvedHostname,
+				port: resolvedPort,
+				user: resolvedUser,
+				identityFiles,
+			};
+		} catch {
+			// No SSH config or parse error — use defaults only
+			for (const name of DEFAULT_KEY_NAMES) {
+				identityFiles.push(join(sshDir, name));
+			}
+			return {
+				hostname,
+				port: 22,
+				user: null,
+				identityFiles,
+			};
+		}
+	}
+
+	/**
+	 * Try reading each key file in order. Returns the first readable key
+	 * along with its passphrase (from macOS Keychain) if encrypted.
+	 */
+	private async readFirstAvailableKey(
+		keyPaths: string[],
+	): Promise<{ key: Buffer; passphrase?: string } | null> {
+		for (const keyPath of keyPaths) {
+			try {
+				const key = fs.readFileSync(keyPath);
+
+				if (this.isEncryptedKey(key)) {
+					const passphrase = await this.getPassphraseFromKeychain(keyPath);
+					if (passphrase) {
+						return { key, passphrase };
+					}
+					// Encrypted but no passphrase available — skip, try next key
+					continue;
+				}
+
+				return { key };
 			} catch {
-				// Key file doesn't exist or isn't readable, try next
+				// File doesn't exist or isn't readable, try next
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Check if a private key is encrypted (has a passphrase).
+	 */
+	private isEncryptedKey(key: Buffer): boolean {
+		const header = key.toString("utf-8", 0, 512);
+		// OpenSSH new format: "-----BEGIN OPENSSH PRIVATE KEY-----" with bcrypt KDF
+		// PEM format: "ENCRYPTED" in the DEK-Info header
+		return (
+			header.includes("ENCRYPTED") ||
+			// OpenSSH new format encrypted keys contain "bcrypt" in the binary payload,
+			// but a simpler heuristic: if it's an OpenSSH key and NOT "none" cipher
+			(header.includes("BEGIN OPENSSH PRIVATE KEY") &&
+				!key.toString("utf-8").includes("none"))
+		);
+	}
+
+	/**
+	 * Attempt to read an SSH key passphrase from the macOS Keychain.
+	 * OpenSSH on macOS stores passphrases under the "SSH" service with
+	 * the key file path as the account.
+	 */
+	private async getPassphraseFromKeychain(
+		keyPath: string,
+	): Promise<string | null> {
+		if (process.platform !== "darwin") return null;
+
+		try {
+			// macOS Keychain stores SSH passphrases with service "SSH" and
+			// the absolute key path as the account name
+			const { stdout } = await execFileAsync("security", [
+				"find-generic-password",
+				"-s",
+				"SSH",
+				"-a",
+				keyPath,
+				"-w",
+			]);
+			return stdout.trim() || null;
+		} catch {
+			// Not found in Keychain or Keychain access denied
+			return null;
+		}
 	}
 
 	private scheduleReconnect(hostId: string): void {

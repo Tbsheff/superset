@@ -245,6 +245,7 @@ export function RemoteHostsSettings({
 																		{kh.hostname}
 																	</p>
 																	<p className="text-xs text-muted-foreground">
+																		{kh.username ? `${kh.username}@` : ""}
 																		{kh.hostname}
 																		{kh.port !== 22 ? `:${kh.port}` : ""}
 																	</p>
@@ -260,6 +261,9 @@ export function RemoteHostsSettings({
 																			name: kh.hostname,
 																			hostname: kh.hostname,
 																			port: kh.port,
+																			username: kh.username ?? undefined,
+																			identityFile:
+																				kh.identityFile ?? undefined,
 																		});
 																	}}
 																>

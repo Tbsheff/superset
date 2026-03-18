@@ -67,6 +67,12 @@ const externalizedRuntimeModules: ExternalizedRuntimeModule[] = [
 		],
 		asarUnpackGlobs: ["**/node_modules/@libsql/**/*"],
 	},
+	{
+		specifier: "ssh2",
+		materialize: ["ssh2"],
+		packagedCopies: [copyWholeModule("ssh2")],
+		asarUnpackGlobs: ["**/node_modules/ssh2/**/*"],
+	},
 ];
 
 const packagedSupportModules = [

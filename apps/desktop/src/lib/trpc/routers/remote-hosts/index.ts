@@ -350,12 +350,36 @@ export const createRemoteHostsRouter = () => {
 		}),
 
 		discoverHosts: publicProcedure.query(async () => {
-			const [config, known, history] = await Promise.all([
+			const [configResult, knownResult, history] = await Promise.all([
 				parseConfigHosts(),
 				parseKnownHosts(),
 				parseHistoryHosts(),
 			]);
-			return { config, known, history };
+
+			// Enrich known hosts with SSH config usernames by matching on hostname
+			const configByHostname = new Map<
+				string,
+				{ username: string | null; identityFile: string | null }
+			>();
+			for (const ch of configResult) {
+				if (ch.hostname) {
+					configByHostname.set(ch.hostname, {
+						username: ch.username,
+						identityFile: ch.identityFile,
+					});
+				}
+			}
+
+			const known = knownResult.map((kh) => {
+				const configMatch = configByHostname.get(kh.hostname);
+				return {
+					...kh,
+					username: configMatch?.username ?? null,
+					identityFile: configMatch?.identityFile ?? null,
+				};
+			});
+
+			return { config: configResult, known, history };
 		}),
 
 		importFromSshConfig: publicProcedure

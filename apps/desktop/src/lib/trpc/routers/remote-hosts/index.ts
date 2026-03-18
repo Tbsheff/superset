@@ -291,9 +291,21 @@ export const createRemoteHostsRouter = () => {
 					return { success: true, error: null };
 				} catch (err) {
 					manager.disconnect(testId);
+					let message =
+						err instanceof Error ? err.message : "Connection failed";
+
+					// Provide actionable hint for the most common agent-auth failure
+					if (
+						input.authMethod === "agent" &&
+						message.includes("All configured authentication methods failed")
+					) {
+						message +=
+							". Ensure your SSH key is loaded in the agent (run: ssh-add) or switch auth method to Key and provide the key path.";
+					}
+
 					return {
 						success: false,
-						error: err instanceof Error ? err.message : "Connection failed",
+						error: message,
 					};
 				}
 			}),

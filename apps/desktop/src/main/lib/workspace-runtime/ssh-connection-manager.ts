@@ -7,6 +7,8 @@
 
 import { EventEmitter } from "node:events";
 import fs from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { getShellEnvironment } from "lib/trpc/routers/workspaces/utils/shell-env";
 import type { Client, ConnectConfig } from "ssh2";
 
@@ -143,6 +145,14 @@ export class SshConnectionManager extends EventEmitter {
 				if (agentSock) {
 					base.agent = agentSock;
 				}
+
+				// Also supply a default private key as fallback, matching OpenSSH
+				// behavior. If the agent has no identities loaded, ssh2 will try
+				// the key directly.
+				const defaultKey = this.readDefaultPrivateKey();
+				if (defaultKey) {
+					base.privateKey = defaultKey;
+				}
 				break;
 			}
 			case "key":
@@ -156,6 +166,25 @@ export class SshConnectionManager extends EventEmitter {
 		}
 
 		return base;
+	}
+
+	/**
+	 * Reads the first available default SSH private key (~/.ssh/id_*).
+	 * Mirrors OpenSSH's default identity file search order.
+	 */
+	private readDefaultPrivateKey(): Buffer | null {
+		const sshDir = join(homedir(), ".ssh");
+		const candidates = ["id_ed25519", "id_rsa", "id_ecdsa", "id_dsa"];
+
+		for (const name of candidates) {
+			try {
+				const keyPath = join(sshDir, name);
+				return fs.readFileSync(keyPath);
+			} catch {
+				// Key file doesn't exist or isn't readable, try next
+			}
+		}
+		return null;
 	}
 
 	private scheduleReconnect(hostId: string): void {

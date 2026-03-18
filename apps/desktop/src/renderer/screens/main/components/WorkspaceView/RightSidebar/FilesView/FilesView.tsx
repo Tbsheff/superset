@@ -210,6 +210,16 @@ export function FilesView() {
 					for (const entry of entries) {
 						entryCacheRef.current.set(entry.path, entry);
 					}
+					// Evict oldest entries when cache grows too large
+					const MAX_ENTRY_CACHE_SIZE = 5000;
+					if (entryCacheRef.current.size > MAX_ENTRY_CACHE_SIZE) {
+						const excess = entryCacheRef.current.size - MAX_ENTRY_CACHE_SIZE;
+						const keys = entryCacheRef.current.keys();
+						for (let i = 0; i < excess; i++) {
+							const key = keys.next().value;
+							if (key !== undefined) entryCacheRef.current.delete(key);
+						}
+					}
 					return entries.map((entry) => entry.path);
 				} catch (error) {
 					console.error("[FilesView] Failed to load children:", error);

@@ -624,6 +624,8 @@ export const buildMultiPaneLayout = (
  * Updates the history stack when switching to a new active tab
  * Adds the current active to history and removes the new active from history
  */
+const MAX_HISTORY_STACK_SIZE = 50;
+
 export const updateHistoryStack = (
 	historyStack: string[],
 	currentActiveId: string | null,
@@ -641,6 +643,11 @@ export const updateHistoryStack = (
 
 	if (tabIdToRemove) {
 		newStack = newStack.filter((id) => id !== tabIdToRemove);
+	}
+
+	// Cap history depth to prevent unbounded growth
+	if (newStack.length > MAX_HISTORY_STACK_SIZE) {
+		newStack = newStack.slice(0, MAX_HISTORY_STACK_SIZE);
 	}
 
 	return newStack;

@@ -13,6 +13,7 @@ import {
 
 const cache = new Map<string, { data: GitHubStatus; timestamp: number }>();
 const CACHE_TTL_MS = 10_000;
+const MAX_CACHE_ENTRIES = 50;
 
 /**
  * Fetches GitHub PR status for a worktree using the `gh` CLI.
@@ -77,6 +78,10 @@ export async function fetchGitHubPRStatus(
 		};
 
 		cache.set(worktreePath, { data: result, timestamp: Date.now() });
+		if (cache.size > MAX_CACHE_ENTRIES) {
+			const oldest = cache.keys().next().value;
+			if (oldest !== undefined) cache.delete(oldest);
+		}
 
 		return result;
 	} catch {
@@ -89,6 +94,7 @@ const repoContextCache = new Map<
 	{ data: RepoContext; timestamp: number }
 >();
 const REPO_CONTEXT_CACHE_TTL_MS = 300_000; // 5 minutes
+const MAX_REPO_CONTEXT_CACHE_ENTRIES = 50;
 
 export async function getRepoContext(
 	worktreePath: string,
@@ -144,6 +150,10 @@ export async function getRepoContext(
 			data: context,
 			timestamp: Date.now(),
 		});
+		if (repoContextCache.size > MAX_REPO_CONTEXT_CACHE_ENTRIES) {
+			const oldest = repoContextCache.keys().next().value;
+			if (oldest !== undefined) repoContextCache.delete(oldest);
+		}
 		return context;
 	} catch {
 		return null;

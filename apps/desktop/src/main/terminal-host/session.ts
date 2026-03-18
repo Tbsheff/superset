@@ -486,9 +486,24 @@ export class Session {
 		return this.sendFrameToSubprocess(PtySubprocessIpcType.Dispose);
 	}
 
+	/** Hard cap: drop oldest entries when the write queue exceeds 16 MB */
+	private static readonly MAX_EMULATOR_QUEUE_BYTES = 16 * 1024 * 1024;
+
 	private enqueueEmulatorWrite(data: string): void {
 		this.emulatorWriteQueue.push(data);
 		this.emulatorWriteQueuedBytes += data.length;
+
+		// Trim oldest entries when the queue grows too large to prevent OOM
+		while (
+			this.emulatorWriteQueuedBytes >
+				TerminalDaemonSession.MAX_EMULATOR_QUEUE_BYTES &&
+			this.emulatorWriteQueue.length > 1
+		) {
+			const dropped = this.emulatorWriteQueue.shift()!;
+			this.emulatorWriteQueuedBytes -= dropped.length;
+			this.emulatorWriteProcessedItems++;
+		}
+
 		this.scheduleEmulatorWrite();
 	}
 

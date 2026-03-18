@@ -3,6 +3,7 @@ import type { GitChangesStatus } from "shared/changes-types";
 // Keep status cached slightly longer than the UI poll interval so repeated
 // passive refreshes reuse the same result instead of spawning git twice.
 export const STATUS_CACHE_TTL_MS = 3_000;
+const MAX_STATUS_CACHE_ENTRIES = 100;
 
 const statusCache = new Map<
 	string,
@@ -32,6 +33,10 @@ export function setCachedStatus(
 	result: GitChangesStatus,
 ): void {
 	statusCache.set(cacheKey, { result, timestamp: Date.now() });
+	if (statusCache.size > MAX_STATUS_CACHE_ENTRIES) {
+		const oldest = statusCache.keys().next().value;
+		if (oldest !== undefined) statusCache.delete(oldest);
+	}
 }
 
 export function getInFlightStatus(

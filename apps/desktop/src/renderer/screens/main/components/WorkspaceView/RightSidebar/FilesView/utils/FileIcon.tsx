@@ -1,4 +1,5 @@
-import { getFileIcon } from "./file-icons";
+import { useEffect, useState } from "react";
+import { getFileIcon, prefetchFileIconManifest } from "./file-icons";
 
 interface FileIconProps {
 	fileName: string;
@@ -13,6 +14,24 @@ export function FileIcon({
 	isOpen = false,
 	className,
 }: FileIconProps) {
-	const { src } = getFileIcon(fileName, isDirectory, isOpen);
-	return <img src={src} alt="" draggable={false} className={className} />;
+	const result = getFileIcon(fileName, isDirectory, isOpen);
+	const [, setReady] = useState(result !== null);
+
+	// If manifest isn't loaded yet, prefetch and re-render once ready
+	useEffect(() => {
+		if (result !== null) return;
+		let cancelled = false;
+		prefetchFileIconManifest().then(() => {
+			if (!cancelled) setReady(true);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, [result]);
+
+	if (!result) return null;
+
+	return (
+		<img src={result.src} alt="" draggable={false} className={className} />
+	);
 }

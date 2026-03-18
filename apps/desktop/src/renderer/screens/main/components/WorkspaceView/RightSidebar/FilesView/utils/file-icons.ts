@@ -1,4 +1,3 @@
-import rawManifest from "resources/public/file-icons/manifest.json";
 import { resolveFileIconAssetUrl } from "./resolveFileIconAssetUrl";
 
 interface FileIconManifest {
@@ -11,7 +10,27 @@ interface FileIconManifest {
 	defaultFolderOpenIcon: string;
 }
 
-const manifest = rawManifest as FileIconManifest;
+// Lazy-load the 427KB manifest JSON — only parsed/loaded on first call.
+// Vite code-splits dynamic import() so this chunk isn't in the main bundle.
+let _manifestPromise: Promise<FileIconManifest> | null = null;
+let _manifest: FileIconManifest | null = null;
+
+function loadManifest(): Promise<FileIconManifest> {
+	if (!_manifestPromise) {
+		_manifestPromise = import("resources/public/file-icons/manifest.json").then(
+			(m) => {
+				_manifest = m.default as FileIconManifest;
+				return _manifest;
+			},
+		);
+	}
+	return _manifestPromise;
+}
+
+/** Prefetch the manifest so it's ready before first render. */
+export function prefetchFileIconManifest(): Promise<FileIconManifest> {
+	return loadManifest();
+}
 
 interface FileIconResult {
 	src: string;
@@ -21,7 +40,15 @@ export function getFileIcon(
 	fileName: string,
 	isDirectory: boolean,
 	isOpen = false,
-): FileIconResult {
+): FileIconResult | null {
+	// Kick off lazy load if not started yet; return null until ready
+	if (!_manifest) {
+		loadManifest();
+		return null;
+	}
+
+	const manifest = _manifest;
+
 	if (isDirectory) {
 		const baseName = fileName.toLowerCase();
 		if (isOpen && manifest.folderNamesExpanded[baseName]) {

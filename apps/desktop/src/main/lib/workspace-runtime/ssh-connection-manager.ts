@@ -320,13 +320,11 @@ export class SshConnectionManager extends EventEmitter {
 			try {
 				const key = fs.readFileSync(keyPath);
 
-				if (this.isEncryptedKey(key)) {
-					const passphrase = await this.getPassphraseFromKeychain(keyPath);
-					if (passphrase) {
-						return { key, passphrase };
-					}
-					// Encrypted but no passphrase available — skip, try next key
-					continue;
+				// Try to get a passphrase from macOS Keychain (for encrypted keys).
+				// If the key isn't encrypted, the passphrase is simply ignored by ssh2.
+				const passphrase = await this.getPassphraseFromKeychain(keyPath);
+				if (passphrase) {
+					return { key, passphrase };
 				}
 
 				return { key };
@@ -335,22 +333,6 @@ export class SshConnectionManager extends EventEmitter {
 			}
 		}
 		return null;
-	}
-
-	/**
-	 * Check if a private key is encrypted (has a passphrase).
-	 */
-	private isEncryptedKey(key: Buffer): boolean {
-		const header = key.toString("utf-8", 0, 512);
-		// OpenSSH new format: "-----BEGIN OPENSSH PRIVATE KEY-----" with bcrypt KDF
-		// PEM format: "ENCRYPTED" in the DEK-Info header
-		return (
-			header.includes("ENCRYPTED") ||
-			// OpenSSH new format encrypted keys contain "bcrypt" in the binary payload,
-			// but a simpler heuristic: if it's an OpenSSH key and NOT "none" cipher
-			(header.includes("BEGIN OPENSSH PRIVATE KEY") &&
-				!key.toString("utf-8").includes("none"))
-		);
 	}
 
 	/**

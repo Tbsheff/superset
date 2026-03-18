@@ -9,9 +9,6 @@ import {
 import { cn } from "@superset/ui/utils";
 import type { ReactNode } from "react";
 import { LuCopy } from "react-icons/lu";
-import jetbrainsIcon from "renderer/assets/app-icons/jetbrains.svg";
-import terminalIcon from "renderer/assets/app-icons/terminal.png";
-import vscodeIcon from "renderer/assets/app-icons/vscode.svg";
 import {
 	FINDER_OPTIONS,
 	IDE_OPTIONS,
@@ -20,6 +17,11 @@ import {
 	TERMINAL_OPTIONS,
 	VSCODE_OPTIONS,
 } from "./constants";
+
+// Icons served from the public directory (not inlined into the JS bundle).
+const jetbrainsIcon = "/app-icons/jetbrains.svg";
+const terminalIcon = "/app-icons/terminal.png";
+const vscodeIcon = "/app-icons/vscode.svg";
 
 export type OpenInExternalAppGroup =
 	| "finder"

@@ -1,30 +1,33 @@
 import type { ExternalApp } from "@superset/local-db";
-import antigravityIcon from "renderer/assets/app-icons/antigravity.svg";
-import appcodeIcon from "renderer/assets/app-icons/appcode.svg";
-import clionIcon from "renderer/assets/app-icons/clion.svg";
-import cursorIcon from "renderer/assets/app-icons/cursor.svg";
-import datagripIcon from "renderer/assets/app-icons/datagrip.svg";
-import finderIcon from "renderer/assets/app-icons/finder.png";
-import fleetIcon from "renderer/assets/app-icons/fleet.svg";
-import ghosttyIcon from "renderer/assets/app-icons/ghostty.svg";
-import golandIcon from "renderer/assets/app-icons/goland.svg";
-import intellijIcon from "renderer/assets/app-icons/intellij.svg";
-import itermIcon from "renderer/assets/app-icons/iterm.png";
-import phpstormIcon from "renderer/assets/app-icons/phpstorm.svg";
-import pycharmIcon from "renderer/assets/app-icons/pycharm.svg";
-import riderIcon from "renderer/assets/app-icons/rider.svg";
-import rubymineIcon from "renderer/assets/app-icons/rubymine.svg";
-import rustroverIcon from "renderer/assets/app-icons/rustrover.svg";
-import sublimeIcon from "renderer/assets/app-icons/sublime.svg";
-import terminalIcon from "renderer/assets/app-icons/terminal.png";
-import vscodeIcon from "renderer/assets/app-icons/vscode.svg";
-import vscodeInsidersIcon from "renderer/assets/app-icons/vscode-insiders.svg";
-import warpIcon from "renderer/assets/app-icons/warp.png";
-import webstormIcon from "renderer/assets/app-icons/webstorm.svg";
-import windsurfIcon from "renderer/assets/app-icons/windsurf.svg";
-import windsurfWhiteIcon from "renderer/assets/app-icons/windsurf-white.svg";
-import xcodeIcon from "renderer/assets/app-icons/xcode.svg";
-import zedIcon from "renderer/assets/app-icons/zed.png";
+
+// Icons served from the public directory (not inlined into the JS bundle).
+// Public dir is apps/desktop/src/resources/public/, served at root "/".
+const antigravityIcon = "/app-icons/antigravity.svg";
+const appcodeIcon = "/app-icons/appcode.svg";
+const clionIcon = "/app-icons/clion.svg";
+const cursorIcon = "/app-icons/cursor.svg";
+const datagripIcon = "/app-icons/datagrip.svg";
+const finderIcon = "/app-icons/finder.png";
+const fleetIcon = "/app-icons/fleet.svg";
+const ghosttyIcon = "/app-icons/ghostty.svg";
+const golandIcon = "/app-icons/goland.svg";
+const intellijIcon = "/app-icons/intellij.svg";
+const itermIcon = "/app-icons/iterm.png";
+const phpstormIcon = "/app-icons/phpstorm.svg";
+const pycharmIcon = "/app-icons/pycharm.svg";
+const riderIcon = "/app-icons/rider.svg";
+const rubymineIcon = "/app-icons/rubymine.svg";
+const rustroverIcon = "/app-icons/rustrover.svg";
+const sublimeIcon = "/app-icons/sublime.svg";
+const terminalIcon = "/app-icons/terminal.png";
+const vscodeIcon = "/app-icons/vscode.svg";
+const vscodeInsidersIcon = "/app-icons/vscode-insiders.svg";
+const warpIcon = "/app-icons/warp.png";
+const webstormIcon = "/app-icons/webstorm.svg";
+const windsurfIcon = "/app-icons/windsurf.svg";
+const windsurfWhiteIcon = "/app-icons/windsurf-white.svg";
+const xcodeIcon = "/app-icons/xcode.svg";
+const zedIcon = "/app-icons/zed.png";
 
 export interface OpenInExternalAppOption {
 	id: ExternalApp;

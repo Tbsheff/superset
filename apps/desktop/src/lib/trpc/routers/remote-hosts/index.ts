@@ -10,6 +10,203 @@ import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import { publicProcedure, router } from "../..";
 
+async function parseConfigHosts(): Promise<
+	Array<{
+		name: string;
+		hostname: string | null;
+		port: number;
+		username: string | null;
+		identityFile: string | null;
+	}>
+> {
+	const configPath = join(homedir(), ".ssh", "config");
+	try {
+		const content = await readFile(configPath, "utf-8");
+		const config = SSHConfig.parse(content);
+
+		const hosts: Array<{
+			name: string;
+			hostname: string | null;
+			port: number;
+			username: string | null;
+			identityFile: string | null;
+		}> = [];
+
+		for (const entry of config) {
+			if (entry.type !== SSHConfig.DIRECTIVE || entry.param !== "Host") {
+				continue;
+			}
+
+			const rawValue = entry.value;
+			const hostPattern =
+				typeof rawValue === "string"
+					? rawValue
+					: rawValue.map((t) => t.val).join(" ");
+
+			if (
+				!hostPattern ||
+				hostPattern === "*" ||
+				hostPattern.includes("*") ||
+				hostPattern.includes("?")
+			) {
+				continue;
+			}
+
+			const hostConfig = config.compute(hostPattern);
+
+			const rawIdentityFile = hostConfig.IdentityFile;
+			const identityFile = Array.isArray(rawIdentityFile)
+				? (rawIdentityFile[0] ?? null)
+				: (rawIdentityFile ?? null);
+
+			const rawPort = hostConfig.Port;
+			const port = rawPort
+				? Number.parseInt(Array.isArray(rawPort) ? rawPort[0] : rawPort, 10)
+				: 22;
+
+			const rawHostname = hostConfig.HostName;
+			const hostname = Array.isArray(rawHostname)
+				? (rawHostname[0] ?? null)
+				: (rawHostname ?? null);
+
+			const rawUser = hostConfig.User;
+			const username = Array.isArray(rawUser)
+				? (rawUser[0] ?? null)
+				: (rawUser ?? null);
+
+			hosts.push({ name: hostPattern, hostname, port, username, identityFile });
+		}
+
+		return hosts;
+	} catch {
+		return [];
+	}
+}
+
+async function parseKnownHosts(): Promise<
+	Array<{ hostname: string; port: number }>
+> {
+	const knownHostsPath = join(homedir(), ".ssh", "known_hosts");
+	try {
+		const content = await readFile(knownHostsPath, "utf-8");
+		const seen = new Set<string>();
+		const hosts: Array<{ hostname: string; port: number }> = [];
+
+		for (const line of content.split("\n")) {
+			const trimmed = line.trim();
+			if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith("|")) {
+				continue;
+			}
+
+			const hostField = trimmed.split(/\s+/)[0];
+			if (!hostField) continue;
+
+			for (const entry of hostField.split(",")) {
+				let hostname = entry;
+				let port = 22;
+
+				const bracketMatch = hostname.match(/^\[(.+?)\]:(\d+)$/);
+				if (bracketMatch) {
+					hostname = bracketMatch[1];
+					port = Number.parseInt(bracketMatch[2], 10);
+				}
+
+				if (
+					hostname === "localhost" ||
+					hostname === "127.0.0.1" ||
+					hostname === "::1"
+				) {
+					continue;
+				}
+
+				const key = `${hostname}:${port}`;
+				if (!seen.has(key)) {
+					seen.add(key);
+					hosts.push({ hostname, port });
+				}
+			}
+		}
+
+		return hosts;
+	} catch {
+		return [];
+	}
+}
+
+async function parseHistoryHosts(): Promise<
+	Array<{ hostname: string; username: string | null; port: number }>
+> {
+	const hosts: Array<{
+		hostname: string;
+		username: string | null;
+		port: number;
+	}> = [];
+	const seen = new Set<string>();
+
+	const historyPaths = [
+		join(homedir(), ".zsh_history"),
+		join(homedir(), ".bash_history"),
+	];
+
+	for (const histPath of historyPaths) {
+		try {
+			const content = await readFile(histPath, "utf-8");
+			for (const line of content.split("\n")) {
+				const command = line.replace(/^:\s*\d+:\d+;/, "").trim();
+				if (!command.startsWith("ssh ")) continue;
+
+				// Strip options and flags to find user@host
+				// Remove known flag-value pairs: -p port, -i key, -l user, -o option, etc.
+				let rest = command.slice(4).trim();
+
+				// Extract -p port if present
+				let port = 22;
+				const portMatch = rest.match(/(?:^|\s)-p\s+(\d+)/);
+				if (portMatch) {
+					port = Number.parseInt(portMatch[1], 10);
+					rest = rest.replace(portMatch[0], " ");
+				}
+
+				// Strip remaining flags (single-char flags with optional value)
+				rest = rest.replace(/-[a-zA-Z](?:\s+\S+)?/g, "").trim();
+
+				// Last non-option token is [user@]host
+				const tokens = rest.split(/\s+/).filter((t) => t && !t.startsWith("-"));
+				const target = tokens[tokens.length - 1];
+				if (!target) continue;
+
+				let username: string | null = null;
+				let hostname = target;
+				if (target.includes("@")) {
+					const atIdx = target.indexOf("@");
+					username = target.slice(0, atIdx);
+					hostname = target.slice(atIdx + 1);
+				}
+
+				if (
+					!hostname ||
+					hostname.startsWith("-") ||
+					hostname.includes("/") ||
+					hostname === "localhost" ||
+					hostname === "127.0.0.1"
+				) {
+					continue;
+				}
+
+				const key = `${username ?? ""}@${hostname}:${port}`;
+				if (!seen.has(key)) {
+					seen.add(key);
+					hosts.push({ hostname, username, port });
+				}
+			}
+		} catch {
+			// History file not found, skip
+		}
+	}
+
+	return hosts;
+}
+
 export const createRemoteHostsRouter = () => {
 	return router({
 		list: publicProcedure.query(() => {
@@ -148,88 +345,17 @@ export const createRemoteHostsRouter = () => {
 			}),
 
 		parseSshConfig: publicProcedure.query(async () => {
-			const configPath = join(homedir(), ".ssh", "config");
-			try {
-				const content = await readFile(configPath, "utf-8");
-				const config = SSHConfig.parse(content);
+			const hosts = await parseConfigHosts();
+			return { hosts, error: null };
+		}),
 
-				const hosts: Array<{
-					name: string;
-					hostname: string | null;
-					port: number;
-					username: string | null;
-					identityFile: string | null;
-				}> = [];
-
-				for (const entry of config) {
-					// Only process Host directives (not Match entries or comments)
-					if (entry.type !== SSHConfig.DIRECTIVE || entry.param !== "Host") {
-						continue;
-					}
-
-					// entry.value may be a string or a token array — extract plain string
-					const rawValue = entry.value;
-					const hostPattern =
-						typeof rawValue === "string"
-							? rawValue
-							: rawValue.map((t) => t.val).join(" ");
-
-					// Skip wildcard patterns like "Host *"
-					if (
-						!hostPattern ||
-						hostPattern === "*" ||
-						hostPattern.includes("*") ||
-						hostPattern.includes("?")
-					) {
-						continue;
-					}
-
-					// compute() returns Record<string, string | string[]> with merged wildcard defaults
-					const hostConfig = config.compute(hostPattern);
-
-					const rawIdentityFile = hostConfig.IdentityFile;
-					const identityFile = Array.isArray(rawIdentityFile)
-						? (rawIdentityFile[0] ?? null)
-						: (rawIdentityFile ?? null);
-
-					const rawPort = hostConfig.Port;
-					const port = rawPort
-						? Number.parseInt(Array.isArray(rawPort) ? rawPort[0] : rawPort, 10)
-						: 22;
-
-					const rawHostname = hostConfig.HostName;
-					const hostname = Array.isArray(rawHostname)
-						? (rawHostname[0] ?? null)
-						: (rawHostname ?? null);
-
-					const rawUser = hostConfig.User;
-					const username = Array.isArray(rawUser)
-						? (rawUser[0] ?? null)
-						: (rawUser ?? null);
-
-					hosts.push({
-						name: hostPattern,
-						hostname,
-						port,
-						username,
-						identityFile,
-					});
-				}
-
-				return { hosts, error: null };
-			} catch (err) {
-				if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-					return {
-						hosts: [],
-						error: "No SSH config file found at ~/.ssh/config",
-					};
-				}
-				return {
-					hosts: [],
-					error:
-						err instanceof Error ? err.message : "Failed to parse SSH config",
-				};
-			}
+		discoverHosts: publicProcedure.query(async () => {
+			const [config, known, history] = await Promise.all([
+				parseConfigHosts(),
+				parseKnownHosts(),
+				parseHistoryHosts(),
+			]);
+			return { config, known, history };
 		}),
 
 		importFromSshConfig: publicProcedure

@@ -45,7 +45,7 @@ export function RemoteHostsSettings({
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [importDialogOpen, setImportDialogOpen] = useState(false);
 
-	const sshConfigQuery = electronTrpc.remoteHosts.parseSshConfig.useQuery(
+	const discoverQuery = electronTrpc.remoteHosts.discoverHosts.useQuery(
 		undefined,
 		{ enabled: importDialogOpen },
 	);
@@ -130,83 +130,204 @@ export function RemoteHostsSettings({
 								<DialogTrigger asChild>
 									<Button variant="outline" size="sm">
 										<LuFileTerminal className="h-4 w-4 mr-1.5" />
-										Import from SSH Config
+										Discover SSH Hosts
 									</Button>
 								</DialogTrigger>
 								<DialogContent className="max-w-lg">
 									<DialogHeader>
-										<DialogTitle>Import from SSH Config</DialogTitle>
+										<DialogTitle>Import SSH Host</DialogTitle>
 										<p className="text-sm text-muted-foreground">
-											Hosts detected in ~/.ssh/config
+											Hosts discovered from SSH config, known hosts, and shell
+											history
 										</p>
 									</DialogHeader>
-									<div className="space-y-2 max-h-[300px] overflow-auto py-2">
-										{sshConfigQuery.isLoading && (
+									<div className="space-y-2 max-h-[400px] overflow-auto py-2">
+										{discoverQuery.isLoading && (
 											<p className="text-sm text-muted-foreground text-center py-4">
-												Reading SSH config...
+												Discovering hosts...
 											</p>
 										)}
-										{sshConfigQuery.data?.error && (
-											<p className="text-sm text-destructive text-center py-4">
-												{sshConfigQuery.data.error}
-											</p>
-										)}
-										{sshConfigQuery.data?.hosts.length === 0 &&
-											!sshConfigQuery.data?.error && (
+										{!discoverQuery.isLoading &&
+											!discoverQuery.data?.config.length &&
+											!discoverQuery.data?.known.length &&
+											!discoverQuery.data?.history.length && (
 												<p className="text-sm text-muted-foreground text-center py-4">
-													No hosts found in ~/.ssh/config
+													No hosts discovered
 												</p>
 											)}
-										{sshConfigQuery.data?.hosts.map((sshHost) => {
-											const alreadyAdded = hosts?.some(
-												(h) =>
-													h.hostname === sshHost.hostname &&
-													h.name === sshHost.name,
-											);
-											return (
-												<div
-													key={sshHost.name}
-													className="flex items-center justify-between rounded-lg border p-3"
-												>
-													<div>
-														<p className="text-sm font-medium">
-															{sshHost.name}
-														</p>
-														<p className="text-xs text-muted-foreground">
-															{sshHost.username ? `${sshHost.username}@` : ""}
-															{sshHost.hostname ?? "no hostname"}
-															{sshHost.port !== 22 ? `:${sshHost.port}` : ""}
-														</p>
-														{sshHost.identityFile && (
-															<p className="text-xs text-muted-foreground/60">
-																Key: {sshHost.identityFile}
-															</p>
-														)}
-													</div>
-													<Button
-														variant={alreadyAdded ? "ghost" : "outline"}
-														size="sm"
-														disabled={
-															alreadyAdded ||
-															!sshHost.hostname ||
-															importMutation.isPending
-														}
-														onClick={() => {
-															if (!sshHost.hostname) return;
-															importMutation.mutate({
-																name: sshHost.name,
-																hostname: sshHost.hostname,
-																port: sshHost.port,
-																username: sshHost.username ?? undefined,
-																identityFile: sshHost.identityFile ?? undefined,
-															});
-														}}
-													>
-														{alreadyAdded ? "Added" : "Import"}
-													</Button>
-												</div>
-											);
-										})}
+										{(discoverQuery.data?.config.length ?? 0) > 0 && (
+											<>
+												<p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1">
+													SSH Config
+												</p>
+												{discoverQuery.data?.config.map((sshHost) => {
+													const alreadyAdded = hosts?.some(
+														(h) =>
+															h.hostname === sshHost.hostname &&
+															h.name === sshHost.name,
+													);
+													return (
+														<div
+															key={sshHost.name}
+															className="flex items-center justify-between rounded-lg border p-3"
+														>
+															<div>
+																<p className="text-sm font-medium">
+																	{sshHost.name}
+																</p>
+																<p className="text-xs text-muted-foreground">
+																	{sshHost.username
+																		? `${sshHost.username}@`
+																		: ""}
+																	{sshHost.hostname ?? "no hostname"}
+																	{sshHost.port !== 22
+																		? `:${sshHost.port}`
+																		: ""}
+																</p>
+																{sshHost.identityFile && (
+																	<p className="text-xs text-muted-foreground/60">
+																		Key: {sshHost.identityFile}
+																	</p>
+																)}
+															</div>
+															<Button
+																variant={alreadyAdded ? "ghost" : "outline"}
+																size="sm"
+																disabled={
+																	alreadyAdded ||
+																	!sshHost.hostname ||
+																	importMutation.isPending
+																}
+																onClick={() => {
+																	if (!sshHost.hostname) return;
+																	importMutation.mutate({
+																		name: sshHost.name,
+																		hostname: sshHost.hostname,
+																		port: sshHost.port,
+																		username: sshHost.username ?? undefined,
+																		identityFile:
+																			sshHost.identityFile ?? undefined,
+																	});
+																}}
+															>
+																{alreadyAdded ? "Added" : "Import"}
+															</Button>
+														</div>
+													);
+												})}
+											</>
+										)}
+										{(discoverQuery.data?.known.length ?? 0) > 0 && (
+											<>
+												<p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1 mt-3">
+													Known Hosts
+												</p>
+												{discoverQuery.data?.known
+													.filter(
+														(kh) =>
+															!discoverQuery.data?.config.some(
+																(ch) =>
+																	ch.hostname === kh.hostname ||
+																	ch.name === kh.hostname,
+															),
+													)
+													.map((kh) => {
+														const alreadyAdded = hosts?.some(
+															(h) => h.hostname === kh.hostname,
+														);
+														return (
+															<div
+																key={`${kh.hostname}:${kh.port}`}
+																className="flex items-center justify-between rounded-lg border p-3"
+															>
+																<div>
+																	<p className="text-sm font-medium">
+																		{kh.hostname}
+																	</p>
+																	<p className="text-xs text-muted-foreground">
+																		{kh.hostname}
+																		{kh.port !== 22 ? `:${kh.port}` : ""}
+																	</p>
+																</div>
+																<Button
+																	variant={alreadyAdded ? "ghost" : "outline"}
+																	size="sm"
+																	disabled={
+																		alreadyAdded || importMutation.isPending
+																	}
+																	onClick={() => {
+																		importMutation.mutate({
+																			name: kh.hostname,
+																			hostname: kh.hostname,
+																			port: kh.port,
+																		});
+																	}}
+																>
+																	{alreadyAdded ? "Added" : "Import"}
+																</Button>
+															</div>
+														);
+													})}
+											</>
+										)}
+										{(discoverQuery.data?.history.length ?? 0) > 0 && (
+											<>
+												<p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1 mt-3">
+													Shell History
+												</p>
+												{discoverQuery.data?.history
+													.filter(
+														(hh) =>
+															!discoverQuery.data?.config.some(
+																(ch) =>
+																	ch.hostname === hh.hostname ||
+																	ch.name === hh.hostname,
+															) &&
+															!discoverQuery.data?.known.some(
+																(kh) => kh.hostname === hh.hostname,
+															),
+													)
+													.map((hh) => {
+														const alreadyAdded = hosts?.some(
+															(h) => h.hostname === hh.hostname,
+														);
+														return (
+															<div
+																key={`${hh.username ?? ""}@${hh.hostname}:${hh.port}`}
+																className="flex items-center justify-between rounded-lg border p-3"
+															>
+																<div>
+																	<p className="text-sm font-medium">
+																		{hh.hostname}
+																	</p>
+																	<p className="text-xs text-muted-foreground">
+																		{hh.username ? `${hh.username}@` : ""}
+																		{hh.hostname}
+																		{hh.port !== 22 ? `:${hh.port}` : ""}
+																	</p>
+																</div>
+																<Button
+																	variant={alreadyAdded ? "ghost" : "outline"}
+																	size="sm"
+																	disabled={
+																		alreadyAdded || importMutation.isPending
+																	}
+																	onClick={() => {
+																		importMutation.mutate({
+																			name: hh.hostname,
+																			hostname: hh.hostname,
+																			port: hh.port,
+																			username: hh.username ?? undefined,
+																		});
+																	}}
+																>
+																	{alreadyAdded ? "Added" : "Import"}
+																</Button>
+															</div>
+														);
+													})}
+											</>
+										)}
 									</div>
 								</DialogContent>
 							</Dialog>

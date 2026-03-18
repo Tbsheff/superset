@@ -295,6 +295,7 @@ export const createCreateProcedures = () => {
 					baseBranch: z.string().optional(),
 					useExistingBranch: z.boolean().optional(),
 					applyPrefix: z.boolean().optional().default(true),
+					remoteHostId: z.string().optional(),
 				}),
 			)
 			.mutation(async ({ input }) => {
@@ -478,6 +479,7 @@ export const createCreateProcedures = () => {
 						name: input.name ?? branch,
 						isUnnamed: !input.name,
 						tabOrder: maxTabOrder + 1,
+						remoteHostId: input.remoteHostId ?? null,
 					})
 					.returning()
 					.get();

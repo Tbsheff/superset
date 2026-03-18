@@ -7,7 +7,7 @@ import {
 	DialogTrigger,
 } from "@superset/ui/dialog";
 import { Input } from "@superset/ui/input";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { HiOutlinePlus, HiOutlineTrash } from "react-icons/hi2";
 import { LuFileTerminal, LuPlug, LuPlugZap, LuUnplug } from "react-icons/lu";
 import { electronTrpc } from "renderer/lib/electron-trpc";
@@ -19,6 +19,14 @@ import {
 
 interface RemoteHostsSettingsProps {
 	visibleItems: SettingItemId[] | null;
+}
+
+/** Per-host test state so results don't bleed across cards */
+interface HostTestState {
+	isPending: boolean;
+	result: { success: boolean; error: string | null } | null;
+	showPassword: boolean;
+	password: string;
 }
 
 export function RemoteHostsSettings({
@@ -36,6 +44,9 @@ export function RemoteHostsSettings({
 
 	const [importDialogOpen, setImportDialogOpen] = useState(false);
 	const [sshCommand, setSshCommand] = useState("");
+	const [hostTestStates, setHostTestStates] = useState<
+		Record<string, HostTestState>
+	>({});
 
 	const discoverQuery = electronTrpc.remoteHosts.discoverHosts.useQuery(
 		undefined,
@@ -53,21 +64,80 @@ export function RemoteHostsSettings({
 		setSshCommand("");
 	};
 
-	const handleTest = (host: {
-		hostname: string | null;
-		port: number | null;
-		username: string | null;
-		authMethod: string | null;
-		privateKeyPath: string | null;
-	}) => {
+	const _getHostTestState = useCallback(
+		(hostId: string): HostTestState =>
+			hostTestStates[hostId] ?? {
+				isPending: false,
+				result: null,
+				showPassword: false,
+				password: "",
+			},
+		[hostTestStates],
+	);
+
+	const updateHostTestState = useCallback(
+		(hostId: string, patch: Partial<HostTestState>) => {
+			setHostTestStates((prev) => ({
+				...prev,
+				[hostId]: {
+					...(prev[hostId] ?? {
+						isPending: false,
+						result: null,
+						showPassword: false,
+						password: "",
+					}),
+					...patch,
+				},
+			}));
+		},
+		[],
+	);
+
+	const handleTest = (
+		host: {
+			id: string;
+			hostname: string | null;
+			port: number | null;
+			username: string | null;
+			authMethod: string | null;
+			privateKeyPath: string | null;
+		},
+		password?: string,
+	) => {
 		if (!host.hostname || !host.username || !host.authMethod) return;
-		testMutation.mutate({
-			hostname: host.hostname,
-			port: host.port ?? 22,
-			username: host.username,
-			authMethod: host.authMethod as "key" | "agent" | "password",
-			privateKeyPath: host.privateKeyPath ?? undefined,
-		});
+		updateHostTestState(host.id, { isPending: true, result: null });
+		testMutation.mutate(
+			{
+				hostname: host.hostname,
+				port: host.port ?? 22,
+				username: host.username,
+				authMethod: host.authMethod as "key" | "agent" | "password",
+				privateKeyPath: host.privateKeyPath ?? undefined,
+				password,
+			},
+			{
+				onSuccess: (data) => {
+					updateHostTestState(host.id, {
+						isPending: false,
+						result: data,
+						// Show password input on auth failure, hide on success
+						showPassword: !data.success,
+						// Clear password on success
+						...(data.success ? { password: "" } : {}),
+					});
+				},
+				onError: (err) => {
+					updateHostTestState(host.id, {
+						isPending: false,
+						result: {
+							success: false,
+							error: err.message ?? "Connection failed",
+						},
+						showPassword: true,
+					});
+				},
+			},
+		);
 	};
 
 	return (

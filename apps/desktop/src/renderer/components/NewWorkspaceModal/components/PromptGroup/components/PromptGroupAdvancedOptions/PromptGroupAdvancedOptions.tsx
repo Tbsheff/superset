@@ -14,13 +14,6 @@ import {
 import { Input } from "@superset/ui/input";
 import { Label } from "@superset/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@superset/ui/popover";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@superset/ui/select";
 import { Switch } from "@superset/ui/switch";
 import { GoGitBranch } from "react-icons/go";
 import {
@@ -199,35 +192,63 @@ export function PromptGroupAdvancedOptions({
 
 				{remoteHosts && remoteHosts.length > 0 && (
 					<div className="space-y-1.5">
-						<Label
-							htmlFor="remote-host"
-							className="text-xs text-muted-foreground"
-						>
-							Remote Host
-						</Label>
-						<Select
-							value={remoteHostId ?? "local"}
-							onValueChange={(value) =>
-								onRemoteHostIdChange(value === "local" ? null : value)
-							}
-						>
-							<SelectTrigger id="remote-host" className="h-8 text-xs w-full">
-								<SelectValue placeholder="Local" />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="local">Local</SelectItem>
-								{remoteHosts.map((host) => (
-									<SelectItem key={host.id} value={host.id}>
-										{host.name}
-										{host.username && host.hostname
-											? ` (${host.username}@${host.hostname})`
-											: host.hostname
-												? ` (${host.hostname})`
-												: ""}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
+						<span className="text-xs text-muted-foreground">Remote Host</span>
+						<Popover modal={false}>
+							<PopoverTrigger asChild>
+								<Button
+									variant="outline"
+									size="sm"
+									className="w-full h-8 justify-between font-normal"
+								>
+									<span className="truncate text-sm">
+										{remoteHostId
+											? (remoteHosts.find((h) => h.id === remoteHostId)?.name ??
+												"Unknown")
+											: "Local"}
+									</span>
+									<HiChevronUpDown className="size-4 shrink-0 text-muted-foreground" />
+								</Button>
+							</PopoverTrigger>
+							<PopoverContent
+								className="w-[--radix-popover-trigger-width] p-0"
+								align="start"
+							>
+								<Command>
+									<CommandList>
+										<CommandItem
+											value="local"
+											onSelect={() => onRemoteHostIdChange(null)}
+											className="flex items-center justify-between"
+										>
+											<span>Local</span>
+											{!remoteHostId && (
+												<HiCheck className="size-4 text-primary" />
+											)}
+										</CommandItem>
+										{remoteHosts.map((host) => (
+											<CommandItem
+												key={host.id}
+												value={host.id}
+												onSelect={() => onRemoteHostIdChange(host.id)}
+												className="flex items-center justify-between"
+											>
+												<span className="truncate">
+													{host.name}
+													{host.username && host.hostname
+														? ` (${host.username}@${host.hostname})`
+														: host.hostname
+															? ` (${host.hostname})`
+															: ""}
+												</span>
+												{remoteHostId === host.id && (
+													<HiCheck className="size-4 text-primary" />
+												)}
+											</CommandItem>
+										))}
+									</CommandList>
+								</Command>
+							</PopoverContent>
+						</Popover>
 					</div>
 				)}
 

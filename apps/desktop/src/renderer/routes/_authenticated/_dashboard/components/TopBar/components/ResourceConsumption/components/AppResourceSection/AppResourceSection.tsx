@@ -71,9 +71,7 @@ export function AppResourceSection({
 				>
 					Main
 				</span>
-				<div
-					className={cn(METRIC_COLS, "text-xs", mainClasses.metricClass)}
-				>
+				<div className={cn(METRIC_COLS, "text-xs", mainClasses.metricClass)}>
 					<span className={CPU_COL}>{formatCpu(app.main.cpu)}</span>
 					<span className={MEM_COL}>{formatMemory(app.main.memory)}</span>
 				</div>
@@ -94,11 +92,7 @@ export function AppResourceSection({
 					Renderer
 				</span>
 				<div
-					className={cn(
-						METRIC_COLS,
-						"text-xs",
-						rendererClasses.metricClass,
-					)}
+					className={cn(METRIC_COLS, "text-xs", rendererClasses.metricClass)}
 				>
 					<span className={CPU_COL}>{formatCpu(app.renderer.cpu)}</span>
 					<span className={MEM_COL}>{formatMemory(app.renderer.memory)}</span>
@@ -120,9 +114,7 @@ export function AppResourceSection({
 					>
 						Other
 					</span>
-					<div
-						className={cn(METRIC_COLS, "text-xs", otherClasses.metricClass)}
-					>
+					<div className={cn(METRIC_COLS, "text-xs", otherClasses.metricClass)}>
 						<span className={CPU_COL}>{formatCpu(app.other.cpu)}</span>
 						<span className={MEM_COL}>{formatMemory(app.other.memory)}</span>
 					</div>

@@ -673,7 +673,10 @@ export function ChangesView({
 					No changes detected
 				</div>
 			) : (
-				<div className="flex-1 overflow-y-auto py-1" data-changes-scroll-container>
+				<div
+					className="flex-1 overflow-y-auto py-1"
+					data-changes-scroll-container
+				>
 					{orderedSections
 						.filter((section) => section.count > 0)
 						.map((section) => (

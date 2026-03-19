@@ -50,16 +50,10 @@ export function ThemeCard({ theme, isSelected, onSelect }: ThemeCardProps) {
 							npm run dev
 						</span>
 					</div>
-					<div
-						className="text-xs font-mono"
-						style={{ color: terminal.cyan }}
-					>
+					<div className="text-xs font-mono" style={{ color: terminal.cyan }}>
 						Starting development server...
 					</div>
-					<div
-						className="text-xs font-mono"
-						style={{ color: terminal.yellow }}
-					>
+					<div className="text-xs font-mono" style={{ color: terminal.yellow }}>
 						Ready on http://localhost:3000
 					</div>
 				</div>

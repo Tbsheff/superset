@@ -94,11 +94,7 @@ function renderContent(props: TaskItemDisplayProps) {
 			{labels.length > 0 ? (
 				<div className="flex flex-wrap gap-1">
 					{visibleLabels.map((label) => (
-						<Badge
-							key={label}
-							variant="outline"
-							className="text-xs h-5 px-1.5"
-						>
+						<Badge key={label} variant="outline" className="text-xs h-5 px-1.5">
 							{label}
 						</Badge>
 					))}
@@ -115,9 +111,7 @@ function renderContent(props: TaskItemDisplayProps) {
 				</div>
 			) : null}
 			{showTaskIdLine ? (
-				<div className="text-xs text-muted-foreground/80">
-					{props.taskId}
-				</div>
+				<div className="text-xs text-muted-foreground/80">{props.taskId}</div>
 			) : null}
 		</TaskItem>
 	);

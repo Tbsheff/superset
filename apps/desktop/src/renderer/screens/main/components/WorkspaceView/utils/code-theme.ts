@@ -30,7 +30,7 @@ const MIDNIGHT_DIFF_COLORS = {
 	modified: MIDNIGHT_CODE_COLORS.modified,
 	selection: MIDNIGHT_CODE_COLORS.selection,
 	additionBar: "#3fb950",
-	deletionBar: "#f85149",
+	deletionBar: "#d4614a",
 };
 
 export function getDiffsTheme() {
@@ -67,9 +67,9 @@ export function getDiffViewerStyle(
 		"--diffs-modified-color-override": MIDNIGHT_DIFF_COLORS.modified,
 		"--diffs-selection-color-override": MIDNIGHT_DIFF_COLORS.selection,
 		"--diffs-fg-number-addition-override": "rgba(63, 185, 80, 0.7)",
-		"--diffs-fg-number-deletion-override": "rgba(248, 81, 73, 0.7)",
+		"--diffs-fg-number-deletion-override": "rgba(212, 97, 74, 0.7)",
 		"--diffs-bg-addition-emphasis-override": "rgba(46, 160, 67, 0.5)",
-		"--diffs-bg-deletion-emphasis-override": "rgba(248, 81, 73, 0.5)",
+		"--diffs-bg-deletion-emphasis-override": "rgba(212, 97, 74, 0.5)",
 		"--diffs-addition-bar-color": MIDNIGHT_DIFF_COLORS.additionBar,
 		"--diffs-deletion-bar-color": MIDNIGHT_DIFF_COLORS.deletionBar,
 		backgroundColor: MIDNIGHT_DIFF_COLORS.background,

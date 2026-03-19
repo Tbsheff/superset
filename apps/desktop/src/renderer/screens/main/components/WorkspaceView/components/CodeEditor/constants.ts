@@ -14,6 +14,6 @@ export const MIDNIGHT_CODE_COLORS = {
 	surface: "#1a1716",
 	foreground: "#eae8e6",
 	addition: "rgba(46, 160, 67, 0.3)",
-	deletion: "rgba(248, 81, 73, 0.3)",
+	deletion: "rgba(212, 97, 74, 0.3)",
 	modified: "rgba(210, 153, 34, 0.25)",
 };

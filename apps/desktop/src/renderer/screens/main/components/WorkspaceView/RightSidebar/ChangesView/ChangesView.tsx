@@ -608,8 +608,38 @@ export function ChangesView({
 
 	if (isLoading) {
 		return (
-			<div className="flex-1 flex items-center justify-center text-muted-foreground text-sm p-4">
-				Loading changes...
+			<div className="flex flex-col gap-1 p-2 animate-pulse">
+				{/* Section header skeleton */}
+				<div className="flex items-center gap-2 px-2 py-1.5">
+					<div className="h-3 w-3 rounded bg-muted/60" />
+					<div className="h-3 w-20 rounded bg-muted/60" />
+					<div className="h-4 w-5 rounded-full bg-muted/40 ml-auto" />
+				</div>
+				{/* File row skeletons */}
+				{[1, 2, 3].map((i) => (
+					<div key={i} className="flex items-center gap-2 px-3 py-1">
+						<div className="h-3 w-3 rounded bg-muted/40" />
+						<div
+							className="h-3 rounded bg-muted/40"
+							style={{ width: `${60 + i * 15}%` }}
+						/>
+					</div>
+				))}
+				{/* Second section */}
+				<div className="flex items-center gap-2 px-2 py-1.5 mt-2">
+					<div className="h-3 w-3 rounded bg-muted/60" />
+					<div className="h-3 w-24 rounded bg-muted/60" />
+					<div className="h-4 w-5 rounded-full bg-muted/40 ml-auto" />
+				</div>
+				{[1, 2].map((i) => (
+					<div key={`b${i}`} className="flex items-center gap-2 px-3 py-1">
+						<div className="h-3 w-3 rounded bg-muted/40" />
+						<div
+							className="h-3 rounded bg-muted/40"
+							style={{ width: `${50 + i * 20}%` }}
+						/>
+					</div>
+				))}
 			</div>
 		);
 	}
@@ -670,7 +700,7 @@ export function ChangesView({
 
 			{!hasChanges ? (
 				<div className="flex-1 flex items-center justify-center text-muted-foreground text-sm px-4 text-center">
-					No changes detected
+					No changes detected — working tree clean
 				</div>
 			) : (
 				<div

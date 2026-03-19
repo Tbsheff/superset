@@ -129,7 +129,7 @@ function BaseBranchSelector({ worktreePath }: { worktreePath: string }) {
 								key={branch}
 								value={branch}
 								onSelect={() => handleBranchSelect(branch)}
-								className="flex items-center justify-between text-xs"
+								className="flex items-center justify-between text-[13px]"
 							>
 								<span className="truncate">
 									{branch}
@@ -172,27 +172,30 @@ function StashDropdown({
 							size="icon"
 							className="size-6 p-0"
 							disabled={isPending}
-							title="Stash operations"
+							title="Stash changes"
 						>
 							<VscGitStash className="size-4" />
 						</Button>
 					</DropdownMenuTrigger>
 				</TooltipTrigger>
 				<TooltipContent side="top" showArrow={false}>
-					Stash operations
+					Stash changes
 				</TooltipContent>
 			</Tooltip>
 			<DropdownMenuContent align="start" className="w-52">
-				<DropdownMenuItem onClick={onStash} className="text-xs">
+				<DropdownMenuItem onClick={onStash} className="text-[13px]">
 					<VscGitStash className="size-4" />
 					Stash Changes
 				</DropdownMenuItem>
-				<DropdownMenuItem onClick={onStashIncludeUntracked} className="text-xs">
+				<DropdownMenuItem
+					onClick={onStashIncludeUntracked}
+					className="text-[13px]"
+				>
 					<VscGitStash className="size-4" />
 					Stash (Include Untracked)
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
-				<DropdownMenuItem onClick={onStashPop} className="text-xs">
+				<DropdownMenuItem onClick={onStashPop} className="text-[13px]">
 					<VscGitStashApply className="size-4" />
 					Pop Stash
 				</DropdownMenuItem>
@@ -252,7 +255,7 @@ const reviewTagStyles = {
 
 const reviewTagLabels = {
 	approved: "Approved",
-	changes_requested: "Changes req.",
+	changes_requested: "Changes requested",
 	pending: "Review pending",
 } as const;
 

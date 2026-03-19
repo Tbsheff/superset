@@ -69,15 +69,15 @@ export function LightDiffViewer({
 
 				/* Separator polish */
 				[data-separator] {
-					--diffs-bg-separator-override: #161b22;
+					--diffs-bg-separator-override: #1a1716;
 				}
 				[data-separator='line-info'] {
-					border-top: 1px solid #21262d;
-					border-bottom: 1px solid #21262d;
+					border-top: 1px solid #2a2827;
+					border-bottom: 1px solid #2a2827;
 				}
 				[data-separator-content],
 				[data-expand-button] {
-					background-color: #161b22 !important;
+					background-color: #1a1716 !important;
 					color: #6e7681 !important;
 					font-size: 12px !important;
 				}
@@ -100,13 +100,13 @@ export function LightDiffViewer({
 					gap: 0 !important;
 				}
 				[data-type='split'][data-overflow='scroll'] [data-additions] {
-					border-left: 1px solid #21262d;
+					border-left: 1px solid #2a2827;
 				}
 
 				/* File header */
 				[data-diffs-header] {
-					background-color: #161b22 !important;
-					border-bottom: 1px solid #30363d !important;
+					background-color: #1a1716 !important;
+					border-bottom: 1px solid #2a2827 !important;
 					padding: 8px 12px !important;
 				}
 				[data-diffs-header] [data-title] {
@@ -117,7 +117,7 @@ export function LightDiffViewer({
 					color: #3fb950 !important;
 				}
 				[data-diffs-header] [data-deletions-count] {
-					color: #f85149 !important;
+					color: #d4614a !important;
 				}
 			`,
 			}}

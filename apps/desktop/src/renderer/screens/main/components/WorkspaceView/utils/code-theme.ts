@@ -21,9 +21,9 @@ const MIDNIGHT_DIFF_THEME = {
 
 const MIDNIGHT_DIFF_COLORS = {
 	background: MIDNIGHT_CODE_COLORS.background,
-	buffer: MIDNIGHT_CODE_COLORS.border,
+	buffer: "#161b22",
 	hover: "#1c2128",
-	separator: MIDNIGHT_CODE_COLORS.border,
+	separator: "#161b22",
 	lineNumber: MIDNIGHT_CODE_COLORS.muted,
 	addition: MIDNIGHT_CODE_COLORS.addition,
 	deletion: MIDNIGHT_CODE_COLORS.deletion,

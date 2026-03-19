@@ -74,6 +74,28 @@ export function LightDiffViewer({
 				[data-line-type="deletion"] [data-role="indicator"] {
 					background-color: var(--diffs-deletion-bar-color, #f85149);
 				}
+				[data-role="file-header"] {
+					background-color: #161b22 !important;
+					border-bottom: 1px solid #30363d !important;
+					padding: 8px 12px !important;
+				}
+				[data-role="file-header"] [data-role="file-name"] {
+					font-weight: 600 !important;
+					color: #e6edf3 !important;
+				}
+				[data-role="file-header"] [data-role="additions"] {
+					color: #3fb950 !important;
+				}
+				[data-role="file-header"] [data-role="deletions"] {
+					color: #f85149 !important;
+				}
+				[data-role="separator"],
+				[data-role="hunk-separator"] {
+					background-color: #161b22 !important;
+					color: #8b949e !important;
+					border-top: 1px solid #21262d !important;
+					border-bottom: 1px solid #21262d !important;
+				}
 			`,
 			}}
 		/>

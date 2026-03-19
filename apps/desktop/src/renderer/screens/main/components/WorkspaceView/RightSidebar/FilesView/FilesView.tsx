@@ -556,7 +556,7 @@ export function FilesView() {
 				onRefresh={handleRefresh}
 			/>
 
-			<div className="flex-1 min-h-0 overflow-hidden">
+			<div className="flex-1 min-h-0 overflow-hidden bg-muted/10">
 				<ContextMenu>
 					<ContextMenuTrigger asChild className="h-full">
 						<div className="h-full overflow-auto">

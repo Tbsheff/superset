@@ -674,7 +674,7 @@ export function ChangesView({
 				</div>
 			) : (
 				<div
-					className="flex-1 overflow-y-auto py-1"
+					className="flex-1 overflow-y-auto py-1 bg-muted/10"
 					data-changes-scroll-container
 				>
 					{orderedSections

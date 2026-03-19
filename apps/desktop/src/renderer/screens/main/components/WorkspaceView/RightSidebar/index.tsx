@@ -47,7 +47,7 @@ function TabButton({
 						className={cn(
 							"flex items-center justify-center shrink-0 h-8 my-1 w-10 rounded-md transition-all",
 							isActive
-								? "text-foreground bg-accent/60"
+								? "text-foreground bg-accent/60 border-b-2 border-primary"
 								: "text-muted-foreground/70 hover:text-muted-foreground hover:bg-accent/30",
 						)}
 					>
@@ -68,7 +68,7 @@ function TabButton({
 			className={cn(
 				"flex items-center gap-2 shrink-0 px-3 h-8 my-1 rounded-md transition-all text-sm",
 				isActive
-					? "text-foreground bg-accent/60"
+					? "text-foreground bg-accent/60 border-b-2 border-primary"
 					: "text-muted-foreground/70 hover:text-muted-foreground hover:bg-accent/30",
 			)}
 		>
@@ -160,7 +160,7 @@ export function RightSidebar() {
 
 	return (
 		<aside className="h-full flex flex-col overflow-hidden">
-			<div className="flex items-center bg-background shrink-0 h-10 border-b border-border/40">
+			<div className="flex items-center bg-tertiary shrink-0 h-10 border-b border-border/40">
 				<div className="flex items-center gap-0.5 px-1 h-full">
 					{showChangesTab && (
 						<TabButton
@@ -188,6 +188,7 @@ export function RightSidebar() {
 								size="icon"
 								onClick={handleExpandToggle}
 								className="size-6 p-0"
+								title={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
 							>
 								{isExpanded ? (
 									<LuShrink className="size-3.5" />
@@ -210,6 +211,7 @@ export function RightSidebar() {
 								size="icon"
 								onClick={toggleSidebar}
 								className="size-6 p-0"
+								title="Close sidebar"
 							>
 								<LuX className="size-3.5" />
 							</Button>

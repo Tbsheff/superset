@@ -102,9 +102,9 @@ export async function initRemoteWorkspace(
 			}
 			await manager.connect({
 				id: hostConfig.id,
-				hostname: hostConfig.hostname,
+				hostname: hostConfig.hostname ?? "",
 				port: hostConfig.port ?? 22,
-				username: hostConfig.username,
+				username: hostConfig.username ?? "",
 				authMethod: hostConfig.authMethod as "key" | "agent" | "password",
 				privateKeyPath: hostConfig.privateKeyPath ?? undefined,
 			});

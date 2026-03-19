@@ -1,7 +1,6 @@
 import type { FitAddon } from "@xterm/addon-fit";
 import type { SearchAddon } from "@xterm/addon-search";
 import type { Terminal as XTerm } from "@xterm/xterm";
-import "@xterm/xterm/css/xterm.css";
 import { useEffect, useRef, useState } from "react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useTabsStore } from "renderer/stores/tabs/store";

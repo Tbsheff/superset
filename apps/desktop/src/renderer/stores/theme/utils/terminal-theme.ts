@@ -1,36 +1,59 @@
-import type { ITheme } from "@xterm/xterm";
+import type { GhosttyTheme } from "restty";
+import type { ThemeColor } from "restty/internal";
 import type { TerminalColors } from "shared/themes/types";
 
+function hexToThemeColor(hex: string): ThemeColor {
+	const r = parseInt(hex.slice(1, 3), 16);
+	const g = parseInt(hex.slice(3, 5), 16);
+	const b = parseInt(hex.slice(5, 7), 16);
+	return { r, g, b };
+}
+
+function maybeHex(hex: string | undefined): ThemeColor | undefined {
+	return hex ? hexToThemeColor(hex) : undefined;
+}
+
 /**
- * Convert theme terminal colors to xterm.js ITheme format
+ * Convert theme terminal colors to Ghostty/restty theme format
  */
-export function toXtermTheme(colors: TerminalColors): ITheme {
+export function toResttyTheme(colors: Partial<TerminalColors>): GhosttyTheme {
+	const bg = colors.background
+		? hexToThemeColor(colors.background)
+		: { r: 26, g: 26, b: 26 };
+	const fg = colors.foreground
+		? hexToThemeColor(colors.foreground)
+		: { r: 212, g: 212, b: 212 };
+
+	// Build palette from available colors, filtering undefined entries
+	const paletteEntries = [
+		maybeHex(colors.black),
+		maybeHex(colors.red),
+		maybeHex(colors.green),
+		maybeHex(colors.yellow),
+		maybeHex(colors.blue),
+		maybeHex(colors.magenta),
+		maybeHex(colors.cyan),
+		maybeHex(colors.white),
+		maybeHex(colors.brightBlack),
+		maybeHex(colors.brightRed),
+		maybeHex(colors.brightGreen),
+		maybeHex(colors.brightYellow),
+		maybeHex(colors.brightBlue),
+		maybeHex(colors.brightMagenta),
+		maybeHex(colors.brightCyan),
+		maybeHex(colors.brightWhite),
+	];
+
 	return {
-		background: colors.background,
-		foreground: colors.foreground,
-		cursor: colors.cursor,
-		cursorAccent: colors.cursorAccent,
-		selectionBackground: colors.selectionBackground,
-		selectionForeground: colors.selectionForeground,
-
-		// Standard ANSI colors
-		black: colors.black,
-		red: colors.red,
-		green: colors.green,
-		yellow: colors.yellow,
-		blue: colors.blue,
-		magenta: colors.magenta,
-		cyan: colors.cyan,
-		white: colors.white,
-
-		// Bright ANSI colors
-		brightBlack: colors.brightBlack,
-		brightRed: colors.brightRed,
-		brightGreen: colors.brightGreen,
-		brightYellow: colors.brightYellow,
-		brightBlue: colors.brightBlue,
-		brightMagenta: colors.brightMagenta,
-		brightCyan: colors.brightCyan,
-		brightWhite: colors.brightWhite,
+		colors: {
+			background: bg,
+			foreground: fg,
+			cursor: maybeHex(colors.cursor),
+			cursorText: maybeHex(colors.cursorAccent),
+			selectionBackground: maybeHex(colors.selectionBackground),
+			selectionForeground: maybeHex(colors.selectionForeground),
+			palette: paletteEntries.filter((c): c is ThemeColor => c !== undefined),
+		},
+		raw: {},
 	};
 }

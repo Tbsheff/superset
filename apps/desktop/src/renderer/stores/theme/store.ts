@@ -1,4 +1,4 @@
-import type { ITheme } from "@xterm/xterm";
+import type { GhosttyTheme } from "restty";
 import {
 	builtInThemes,
 	DEFAULT_THEME_ID,
@@ -9,7 +9,7 @@ import {
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 import { trpcThemeStorage } from "../../lib/trpc-storage";
-import { applyUIColors, toXtermTheme, updateThemeClass } from "./utils";
+import { applyUIColors, toResttyTheme, updateThemeClass } from "./utils";
 
 /** Special theme ID for system preference (follows OS dark/light mode) */
 export const SYSTEM_THEME_ID = "system";
@@ -24,8 +24,8 @@ interface ThemeState {
 	/** The currently active theme object (resolved from system preference if needed) */
 	activeTheme: Theme | null;
 
-	/** Terminal theme in xterm.js format (derived from activeTheme) */
-	terminalTheme: ITheme | null;
+	/** Terminal theme in restty/Ghostty format (derived from activeTheme) */
+	terminalTheme: GhosttyTheme | null;
 
 	/** Set the active theme by ID (can be "system" or a specific theme ID) */
 	setTheme: (themeId: string) => void;
@@ -112,7 +112,7 @@ function syncThemeToLocalStorage(theme: Theme): void {
  * Apply a theme to the UI and terminal
  */
 function applyTheme(theme: Theme): {
-	terminalTheme: ITheme;
+	terminalTheme: GhosttyTheme;
 } {
 	// Apply UI colors to CSS variables
 	applyUIColors(theme.ui);
@@ -124,7 +124,7 @@ function applyTheme(theme: Theme): {
 
 	// Convert to editor-specific formats
 	return {
-		terminalTheme: toXtermTheme(getTerminalColors(theme)),
+		terminalTheme: toResttyTheme(getTerminalColors(theme)),
 	};
 }
 

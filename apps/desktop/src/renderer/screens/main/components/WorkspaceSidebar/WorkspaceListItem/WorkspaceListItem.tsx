@@ -276,8 +276,8 @@ export function WorkspaceListItem({
 				"hover:bg-muted/50 transition-colors text-left cursor-pointer",
 				"group relative",
 				showBranchSubtitle ? "py-1.5" : "py-2 items-center",
-				isActive && "bg-muted",
-				isSelected && "bg-primary/10 ring-1 ring-inset ring-primary/30",
+				isActive && "bg-muted rounded-md",
+				isSelected && "bg-primary/10 ring-1 ring-inset ring-primary/30 rounded-md",
 				(isDragging || isMultiDragging) && "opacity-30",
 			)}
 			style={{ cursor: isDragging ? "grabbing" : "pointer" }}

@@ -111,7 +111,7 @@ function ScriptTextarea({
 				role="region"
 				aria-label={`${title} script editor with file drop support`}
 				className={cn(
-					"relative rounded-lg border transition-colors",
+					"relative rounded-md border transition-colors",
 					isDragOver
 						? "border-primary bg-primary/5"
 						: "border-border hover:border-border/80",
@@ -124,11 +124,11 @@ function ScriptTextarea({
 					value={value}
 					onChange={(e) => onChange(e.target.value)}
 					placeholder={placeholder}
-					className="w-full min-h-[80px] p-3 text-sm font-mono bg-transparent resize-y focus:outline-none focus:ring-1 focus:ring-ring rounded-lg"
+					className="w-full min-h-[80px] p-3 text-sm font-mono bg-transparent resize-y focus:outline-none focus:ring-1 focus:ring-ring rounded-md"
 					rows={3}
 				/>
 				{isDragOver && (
-					<div className="absolute inset-0 flex items-center justify-center bg-primary/10 rounded-lg pointer-events-none">
+					<div className="absolute inset-0 flex items-center justify-center bg-primary/10 rounded-md pointer-events-none">
 						<div className="flex items-center gap-2 text-primary text-sm font-medium">
 							<HiDocumentArrowUp className="h-5 w-5" />
 							Drop to import

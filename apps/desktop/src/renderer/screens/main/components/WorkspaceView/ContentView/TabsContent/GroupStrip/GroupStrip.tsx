@@ -344,7 +344,7 @@ export function GroupStrip() {
 			>
 				<div ref={tabsTrackRef} className="flex items-stretch">
 					{tabs.length > 0 && (
-						<div className="flex items-stretch h-full shrink-0">
+						<div className="flex items-stretch h-full shrink-0 gap-px">
 							{tabs.map((tab, index) => {
 								return (
 									<div

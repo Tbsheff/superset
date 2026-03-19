@@ -165,9 +165,9 @@ export function GroupItem({
 	};
 
 	const tabStyles = cn(
-		"flex items-center gap-2 transition-all w-full shrink-0 pl-3 pr-8 h-full",
+		"flex items-center gap-2 transition-all w-full shrink-0 pl-3 pr-8 h-full rounded-t-md",
 		isActive
-			? "text-foreground bg-border/30"
+			? "text-foreground bg-accent/60"
 			: "text-muted-foreground/70 hover:text-muted-foreground hover:bg-tertiary/20",
 	);
 
@@ -179,7 +179,7 @@ export function GroupItem({
 						drag(drop(node));
 					}}
 					className={cn(
-						"group relative flex items-center shrink-0 h-full border-r border-border",
+						"group relative flex items-center shrink-0 h-full",
 						isOver && canDrop && "bg-primary/5",
 						isDragging && "opacity-50 text-muted-foreground/50",
 					)}

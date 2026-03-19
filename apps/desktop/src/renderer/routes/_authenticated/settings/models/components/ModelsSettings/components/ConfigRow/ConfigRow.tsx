@@ -25,7 +25,7 @@ export function ConfigRow({
 	disableClear,
 }: ConfigRowProps) {
 	return (
-		<div className="rounded-xl border bg-card px-4 py-4">
+		<div className="rounded-lg border bg-card px-4 py-4">
 			<div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 				<div className="min-w-0 lg:w-64">
 					<p className="text-sm font-semibold">{title}</p>

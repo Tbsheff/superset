@@ -42,6 +42,9 @@ const DEFAULT_COLOR_G = 0;
 const DEFAULT_COLOR_B = 0;
 const DEFAULT_COLOR_A = 0;
 
+/** Maximum serialized output size (2MB) to prevent OOM during restore */
+const MAX_SERIALIZE_BYTES = 2 * 1024 * 1024;
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -123,21 +126,30 @@ export function serializeWasmTerminal(
 	const viewportRows = initialState.rows;
 	const cols = initialState.cols;
 
+	let result: string;
+
 	// If no scrollback or scrollbar not supported, just serialize current viewport
 	if (!scrollbarTotal || totalRows <= viewportRows) {
-		return serializeRenderState(initialState, cols);
+		result = serializeRenderState(initialState, cols);
+	} else {
+		// Serialize with scrollback: scroll to top, read pages, restore
+		result = serializeWithScrollback(
+			wasm,
+			handle,
+			exports,
+			viewportRows,
+			cols,
+			totalRows,
+			scrollbarOffset,
+		);
 	}
 
-	// Serialize with scrollback: scroll to top, read pages, restore
-	return serializeWithScrollback(
-		wasm,
-		handle,
-		exports,
-		viewportRows,
-		cols,
-		totalRows,
-		scrollbarOffset,
-	);
+	// Cap output size to prevent OOM during restore
+	if (result.length > MAX_SERIALIZE_BYTES) {
+		result = result.slice(-MAX_SERIALIZE_BYTES);
+	}
+
+	return result;
 }
 
 function serializeWithScrollback(

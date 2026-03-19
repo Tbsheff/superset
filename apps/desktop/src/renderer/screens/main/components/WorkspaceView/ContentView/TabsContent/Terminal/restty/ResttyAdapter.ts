@@ -57,6 +57,11 @@ export class ResttyAdapter {
 	private _cursorCol = 0;
 	private _cursorRow = 0;
 
+	// Chunked write buffer to prevent OOM during session restore
+	private _writeQueue: Array<{ data: string; callback?: () => void }> = [];
+	private _isWriting = false;
+	private static readonly CHUNK_SIZE = 16_384; // 16KB per chunk
+
 	constructor(opts: {
 		container: HTMLElement;
 		transport: TrpcPtyTransport;
@@ -157,14 +162,39 @@ export class ResttyAdapter {
 	 */
 	write(data: string, callback?: () => void): void {
 		if (this._disposed) return;
-		this._transport.feedData(data);
-		// Notify write-parsed listeners after data is fed
-		for (const listener of this._writeParsedListeners) {
-			listener();
+		this._writeQueue.push({ data, callback });
+		if (!this._isWriting) {
+			this._drainQueue();
 		}
-		if (callback) {
-			// Use microtask to let WASM process the data before callback fires
-			queueMicrotask(callback);
+	}
+
+	private _drainQueue(): void {
+		this._isWriting = true;
+		const item = this._writeQueue[0];
+		if (!item) {
+			this._isWriting = false;
+			return;
+		}
+
+		const chunk = item.data.substring(0, ResttyAdapter.CHUNK_SIZE);
+		item.data = item.data.substring(ResttyAdapter.CHUNK_SIZE);
+
+		// Feed chunk to restty
+		this._transport.feedData(chunk);
+
+		if (item.data.length === 0) {
+			this._writeQueue.shift();
+			item.callback?.();
+			// Notify write-parsed listeners after full item completes
+			for (const listener of this._writeParsedListeners) {
+				listener();
+			}
+		}
+
+		if (this._writeQueue.length > 0 || item.data.length > 0) {
+			setTimeout(() => this._drainQueue(), 0);
+		} else {
+			this._isWriting = false;
 		}
 	}
 
@@ -369,6 +399,7 @@ export class ResttyAdapter {
 		this._disposed = true;
 		this._transport.destroy();
 		this._restty.destroy();
+		this._writeQueue.length = 0;
 		this._dataListeners.clear();
 		this._scrollListeners.clear();
 		this._writeParsedListeners.clear();

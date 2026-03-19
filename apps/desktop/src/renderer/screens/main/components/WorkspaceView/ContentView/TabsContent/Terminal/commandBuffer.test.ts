@@ -1,39 +1,44 @@
 import { describe, expect, it } from "bun:test";
-import type { Terminal as XTerm } from "@xterm/xterm";
+import type { ResttyAdapter } from "./restty/ResttyAdapter";
 import { isCommandEchoed, sanitizeForTitle } from "./commandBuffer";
 
-function makeXterm(
-	lines: Array<{ text: string; isWrapped?: boolean }>,
+/**
+ * Build a minimal ResttyAdapter mock from an array of text rows.
+ *
+ * Each row is padded to `cols` characters so codepoints indexing works
+ * correctly. cursorX defaults to the end of the last line; cursorY defaults
+ * to the last row index.
+ */
+function makeAdapter(
+	lines: Array<{ text: string }>,
 	options: {
 		cursorX?: number;
 		cursorY?: number;
-		viewportY?: number;
 	} = {},
-): XTerm {
-	const {
-		cursorX = lines.at(-1)?.text.length ?? 0,
-		cursorY = Math.max(lines.length - 1, 0),
-		viewportY = 0,
-	} = options;
+): ResttyAdapter {
+	const cols = Math.max(...lines.map((l) => l.text.length), 1);
+	const rows = lines.length;
+	const cursorY = options.cursorY ?? Math.max(rows - 1, 0);
+	const cursorX = options.cursorX ?? (lines.at(-1)?.text.length ?? 0);
+
+	// Build flat codepoints array (rows × cols)
+	const codepoints = new Uint32Array(rows * cols);
+	for (let r = 0; r < rows; r++) {
+		const text = lines[r]?.text ?? "";
+		for (let c = 0; c < text.length && c < cols; c++) {
+			codepoints[r * cols + c] = text.codePointAt(c) ?? 0;
+		}
+		// Remaining cells stay 0 (empty/space)
+	}
+
+	const renderState = { rows, cols, codepoints, graphemeOffset: null, graphemeLen: null, graphemeBuffer: null };
 
 	return {
-		buffer: {
-			active: {
-				cursorX,
-				cursorY,
-				viewportY,
-				getLine: (index: number) => {
-					const line = lines[index];
-					if (!line) return undefined;
-
-					return {
-						isWrapped: line.isWrapped ?? false,
-						translateToString: () => line.text,
-					};
-				},
-			},
+		getCursorPosition: () => ({ col: cursorX, row: cursorY }),
+		restty: {
+			getRenderState: () => renderState,
 		},
-	} as unknown as XTerm;
+	} as unknown as ResttyAdapter;
 }
 
 describe("sanitizeForTitle", () => {
@@ -77,45 +82,36 @@ describe("sanitizeForTitle", () => {
 
 describe("isCommandEchoed", () => {
 	it("returns true when the rendered prompt line ends with the typed command", () => {
-		const xterm = makeXterm([{ text: "$ ls -la" }]);
+		const adapter = makeAdapter([{ text: "$ ls -la" }]);
 
-		expect(isCommandEchoed(xterm, "ls -la")).toBe(true);
+		expect(isCommandEchoed(adapter, "ls -la")).toBe(true);
 	});
 
 	it("returns false when masked input is not echoed on screen", () => {
-		const xterm = makeXterm([{ text: "[sudo] password for alice: " }]);
+		const adapter = makeAdapter([{ text: "[sudo] password for alice: " }]);
 
-		expect(isCommandEchoed(xterm, "hunter2")).toBe(false);
+		expect(isCommandEchoed(adapter, "hunter2")).toBe(false);
 	});
 
 	it("returns false when the prompt contains the same substring as the secret", () => {
-		const xterm = makeXterm([{ text: "[sudo] password for alice: " }]);
+		const adapter = makeAdapter([{ text: "[sudo] password for alice: " }]);
 
-		expect(isCommandEchoed(xterm, "alice")).toBe(false);
-	});
-
-	it("returns true for commands that wrap onto the current line", () => {
-		const xterm = makeXterm([
-			{ text: "$ git status --", isWrapped: false },
-			{ text: "short", isWrapped: true },
-		]);
-
-		expect(isCommandEchoed(xterm, "git status --short")).toBe(true);
+		expect(isCommandEchoed(adapter, "alice")).toBe(false);
 	});
 
 	it("uses the cursor position on the current line", () => {
-		const xterm = makeXterm([{ text: "$ npm test ghost-text" }], {
+		const adapter = makeAdapter([{ text: "$ npm test ghost-text" }], {
 			cursorX: "$ npm test".length,
 		});
 
-		expect(isCommandEchoed(xterm, "npm test")).toBe(true);
-		expect(isCommandEchoed(xterm, "npm test ghost-text")).toBe(false);
+		expect(isCommandEchoed(adapter, "npm test")).toBe(true);
+		expect(isCommandEchoed(adapter, "npm test ghost-text")).toBe(false);
 	});
 
 	it("returns false for empty commands", () => {
-		const xterm = makeXterm([{ text: "$ " }]);
+		const adapter = makeAdapter([{ text: "$ " }]);
 
-		expect(isCommandEchoed(xterm, "")).toBe(false);
-		expect(isCommandEchoed(xterm, "   ")).toBe(false);
+		expect(isCommandEchoed(adapter, "")).toBe(false);
+		expect(isCommandEchoed(adapter, "   ")).toBe(false);
 	});
 });

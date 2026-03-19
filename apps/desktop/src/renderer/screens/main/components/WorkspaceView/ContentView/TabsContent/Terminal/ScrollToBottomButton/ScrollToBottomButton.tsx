@@ -1,44 +1,43 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { cn } from "@superset/ui/utils";
-import type { Terminal } from "@xterm/xterm";
 import { useCallback, useEffect, useState } from "react";
 import { ArrowDown } from "lucide-react";
 import { useHotkeyText } from "renderer/stores/hotkeys";
+import type { ResttyAdapter } from "../restty/ResttyAdapter";
 import { scrollToBottom } from "../utils";
 
 interface ScrollToBottomButtonProps {
-	terminal: Terminal | null;
+	adapter: ResttyAdapter | null;
 }
 
-export function ScrollToBottomButton({ terminal }: ScrollToBottomButtonProps) {
+export function ScrollToBottomButton({ adapter }: ScrollToBottomButtonProps) {
 	const [isVisible, setIsVisible] = useState(false);
 	const shortcutText = useHotkeyText("SCROLL_TO_BOTTOM");
 	const showShortcut = shortcutText !== "Unassigned";
 
 	const checkScrollPosition = useCallback(() => {
-		if (!terminal) return;
-		const buffer = terminal.buffer.active;
-		const isAtBottom = buffer.viewportY >= buffer.baseY;
+		if (!adapter) return;
+		const isAtBottom = adapter.isAtBottom();
 		setIsVisible(!isAtBottom);
-	}, [terminal]);
+	}, [adapter]);
 
 	useEffect(() => {
-		if (!terminal) return;
+		if (!adapter) return;
 
 		checkScrollPosition();
 
-		const writeDisposable = terminal.onWriteParsed(checkScrollPosition);
-		const scrollDisposable = terminal.onScroll(checkScrollPosition);
+		const writeDisposable = adapter.onWriteParsed(checkScrollPosition);
+		const scrollDisposable = adapter.onScroll(checkScrollPosition);
 
 		return () => {
 			writeDisposable.dispose();
 			scrollDisposable.dispose();
 		};
-	}, [terminal, checkScrollPosition]);
+	}, [adapter, checkScrollPosition]);
 
 	const handleClick = () => {
-		if (terminal) {
-			scrollToBottom(terminal);
+		if (adapter) {
+			scrollToBottom(adapter);
 		}
 	};
 

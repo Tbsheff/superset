@@ -209,7 +209,10 @@ export function GroupItem({
 									onClose();
 								}
 							}}
-							className={cn(tabStyles, "focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background")}
+							className={cn(
+								tabStyles,
+								"focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+							)}
 						>
 							<span className="text-sm truncate flex-1 text-left">
 								{displayName}

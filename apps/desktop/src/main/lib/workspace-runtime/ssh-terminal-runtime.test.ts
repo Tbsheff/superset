@@ -69,6 +69,7 @@ describe("SshTerminalRuntime", () => {
 	test("createOrAttach creates a new SSH session", async () => {
 		const result = await runtime.createOrAttach({
 			paneId: "pane-1",
+			tabId: "tab-1",
 			workspaceId: "ws-1",
 			cols: 80,
 			rows: 24,
@@ -82,10 +83,12 @@ describe("SshTerminalRuntime", () => {
 	test("createOrAttach returns isNew:false for existing alive session", async () => {
 		await runtime.createOrAttach({
 			paneId: "pane-1",
+			tabId: "tab-1",
 			workspaceId: "ws-1",
 		});
 		const result = await runtime.createOrAttach({
 			paneId: "pane-1",
+			tabId: "tab-1",
 			workspaceId: "ws-1",
 		});
 		expect(result.isNew).toBe(false);
@@ -94,7 +97,7 @@ describe("SshTerminalRuntime", () => {
 	});
 
 	test("write sends data to channel", async () => {
-		await runtime.createOrAttach({ paneId: "pane-1", workspaceId: "ws-1" });
+		await runtime.createOrAttach({ paneId: "pane-1", tabId: "tab-1", workspaceId: "ws-1" });
 		runtime.write({ paneId: "pane-1", data: "hello" });
 		expect(mockChannel.write).toHaveBeenCalledWith("hello");
 	});
@@ -108,6 +111,7 @@ describe("SshTerminalRuntime", () => {
 	test("resize calls setWindow on channel", async () => {
 		await runtime.createOrAttach({
 			paneId: "pane-1",
+			tabId: "tab-1",
 			workspaceId: "ws-1",
 			cols: 80,
 			rows: 24,
@@ -117,20 +121,20 @@ describe("SshTerminalRuntime", () => {
 	});
 
 	test("signal writes Ctrl+C for SIGINT", async () => {
-		await runtime.createOrAttach({ paneId: "pane-1", workspaceId: "ws-1" });
+		await runtime.createOrAttach({ paneId: "pane-1", tabId: "tab-1", workspaceId: "ws-1" });
 		runtime.signal({ paneId: "pane-1", signal: "SIGINT" });
 		expect(mockChannel.write).toHaveBeenCalledWith("\x03");
 	});
 
 	test("kill closes channel and removes session", async () => {
-		await runtime.createOrAttach({ paneId: "pane-1", workspaceId: "ws-1" });
+		await runtime.createOrAttach({ paneId: "pane-1", tabId: "tab-1", workspaceId: "ws-1" });
 		await runtime.kill({ paneId: "pane-1" });
 		expect(mockChannel.close).toHaveBeenCalledTimes(1);
 		expect(runtime.getSession("pane-1")).toBeNull();
 	});
 
 	test("getSession returns session info", async () => {
-		await runtime.createOrAttach({ paneId: "pane-1", workspaceId: "ws-1" });
+		await runtime.createOrAttach({ paneId: "pane-1", tabId: "tab-1", workspaceId: "ws-1" });
 		const session = runtime.getSession("pane-1");
 		expect(session).not.toBeNull();
 		expect(session?.isAlive).toBe(true);
@@ -142,7 +146,7 @@ describe("SshTerminalRuntime", () => {
 	});
 
 	test("clearScrollback writes ANSI clear sequence", async () => {
-		await runtime.createOrAttach({ paneId: "pane-1", workspaceId: "ws-1" });
+		await runtime.createOrAttach({ paneId: "pane-1", tabId: "tab-1", workspaceId: "ws-1" });
 		// Reset write mock count after createOrAttach (may write cd command)
 		mockChannel.write.mockClear();
 		runtime.clearScrollback({ paneId: "pane-1" });
@@ -158,6 +162,7 @@ describe("SshTerminalRuntime", () => {
 		};
 		await runtime.createOrAttach({
 			paneId: "pane-1",
+			tabId: "tab-1",
 			workspaceId: "ws-target",
 		});
 
@@ -167,7 +172,7 @@ describe("SshTerminalRuntime", () => {
 				cb(null, ch2);
 			}),
 		};
-		await runtime.createOrAttach({ paneId: "pane-2", workspaceId: "ws-other" });
+		await runtime.createOrAttach({ paneId: "pane-2", tabId: "tab-2", workspaceId: "ws-other" });
 
 		const result = await runtime.killByWorkspaceId("ws-target");
 		expect(result.killed).toBe(1);
@@ -177,7 +182,7 @@ describe("SshTerminalRuntime", () => {
 	});
 
 	test("getSessionCountByWorkspaceId counts alive sessions", async () => {
-		await runtime.createOrAttach({ paneId: "pane-1", workspaceId: "ws-1" });
+		await runtime.createOrAttach({ paneId: "pane-1", tabId: "tab-1", workspaceId: "ws-1" });
 
 		const ch2 = createMockChannel();
 		mockClient = {
@@ -185,7 +190,7 @@ describe("SshTerminalRuntime", () => {
 				cb(null, ch2);
 			}),
 		};
-		await runtime.createOrAttach({ paneId: "pane-2", workspaceId: "ws-1" });
+		await runtime.createOrAttach({ paneId: "pane-2", tabId: "tab-2", workspaceId: "ws-1" });
 
 		const ch3 = createMockChannel();
 		mockClient = {
@@ -193,7 +198,7 @@ describe("SshTerminalRuntime", () => {
 				cb(null, ch3);
 			}),
 		};
-		await runtime.createOrAttach({ paneId: "pane-3", workspaceId: "ws-other" });
+		await runtime.createOrAttach({ paneId: "pane-3", tabId: "tab-3", workspaceId: "ws-other" });
 
 		const count = await runtime.getSessionCountByWorkspaceId("ws-1");
 		expect(count).toBe(2);
@@ -205,7 +210,7 @@ describe("SshTerminalRuntime", () => {
 	});
 
 	test("cleanup kills all sessions", async () => {
-		await runtime.createOrAttach({ paneId: "pane-1", workspaceId: "ws-1" });
+		await runtime.createOrAttach({ paneId: "pane-1", tabId: "tab-1", workspaceId: "ws-1" });
 
 		const ch2 = createMockChannel();
 		mockClient = {
@@ -213,7 +218,7 @@ describe("SshTerminalRuntime", () => {
 				cb(null, ch2);
 			}),
 		};
-		await runtime.createOrAttach({ paneId: "pane-2", workspaceId: "ws-1" });
+		await runtime.createOrAttach({ paneId: "pane-2", tabId: "tab-2", workspaceId: "ws-1" });
 
 		await runtime.cleanup();
 

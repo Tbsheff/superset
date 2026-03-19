@@ -13,7 +13,7 @@ export const MIDNIGHT_CODE_COLORS = {
 	panel: "#1a1716",
 	surface: "#1a1716",
 	foreground: "#eae8e6",
-	addition: "rgba(46, 160, 67, 0.3)",
-	deletion: "rgba(212, 97, 74, 0.3)",
-	modified: "rgba(210, 153, 34, 0.25)",
+	addition: "rgba(46, 160, 67, 0.45)",
+	deletion: "rgba(212, 97, 74, 0.45)",
+	modified: "rgba(210, 153, 34, 0.38)",
 };

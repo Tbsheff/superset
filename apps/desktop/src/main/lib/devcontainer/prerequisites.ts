@@ -19,154 +19,170 @@ export interface PrerequisiteReport {
 	allPassed: boolean;
 }
 
-/**
- * Run all prerequisite checks on a remote host.
- * Reports individual results so the UI can show granular progress.
- */
-export async function checkPrerequisites(
+async function checkDocker(
 	client: Client,
 	hostname: string,
-): Promise<PrerequisiteReport> {
-	const report: PrerequisiteReport = {
-		docker: { passed: false },
-		dockerPermissions: { passed: false },
-		dockerResponsive: { passed: false },
-		nodeJs: { passed: false },
-		devcontainerCli: { passed: false },
-		diskSpace: { passed: false },
-		allPassed: false,
-	};
-
-	// 1. Docker installed
-	const dockerVersion = await sshExec(
+): Promise<PrerequisiteResult> {
+	const result = await sshExec(
 		client,
 		"docker version --format '{{.Server.Version}}'",
 		{ timeout: 10_000 },
 	);
-	if (dockerVersion.code !== 0) {
-		const stderr = dockerVersion.stderr.toLowerCase();
+	if (result.code !== 0) {
+		const stderr = result.stderr.toLowerCase();
 		if (stderr.includes("not found") || stderr.includes("no such file")) {
-			report.docker = {
+			return {
 				passed: false,
 				error: `Docker is not installed on ${hostname}`,
 				hint: "Install Docker: https://docs.docker.com/engine/install/",
 			};
-		} else if (stderr.includes("cannot connect") || stderr.includes("daemon")) {
-			report.docker = { passed: true }; // Docker exists but daemon not running — caught in step 3
-			report.dockerResponsive = {
-				passed: false,
-				error: "Docker daemon not running",
-				hint: "Start Docker: `sudo systemctl start docker` or open Docker Desktop",
-			};
-		} else {
-			report.docker = {
-				passed: false,
-				error: `Docker check failed: ${dockerVersion.stderr.trim()}`,
-			};
 		}
-	} else {
-		report.docker = { passed: true };
+		return {
+			passed: false,
+			error: `Docker check failed: ${result.stderr.trim()}`,
+		};
 	}
+	return { passed: true };
+}
 
-	// 2. Docker permissions
-	if (report.docker.passed) {
-		const dockerInfo = await sshExec(
-			client,
-			"docker info --format '{{.SecurityOptions}}'",
-			{ timeout: 10_000 },
-		);
-		if (dockerInfo.stderr.toLowerCase().includes("permission denied")) {
-			report.dockerPermissions = {
-				passed: false,
-				error: "User cannot access Docker",
-				hint: "Run: `sudo usermod -aG docker $USER` then re-login",
-			};
-		} else {
-			report.dockerPermissions = { passed: true };
-		}
+async function checkDockerPermissions(
+	client: Client,
+): Promise<PrerequisiteResult> {
+	const result = await sshExec(
+		client,
+		"docker info --format '{{.SecurityOptions}}'",
+		{ timeout: 10_000 },
+	);
+	if (result.stderr.toLowerCase().includes("permission denied")) {
+		return {
+			passed: false,
+			error: "User cannot access Docker",
+			hint: "Run: `sudo usermod -aG docker $USER` then re-login",
+		};
 	}
-
-	// 3. Docker responsive
-	if (report.docker.passed && report.dockerPermissions.passed) {
-		const dockerPs = await sshExec(client, "docker ps -q", { timeout: 5_000 });
-		if (dockerPs.code !== 0) {
-			report.dockerResponsive = {
-				passed: false,
-				error: "Docker daemon not responding",
-				hint: "Start Docker: `sudo systemctl start docker` or open Docker Desktop",
-			};
-		} else {
-			report.dockerResponsive = { passed: true };
-		}
+	// docker info also verifies the daemon is responsive
+	if (result.code !== 0) {
+		return {
+			passed: false,
+			error: "Docker daemon not running",
+			hint: "Start Docker: `sudo systemctl start docker` or open Docker Desktop",
+		};
 	}
+	return { passed: true };
+}
 
-	// 4. Node.js
-	const nodeVersion = await sshExec(client, "node --version", {
-		timeout: 5_000,
-	});
-	if (nodeVersion.code === 0) {
-		const version = nodeVersion.stdout.trim().replace(/^v/, "");
-		const major = Number.parseInt(version.split(".")[0] ?? "0", 10);
-		if (major >= 18) {
-			report.nodeJs = { passed: true };
-		} else {
-			report.nodeJs = {
-				passed: false,
-				error: `Node.js ${version} is too old (need >= 18)`,
-				hint: "Update Node.js: https://nodejs.org/",
-			};
-		}
-	} else {
-		report.nodeJs = {
+async function checkNodeJs(client: Client): Promise<PrerequisiteResult> {
+	const result = await sshExec(client, "node --version", { timeout: 5_000 });
+	if (result.code !== 0) {
+		return {
 			passed: false,
 			error: "Node.js not installed",
 			hint: "Install Node.js: `brew install node` or `curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -`",
 		};
 	}
-
-	// 5. devcontainer CLI
-	const dcVersion = await sshExec(client, "devcontainer --version", {
-		timeout: 5_000,
-	});
-	if (dcVersion.code === 0) {
-		report.devcontainerCli = { passed: true };
-	} else if (report.nodeJs.passed) {
-		// Try auto-install
-		report.devcontainerCli = await autoInstallDevcontainerCli(client);
-	} else {
-		report.devcontainerCli = {
-			passed: false,
-			error: "devcontainer CLI not installed (requires Node.js)",
-			hint: "Install Node.js first, then: `npm install -g @devcontainers/cli`",
-		};
+	const version = result.stdout.trim().replace(/^v/, "");
+	const major = Number.parseInt(version.split(".")[0] ?? "0", 10);
+	if (major >= 18) {
+		return { passed: true };
 	}
+	return {
+		passed: false,
+		error: `Node.js ${version} is too old (need >= 18)`,
+		hint: "Update Node.js: https://nodejs.org/",
+	};
+}
 
-	// 6. Disk space — use `df` with portable flags (macOS doesn't support -BG)
-	const dfResult = await sshExec(
+async function checkDiskSpace(client: Client): Promise<PrerequisiteResult> {
+	const result = await sshExec(
 		client,
 		"df -k ~ | tail -1 | awk '{print $4}'",
 		{ timeout: 5_000 },
 	);
-	if (dfResult.code === 0) {
-		const availKb = Number.parseInt(dfResult.stdout.trim(), 10);
-		const availGb = availKb / 1_048_576;
-		if (availGb < 5) {
-			report.diskSpace = {
-				passed: false,
-				error: `Only ${availGb.toFixed(1)}GB free (need at least 5GB)`,
-				hint: "Free disk space: `docker system prune -a`",
-			};
-		} else if (availGb < 20) {
-			report.diskSpace = {
-				passed: true, // warn but don't block
-				hint: `Low disk space: ${availGb.toFixed(1)}GB free. Consider freeing space.`,
-			};
-		} else {
-			report.diskSpace = { passed: true };
-		}
-	} else {
-		report.diskSpace = { passed: true }; // Can't check — don't block
+	if (result.code !== 0) {
+		return { passed: true }; // Can't check — don't block
 	}
+	const availKb = Number.parseInt(result.stdout.trim(), 10);
+	const availGb = availKb / 1_048_576;
+	if (availGb < 5) {
+		return {
+			passed: false,
+			error: `Only ${availGb.toFixed(1)}GB free (need at least 5GB)`,
+			hint: "Free disk space: `docker system prune -a`",
+		};
+	}
+	if (availGb < 20) {
+		return {
+			passed: true, // warn but don't block
+			hint: `Low disk space: ${availGb.toFixed(1)}GB free. Consider freeing space.`,
+		};
+	}
+	return { passed: true };
+}
+
+async function checkDevcontainerCli(
+	client: Client,
+	nodeJsPassed: boolean,
+): Promise<PrerequisiteResult> {
+	const result = await sshExec(client, "devcontainer --version", {
+		timeout: 5_000,
+	});
+	if (result.code === 0) {
+		return { passed: true };
+	}
+	if (nodeJsPassed) {
+		return autoInstallDevcontainerCli(client);
+	}
+	return {
+		passed: false,
+		error: "devcontainer CLI not installed (requires Node.js)",
+		hint: "Install Node.js first, then: `npm install -g @devcontainers/cli`",
+	};
+}
+
+/**
+ * Run all prerequisite checks on a remote host.
+ * Reports individual results so the UI can show granular progress.
+ *
+ * Checks are parallelized where possible:
+ *   Batch 1 (parallel): Docker installed, Node.js, Disk space
+ *   Batch 2 (after Docker passes): Docker permissions (docker info covers daemon responsiveness)
+ *   Batch 3 (after Node passes): devcontainer CLI
+ */
+export async function checkPrerequisites(
+	client: Client,
+	hostname: string,
+): Promise<PrerequisiteReport> {
+	// Batch 1: independent checks in parallel
+	const [dockerResult, nodeResult, diskResult] = await Promise.all([
+		checkDocker(client, hostname),
+		checkNodeJs(client),
+		checkDiskSpace(client),
+	]);
+
+	const report: PrerequisiteReport = {
+		docker: dockerResult,
+		dockerPermissions: { passed: false },
+		dockerResponsive: { passed: false },
+		nodeJs: nodeResult,
+		devcontainerCli: { passed: false },
+		diskSpace: diskResult,
+		allPassed: false,
+	};
+
+	// Batch 2 & 3: run in parallel — each gated on its Batch 1 dependency
+	const [dockerPermissionsResult, devcontainerResult] = await Promise.all([
+		report.docker.passed
+			? checkDockerPermissions(client)
+			: Promise.resolve<PrerequisiteResult>({ passed: false }),
+		checkDevcontainerCli(client, report.nodeJs.passed),
+	]);
+
+	report.dockerPermissions = dockerPermissionsResult;
+	// docker info (in checkDockerPermissions) already verifies daemon responsiveness
+	report.dockerResponsive = report.docker.passed
+		? dockerPermissionsResult
+		: { passed: false };
+	report.devcontainerCli = devcontainerResult;
 
 	report.allPassed =
 		report.docker.passed &&

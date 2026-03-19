@@ -1,6 +1,6 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { settings } from "@superset/local-db";
+import { projects, remoteHosts, settings } from "@superset/local-db";
 import {
 	app,
 	BrowserWindow,
@@ -10,6 +10,7 @@ import {
 	protocol,
 	session,
 } from "electron";
+import { isNotNull, eq } from "drizzle-orm";
 import { makeAppSetup } from "lib/electron-app/factories/app/setup";
 import {
 	handleAuthCallback,
@@ -34,6 +35,7 @@ import {
 	stopIntegrationSync,
 } from "./lib/integration-sync";
 import { localDb } from "./lib/local-db";
+import { getSshConnectionManager } from "./lib/workspace-runtime";
 import { outlit } from "./lib/outlit";
 import { ensureProjectIconsDir, getProjectIconPath } from "./lib/project-icons";
 import {
@@ -298,6 +300,43 @@ if (!gotTheLock) {
 		ensureProjectIconsDir();
 		setWorkspaceDockIcon();
 		await initAppState();
+
+		// Pre-connect SSH for any projects with a remote host (fire-and-forget)
+		try {
+			const remoteProjects = localDb
+				.select({ remoteHostId: projects.remoteHostId })
+				.from(projects)
+				.where(isNotNull(projects.remoteHostId))
+				.all();
+			const uniqueHostIds = [
+				...new Set(
+					remoteProjects
+						.map((p) => p.remoteHostId)
+						.filter((id): id is string => id !== null),
+				),
+			];
+			for (const hostId of uniqueHostIds) {
+				const hostConfig = localDb
+					.select()
+					.from(remoteHosts)
+					.where(eq(remoteHosts.id, hostId))
+					.get();
+				if (hostConfig?.hostname && hostConfig.username && hostConfig.authMethod) {
+					getSshConnectionManager()
+						.connect({
+							id: hostConfig.id,
+							hostname: hostConfig.hostname,
+							port: hostConfig.port ?? 22,
+							username: hostConfig.username,
+							authMethod: hostConfig.authMethod as "key" | "agent" | "password",
+							privateKeyPath: hostConfig.privateKeyPath ?? undefined,
+						})
+						.catch(() => {}); // Fire and forget
+				}
+			}
+		} catch (error) {
+			console.error("[main] Failed to pre-connect SSH hosts:", error);
+		}
 
 		await loadWebviewBrowserExtension();
 

@@ -10,7 +10,9 @@ export function sanitizeForTitle(text: string): string | null {
 }
 
 function getVisiblePromptBlockToCursor(adapter: ResttyAdapter): string | null {
-	const state = adapter.restty.getRenderState?.();
+	// getRenderState is not yet in restty's public API — always returns null for now
+	// biome-ignore lint/suspicious/noExplicitAny: restty internal API not yet public
+	const state = (adapter.restty as any).getRenderState?.();
 	if (!state?.codepoints) return null;
 
 	const { rows, cols, codepoints } = state;
@@ -20,7 +22,7 @@ function getVisiblePromptBlockToCursor(adapter: ResttyAdapter): string | null {
 	if (lineIndex < 0 || lineIndex >= rows) return null;
 
 	// Walk backwards to find start of wrapped block
-	let startIndex = lineIndex;
+	const startIndex = lineIndex;
 	// restty doesn't expose isWrapped yet — assume single line
 	// (multi-line wrap support can be added when restty exposes wrap flags)
 
@@ -35,8 +37,7 @@ function getVisiblePromptBlockToCursor(adapter: ResttyAdapter): string | null {
 		// Trim trailing spaces (matches xterm translateToString(true))
 		rowText = rowText.replace(/\s+$/, "");
 
-		rendered +=
-			index === lineIndex ? rowText.slice(0, cursor.col) : rowText;
+		rendered += index === lineIndex ? rowText.slice(0, cursor.col) : rowText;
 	}
 
 	return rendered;

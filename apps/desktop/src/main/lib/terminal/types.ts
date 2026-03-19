@@ -1,31 +1,3 @@
-import type { SerializeAddon } from "@xterm/addon-serialize";
-import type { Terminal as HeadlessTerminal } from "@xterm/headless";
-import type * as pty from "node-pty";
-import type { DataBatcher } from "../data-batcher";
-import type { PtyWriteQueue } from "./pty-write-queue";
-
-export interface TerminalSession {
-	pty: pty.IPty;
-	paneId: string;
-	workspaceId: string;
-	cwd: string;
-	cols: number;
-	rows: number;
-	lastActive: number;
-	headless: HeadlessTerminal;
-	serializer: SerializeAddon;
-	isAlive: boolean;
-	wasRecovered: boolean;
-	dataBatcher: DataBatcher;
-	/** Queued writer to prevent blocking on large writes */
-	writeQueue: PtyWriteQueue;
-	shell: string;
-	startTime: number;
-	usedFallback: boolean;
-	exitReason?: TerminalExitReason;
-	killedByUserAt?: number;
-}
-
 export type TerminalExitReason = "killed" | "exited" | "error";
 
 export interface TerminalDataEvent {
@@ -104,9 +76,4 @@ export interface CreateSessionParams {
 	/** Allow restarting a session that was explicitly killed */
 	allowKilled?: boolean;
 	themeType?: "dark" | "light";
-}
-
-export interface InternalCreateSessionParams extends CreateSessionParams {
-	existingScrollback: string | null;
-	useFallbackShell?: boolean;
 }

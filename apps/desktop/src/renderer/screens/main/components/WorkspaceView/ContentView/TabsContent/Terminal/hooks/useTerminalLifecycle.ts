@@ -8,7 +8,7 @@ import { sanitizeForTitle } from "../commandBuffer";
 import { DEBUG_TERMINAL, FIRST_RENDER_RESTORE_FALLBACK_MS } from "../config";
 import {
 	createKeyboardHandler,
-	createResttyInstance,
+	createTerminalInstance,
 	setupFocusListener,
 	setupPasteHandler,
 } from "../helpers";
@@ -93,7 +93,6 @@ export interface UseTerminalLifecycleOptions {
 	handleFileLinkClickRef: MutableRefObject<
 		(path: string, line?: number, column?: number) => void
 	>;
-	paneInitialCommandsRef: MutableRefObject<string[] | undefined>;
 	paneInitialCwdRef: MutableRefObject<string | undefined>;
 	clearPaneInitialDataRef: MutableRefObject<(paneId: string) => void>;
 	setConnectionError: (error: string | null) => void;
@@ -151,7 +150,6 @@ export function useTerminalLifecycle({
 	initialThemeRef,
 	workspaceCwdRef,
 	handleFileLinkClickRef,
-	paneInitialCommandsRef,
 	paneInitialCwdRef,
 	clearPaneInitialDataRef,
 	setConnectionError,
@@ -225,7 +223,7 @@ export function useTerminalLifecycle({
 			adapter,
 			linkDetector,
 			cleanup: cleanupRestty,
-		} = createResttyInstance(container, transport, {
+		} = createTerminalInstance(container, transport, {
 			cwd: workspaceCwdRef.current ?? undefined,
 			initialTheme: initialTheme ?? null,
 			onFileLinkClick: (path, line, column) =>
@@ -359,7 +357,6 @@ export function useTerminalLifecycle({
 			}
 		};
 
-		const initialCommands = paneInitialCommandsRef.current;
 		const initialCwd = paneInitialCwdRef.current;
 
 		const cancelInitialAttach = scheduleTerminalAttach({
@@ -398,14 +395,13 @@ export function useTerminalLifecycle({
 							workspaceId,
 							cols: adapter.cols,
 							rows: adapter.rows,
-							initialCommands,
 							cwd: initialCwd,
 						},
 						{
 							onSuccess: (result) => {
 								if (!isAttachActive()) return;
 								setConnectionError(null);
-								if (initialCommands || initialCwd) {
+								if (initialCwd) {
 									clearPaneInitialDataRef.current(paneId);
 								}
 

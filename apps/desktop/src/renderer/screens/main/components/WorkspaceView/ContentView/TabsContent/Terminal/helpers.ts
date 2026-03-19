@@ -102,8 +102,12 @@ export function createTerminalInstance(
 	linkDetector: ResttyLinkDetector;
 	cleanup: () => void;
 } {
-	const { cwd, initialTheme, onFileLinkClick, onUrlClickRef: urlClickRef } =
-		options;
+	const {
+		cwd,
+		initialTheme,
+		onFileLinkClick,
+		onUrlClickRef: urlClickRef,
+	} = options;
 	const theme = initialTheme ?? getDefaultTerminalTheme();
 
 	// Build font sources from config font family list
@@ -547,8 +551,8 @@ export function setupResizeHandlers(
 	onResize: (cols: number, rows: number) => void,
 ): () => void {
 	const debouncedHandleResize = debounce(() => {
-		adapter.fit();
-		const { cols, rows } = adapter.getDimensions();
+		adapter.updateSize();
+		const { cols, rows } = adapter;
 		onResize(cols, rows);
 		requestAnimationFrame(() => scrollToBottom(adapter));
 	}, RESIZE_DEBOUNCE_MS);
@@ -561,56 +565,5 @@ export function setupResizeHandlers(
 		window.removeEventListener("resize", debouncedHandleResize);
 		resizeObserver.disconnect();
 		debouncedHandleResize.cancel();
-	};
-}
-
-export interface ClickToMoveOptions {
-	/** Callback to write data to the terminal PTY */
-	onWrite: (data: string) => void;
-}
-
-/**
- * Setup click-to-move cursor functionality.
- * Allows clicking on the current prompt line to move the cursor to that position.
- *
- * This works by calculating the difference between click position and cursor position,
- * then sending the appropriate number of arrow key sequences to move the cursor.
- *
- * Limitations:
- * - Only works on the current line (same row as cursor)
- * - Only works at the shell prompt (not in full-screen apps like vim)
- * - Requires the shell to interpret arrow key sequences
- *
- * Returns a cleanup function to remove the handler.
- */
-export function setupClickToMoveCursor(
-	adapter: ResttyAdapter,
-	options: ClickToMoveOptions,
-): () => void {
-	const container = adapter.container;
-
-	const handleClick = (event: MouseEvent) => {
-		if (event.button !== 0) return;
-		if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey)
-			return;
-
-		const coords = adapter.getCursorCoords(event);
-		if (!coords) return;
-
-		const { clickCol, cursorCol, isOnCursorRow } = coords;
-		if (!isOnCursorRow) return;
-
-		const delta = clickCol - cursorCol;
-		if (delta === 0) return;
-
-		// Right arrow: \x1b[C, Left arrow: \x1b[D
-		const arrowKey = delta > 0 ? "\x1b[C" : "\x1b[D";
-		options.onWrite(arrowKey.repeat(Math.abs(delta)));
-	};
-
-	container.addEventListener("click", handleClick);
-
-	return () => {
-		container.removeEventListener("click", handleClick);
 	};
 }

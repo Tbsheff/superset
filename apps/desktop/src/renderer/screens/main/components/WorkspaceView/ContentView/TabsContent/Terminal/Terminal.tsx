@@ -33,7 +33,6 @@ const stripLeadingEmoji = (text: string) =>
 
 export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 	const pane = useTabsStore((s) => s.panes[paneId]);
-	const paneInitialCommands = pane?.initialCommands;
 	const paneInitialCwd = pane?.initialCwd;
 	const clearPaneInitialData = useTabsStore((s) => s.clearPaneInitialData);
 
@@ -134,7 +133,6 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 		isFocused,
 		isFocusedRef,
 		initialThemeRef,
-		paneInitialCommandsRef,
 		paneInitialCwdRef,
 		clearPaneInitialDataRef,
 		workspaceCwdRef,
@@ -155,7 +153,6 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 		focusedPaneId,
 		// biome-ignore lint/suspicious/noExplicitAny: theme migration pending
 		terminalTheme: terminalTheme as any,
-		paneInitialCommands,
 		paneInitialCwd,
 		clearPaneInitialData,
 		workspaceCwd,
@@ -270,7 +267,6 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 		initialThemeRef,
 		workspaceCwdRef,
 		handleFileLinkClickRef,
-		paneInitialCommandsRef,
 		paneInitialCwdRef,
 		clearPaneInitialDataRef,
 		setConnectionError,

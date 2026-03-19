@@ -62,7 +62,7 @@ export function ProjectSelector({
 					<span className="truncate max-w-[140px]">
 						{selectedProjectName ?? "Select project"}
 					</span>
-					<HiChevronUpDown className="size-3.5" />
+					<ChevronsUpDown className="size-3.5" />
 				</Button>
 			</PopoverTrigger>
 			<PopoverContent align="end" className="w-60 p-0">
@@ -90,7 +90,7 @@ export function ProjectSelector({
 									/>
 									{project.name}
 									{project.id === selectedProjectId && (
-										<HiCheck className="ml-auto size-4" />
+										<Check className="ml-auto size-4" />
 									)}
 								</CommandItem>
 							))}

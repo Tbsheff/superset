@@ -349,7 +349,7 @@ export function PresetsBar() {
 					<TooltipTrigger asChild>
 						<DropdownMenuTrigger asChild>
 							<Button variant="ghost" size="icon" className="size-6 shrink-0">
-								<HiMiniCog6Tooth className="size-3.5" />
+								<Settings className="size-3.5" />
 							</Button>
 						</DropdownMenuTrigger>
 					</TooltipTrigger>
@@ -394,7 +394,7 @@ export function PresetsBar() {
 								{icon ? (
 									<img src={icon} alt="" className="size-4 object-contain" />
 								) : (
-									<HiMiniCommandLine className="size-4" />
+									<Terminal className="size-4" />
 								)}
 								<span className="truncate">{item.name || "default"}</span>
 								<div className="ml-auto flex items-center gap-2">
@@ -429,7 +429,7 @@ export function PresetsBar() {
 						className="gap-2"
 						onClick={() => navigate({ to: "/settings/terminal" })}
 					>
-						<HiMiniCog6Tooth className="size-4" />
+						<Settings className="size-4" />
 						<span>Manage Presets</span>
 					</DropdownMenuItem>
 				</DropdownMenuContent>

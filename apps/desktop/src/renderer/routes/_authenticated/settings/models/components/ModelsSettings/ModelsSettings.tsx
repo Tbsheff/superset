@@ -333,7 +333,7 @@ export function ModelsSettings({ visibleItems }: ModelsSettingsProps) {
 									type="button"
 									className="flex items-center gap-2 text-left text-sm font-semibold"
 								>
-									<HiChevronDown
+									<ChevronDown
 										className={`size-4 transition-transform ${apiKeysOpen ? "" : "-rotate-90"}`}
 									/>
 									API Keys
@@ -458,7 +458,7 @@ export function ModelsSettings({ visibleItems }: ModelsSettingsProps) {
 										type="button"
 										className="flex items-center gap-2 text-left text-sm font-semibold"
 									>
-										<HiChevronDown
+										<ChevronDown
 											className={`size-4 transition-transform ${overrideOpen ? "" : "-rotate-90"}`}
 										/>
 										Override Provider

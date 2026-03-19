@@ -79,7 +79,7 @@ export function PromptGroupAdvancedOptions({
 	return (
 		<Collapsible open={showAdvanced} onOpenChange={onShowAdvancedChange}>
 			<CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
-				<HiChevronDown
+				<ChevronDown
 					className={`size-3 transition-transform ${showAdvanced ? "" : "-rotate-90"}`}
 				/>
 				Advanced options
@@ -95,7 +95,7 @@ export function PromptGroupAdvancedOptions({
 							onClick={onEditPrefix}
 							className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
 						>
-							<HiOutlinePencil className="size-3" />
+							<Pencil className="size-3" />
 							<span>Edit prefix</span>
 						</button>
 					</div>
@@ -139,7 +139,7 @@ export function PromptGroupAdvancedOptions({
 											</span>
 										)}
 									</span>
-									<HiChevronUpDown className="size-4 shrink-0 text-muted-foreground" />
+									<ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
 								</Button>
 							</PopoverTrigger>
 							<PopoverContent
@@ -178,7 +178,7 @@ export function PromptGroupAdvancedOptions({
 														</span>
 													)}
 													{effectiveBaseBranch === branch.name && (
-														<HiCheck className="size-4 text-primary" />
+														<Check className="size-4 text-primary" />
 													)}
 												</span>
 											</CommandItem>
@@ -215,7 +215,7 @@ export function PromptGroupAdvancedOptions({
 												"Unknown")
 											: "Local"}
 									</span>
-									<HiChevronUpDown className="size-4 shrink-0 text-muted-foreground" />
+									<ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
 								</Button>
 							</PopoverTrigger>
 							<PopoverContent
@@ -231,7 +231,7 @@ export function PromptGroupAdvancedOptions({
 										>
 											<span>Local</span>
 											{!remoteHostId && (
-												<HiCheck className="size-4 text-primary" />
+												<Check className="size-4 text-primary" />
 											)}
 										</CommandItem>
 										{remoteHosts.map((host) => (
@@ -250,7 +250,7 @@ export function PromptGroupAdvancedOptions({
 															: ""}
 												</span>
 												{remoteHostId === host.id && (
-													<HiCheck className="size-4 text-primary" />
+													<Check className="size-4 text-primary" />
 												)}
 											</CommandItem>
 										))}

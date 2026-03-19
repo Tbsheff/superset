@@ -2,9 +2,9 @@ import { COMPANY } from "@superset/shared/constants";
 import { Button } from "@superset/ui/button";
 import { toast } from "@superset/ui/sonner";
 import { type ChangeEvent, useRef, useState } from "react";
+import { ExternalLink } from "lucide-react";
 import {
 	HiOutlineArrowDownTray,
-	HiOutlineArrowTopRightOnSquare,
 	HiOutlineArrowUpTray,
 } from "react-icons/hi2";
 import {
@@ -160,7 +160,7 @@ export function ThemeSection() {
 						className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:underline"
 					>
 						Theme docs
-						<HiOutlineArrowTopRightOnSquare className="h-3 w-3" />
+						<ExternalLink className="h-3 w-3" />
 					</a>
 				</div>
 			</div>

@@ -9,15 +9,8 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { cn } from "@superset/ui/utils";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-	VscAdd,
-	VscClippy,
-	VscDiscard,
-	VscFolderOpened,
-	VscLinkExternal,
-	VscRemove,
-	VscTrash,
-} from "react-icons/vsc";
+import { ClipboardCopy, Minus, Plus, RotateCcw } from "lucide-react";
+import { VscFolderOpened, VscLinkExternal, VscTrash } from "react-icons/vsc";
 import { toAbsoluteWorkspacePath } from "shared/absolute-paths";
 import type { ChangeCategory, ChangedFile } from "shared/changes-types";
 import { createFileKey, useScrollContext } from "../../../../ChangesContent";
@@ -172,7 +165,7 @@ export function FileItem({
 						icon: isDeleteAction ? (
 							<VscTrash className="size-3" />
 						) : (
-							<VscDiscard className="size-3" />
+							<RotateCcw className="size-3" />
 						),
 						onClick: handleDiscardClick,
 						isDestructive: true,
@@ -185,7 +178,7 @@ export function FileItem({
 					{
 						key: "stage",
 						label: "Stage",
-						icon: <VscAdd className="size-3" />,
+						icon: <Plus className="size-3" />,
 						onClick: onStage,
 						disabled: isActioning,
 					},
@@ -196,7 +189,7 @@ export function FileItem({
 					{
 						key: "unstage",
 						label: "Unstage",
-						icon: <VscRemove className="size-3" />,
+						icon: <Minus className="size-3" />,
 						onClick: onUnstage,
 						disabled: isActioning,
 					},
@@ -268,11 +261,11 @@ export function FileItem({
 				<ContextMenuTrigger asChild>{fileContent}</ContextMenuTrigger>
 				<ContextMenuContent className="w-48">
 					<ContextMenuItem onClick={copyPath}>
-						<VscClippy className="mr-2 size-4" />
+						<ClipboardCopy className="mr-2 size-4" />
 						Copy Path
 					</ContextMenuItem>
 					<ContextMenuItem onClick={copyRelativePath}>
-						<VscClippy className="mr-2 size-4" />
+						<ClipboardCopy className="mr-2 size-4" />
 						Copy Relative Path
 					</ContextMenuItem>
 					<ContextMenuSeparator />
@@ -289,14 +282,14 @@ export function FileItem({
 
 					{onStage && (
 						<ContextMenuItem onClick={onStage} disabled={isActioning}>
-							<VscAdd className="mr-2 size-4" />
+							<Plus className="mr-2 size-4" />
 							Stage
 						</ContextMenuItem>
 					)}
 
 					{onUnstage && (
 						<ContextMenuItem onClick={onUnstage} disabled={isActioning}>
-							<VscRemove className="mr-2 size-4" />
+							<Minus className="mr-2 size-4" />
 							Unstage
 						</ContextMenuItem>
 					)}
@@ -310,7 +303,7 @@ export function FileItem({
 							{isDeleteAction ? (
 								<VscTrash className="mr-2 size-4" />
 							) : (
-								<VscDiscard className="mr-2 size-4" />
+								<RotateCcw className="mr-2 size-4" />
 							)}
 							{discardLabel}
 						</ContextMenuItem>

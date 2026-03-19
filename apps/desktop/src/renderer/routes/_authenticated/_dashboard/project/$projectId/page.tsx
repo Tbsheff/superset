@@ -325,7 +325,7 @@ function ProjectPage() {
 											className="group inline-flex items-center gap-0.5 underline underline-offset-2 hover:text-foreground transition-colors"
 										>
 											Read our docs
-											<HiChevronRight className="size-3 transition-transform duration-150 group-hover:translate-x-0.5" />
+											<ChevronRight className="size-3 transition-transform duration-150 group-hover:translate-x-0.5" />
 										</a>
 									</>
 								)}
@@ -376,7 +376,7 @@ function ProjectPage() {
 										onOpenChange={setShowAdvanced}
 									>
 										<CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-muted-foreground/80 hover:text-muted-foreground transition-colors py-1">
-											<HiChevronDown
+											<ChevronDown
 												className={`size-3 transition-transform duration-200 ${showAdvanced ? "" : "-rotate-90"}`}
 											/>
 											Advanced options
@@ -423,7 +423,7 @@ function ProjectPage() {
 																				</span>
 																			)}
 																		</span>
-																		<HiChevronUpDown className="size-4 shrink-0 text-muted-foreground" />
+																		<ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
 																	</Button>
 																</PopoverTrigger>
 																<PopoverContent
@@ -474,7 +474,7 @@ function ProjectPage() {
 																						)}
 																						{effectiveBaseBranch ===
 																							branch.name && (
-																							<HiCheck className="size-4 text-primary" />
+																							<Check className="size-4 text-primary" />
 																						)}
 																					</span>
 																				</CommandItem>
@@ -496,7 +496,7 @@ function ProjectPage() {
 											disabled={!canContinueFromWorkspace}
 										>
 											Continue
-											<HiChevronRight className="size-4" />
+											<ChevronRight className="size-4" />
 										</Button>
 									</div>
 								</motion.div>
@@ -623,7 +623,7 @@ function ProjectPage() {
 										onOpenChange={setTeardownOpen}
 									>
 										<CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-muted-foreground/80 hover:text-muted-foreground transition-colors py-1">
-											<HiChevronDown
+											<ChevronDown
 												className={`size-3 transition-transform duration-200 ${teardownOpen ? "" : "-rotate-90"}`}
 											/>
 											Teardown commands (optional)
@@ -644,7 +644,7 @@ function ProjectPage() {
 											variant="outline"
 											onClick={() => setStep("workspace")}
 										>
-											<HiChevronLeft className="size-4" />
+											<ChevronLeft className="size-4" />
 											Back
 										</Button>
 										<div className="flex items-center gap-2">
@@ -671,7 +671,7 @@ function ProjectPage() {
 													: setupMode === "checklist"
 														? "Create workspace"
 														: "Save & create workspace"}
-												<HiChevronRight className="size-4" />
+												<ChevronRight className="size-4" />
 											</Button>
 										</div>
 									</div>

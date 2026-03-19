@@ -123,12 +123,12 @@ export function SessionSelector({
 					aria-busy={isSessionInitializing}
 					className="flex w-full min-w-0 flex-1 items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
 				>
-					<HiMiniChevronDown className="size-3" />
+					<ChevronDown className="size-3" />
 					<span className="min-w-0 flex-1 truncate text-left">
 						{currentTitle}
 					</span>
 					{isSessionInitializing && (
-						<HiMiniArrowPath className="size-3 animate-spin" />
+						<RefreshCw className="size-3 animate-spin" />
 					)}
 				</button>
 			</DropdownMenuTrigger>
@@ -189,7 +189,7 @@ export function SessionSelector({
 						setIsOpen(false);
 					}}
 				>
-					<HiMiniPlus className="mr-1.5 size-3.5" />
+					<Plus className="mr-1.5 size-3.5" />
 					<span className="text-xs">New Chat</span>
 				</DropdownMenuItem>
 			</DropdownMenuContent>

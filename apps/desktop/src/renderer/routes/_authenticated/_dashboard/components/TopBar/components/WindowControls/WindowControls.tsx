@@ -26,7 +26,7 @@ export function WindowControls() {
 				className="no-drag flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
 				onClick={handleMinimize}
 			>
-				<HiMiniMinus className="h-3.5 w-3.5" />
+				<Minus className="h-3.5 w-3.5" />
 			</button>
 			<button
 				type="button"
@@ -34,7 +34,7 @@ export function WindowControls() {
 				className="no-drag flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
 				onClick={handleMaximize}
 			>
-				<HiMiniStop className="h-3 w-3" />
+				<Square className="h-3 w-3" />
 			</button>
 			<button
 				type="button"
@@ -42,7 +42,7 @@ export function WindowControls() {
 				className="no-drag flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive hover:text-destructive-foreground"
 				onClick={handleClose}
 			>
-				<HiMiniXMark className="h-3.5 w-3.5" />
+				<X className="h-3.5 w-3.5" />
 			</button>
 		</div>
 	);

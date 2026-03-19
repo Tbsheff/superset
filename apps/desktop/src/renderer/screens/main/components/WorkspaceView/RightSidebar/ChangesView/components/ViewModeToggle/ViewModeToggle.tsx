@@ -1,6 +1,6 @@
 import { Button } from "@superset/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
-import { VscListFlat, VscListTree } from "react-icons/vsc";
+import { List, ListTree } from "lucide-react";
 import type { ChangesViewMode } from "../../types";
 
 interface ViewModeToggleProps {
@@ -36,9 +36,9 @@ export function ViewModeToggle({
 					}
 				>
 					{viewMode === "grouped" ? (
-						<VscListTree className="size-3.5" />
+						<ListTree className="size-3.5" />
 					) : (
-						<VscListFlat className="size-3.5" />
+						<List className="size-3.5" />
 					)}
 				</Button>
 			</TooltipTrigger>

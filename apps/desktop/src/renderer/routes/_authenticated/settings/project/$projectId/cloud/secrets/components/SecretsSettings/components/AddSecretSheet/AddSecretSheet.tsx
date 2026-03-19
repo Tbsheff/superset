@@ -14,12 +14,8 @@ import { Textarea } from "@superset/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { cn } from "@superset/ui/utils";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-	HiOutlineArrowDownTray,
-	HiOutlineQuestionMarkCircle,
-	HiOutlineTrash,
-	HiPlus,
-} from "react-icons/hi2";
+import { CircleHelp, Plus, Trash2 } from "lucide-react";
+import { HiOutlineArrowDownTray } from "react-icons/hi2";
 import { vanillaElectronTrpc } from "renderer/lib/vanilla-electron-trpc";
 import { parseEnvContent, validateEnvContent } from "../../utils/env-file";
 
@@ -285,7 +281,7 @@ export function AddSecretSheet({
 										className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground mt-[1px]"
 										onClick={() => removeEntry(index)}
 									>
-										<HiOutlineTrash className="h-4 w-4" />
+										<Trash2 className="h-4 w-4" />
 									</Button>
 								) : (
 									<div className="w-8 shrink-0" />
@@ -299,7 +295,7 @@ export function AddSecretSheet({
 							className="text-muted-foreground gap-1.5"
 							onClick={addEntry}
 						>
-							<HiPlus className="h-3.5 w-3.5" />
+							<Plus className="h-3.5 w-3.5" />
 							Add Another
 						</Button>
 
@@ -308,7 +304,7 @@ export function AddSecretSheet({
 							<span className="text-sm text-muted-foreground">Sensitive</span>
 							<Tooltip>
 								<TooltipTrigger asChild>
-									<HiOutlineQuestionMarkCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+									<CircleHelp className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
 								</TooltipTrigger>
 								<TooltipContent side="right">
 									<p className="max-w-[200px] text-xs">

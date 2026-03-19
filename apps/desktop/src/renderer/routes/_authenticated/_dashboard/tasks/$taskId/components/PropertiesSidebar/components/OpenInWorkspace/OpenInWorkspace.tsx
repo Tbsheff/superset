@@ -26,7 +26,7 @@ import {
 import { toast } from "@superset/ui/sonner";
 import { Switch } from "@superset/ui/switch";
 import { useEffect, useState } from "react";
-import { HiArrowRight, HiChevronDown } from "react-icons/hi2";
+import { ArrowRight, ChevronDown } from "lucide-react";
 import {
 	getPresetIcon,
 	useIsDarkTheme,
@@ -210,7 +210,7 @@ export function OpenInWorkspace({ task }: OpenInWorkspaceProps) {
 									<span className="text-muted-foreground">Select project</span>
 								)}
 							</span>
-							<HiChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+							<ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
 						</Button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent
@@ -252,7 +252,7 @@ export function OpenInWorkspace({ task }: OpenInWorkspaceProps) {
 					disabled={!effectiveProjectId || createWorkspace.isPending}
 					onClick={handleOpen}
 				>
-					<HiArrowRight className="w-3.5 h-3.5" />
+					<ArrowRight className="w-3.5 h-3.5" />
 				</Button>
 			</div>
 			<Select

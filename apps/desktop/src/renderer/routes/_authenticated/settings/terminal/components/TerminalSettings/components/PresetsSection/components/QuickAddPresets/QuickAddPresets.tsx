@@ -38,7 +38,7 @@ export function QuickAddPresets({
 								disabled={alreadyAdded || isCreatePending}
 							>
 								{alreadyAdded ? (
-									<HiOutlineCheck className="h-3 w-3" />
+									<Check className="h-3 w-3" />
 								) : presetIcon ? (
 									<img
 										src={presetIcon}

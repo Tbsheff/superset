@@ -114,7 +114,7 @@ export function OpenInButton({
 						disabled={!path}
 					>
 						<span>Open</span>
-						<HiChevronDown className="size-3" />
+						<ChevronDown className="size-3" />
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-48">

@@ -81,7 +81,7 @@ export function AddTabButton({
 									size="icon"
 									className="size-7 rounded-l-none border border-l-0 border-border/60 bg-muted/30 px-1 text-muted-foreground hover:bg-accent/60 hover:text-foreground"
 								>
-									<HiMiniChevronDown className="size-3" />
+									<ChevronDown className="size-3" />
 								</Button>
 							</DropdownMenuTrigger>
 						</>

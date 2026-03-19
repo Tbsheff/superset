@@ -127,7 +127,7 @@ export function ResourceConsumption() {
 							className="no-drag flex items-center gap-1.5 h-6 px-1.5 rounded border border-border/60 bg-secondary/50 hover:bg-secondary hover:border-border transition-all duration-150 ease-out focus:outline-none focus:ring-1 focus:ring-ring"
 							aria-label="Resource consumption"
 						>
-							<HiOutlineCpuChip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+							<Cpu className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
 							{normalizedSnapshot && (
 								<span className="text-xs font-medium tabular-nums text-muted-foreground hidden md:inline">
 									{formatMemory(normalizedSnapshot.totalMemory)}
@@ -160,7 +160,7 @@ export function ResourceConsumption() {
 							className="p-0.5 rounded hover:bg-muted transition-colors"
 							aria-label="Refresh metrics"
 						>
-							<HiOutlineArrowPath
+							<RefreshCw
 								className={`h-3.5 w-3.5 text-muted-foreground ${isFetching ? "animate-spin" : ""}`}
 							/>
 						</button>

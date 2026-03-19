@@ -176,7 +176,7 @@ export function TasksView({
 			) : showEmptyState ? (
 				<div className="flex-1 flex items-center justify-center">
 					<div className="flex flex-col items-center gap-2 text-muted-foreground">
-						<HiCheckCircle className="h-8 w-8" />
+						<CheckCircle2 className="h-8 w-8" />
 						<span className="text-sm">No tasks found</span>
 					</div>
 				</div>

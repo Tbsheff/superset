@@ -79,7 +79,7 @@ export function MessageList({
 					<ConversationEmptyState
 						title="Start a conversation"
 						description="Ask anything to get started"
-						icon={<HiMiniChatBubbleLeftRight className="size-8" />}
+						icon={<MessagesSquare className="size-8" />}
 					/>
 				) : (
 					messages.map((msg, index) => {

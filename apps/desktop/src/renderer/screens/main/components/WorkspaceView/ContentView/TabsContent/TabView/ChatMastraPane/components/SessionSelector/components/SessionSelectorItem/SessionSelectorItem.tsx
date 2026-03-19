@@ -50,7 +50,7 @@ export function SessionSelectorItem({
 						});
 					}}
 				>
-					<HiMiniTrash className="size-3" />
+					<Trash2 className="size-3" />
 				</button>
 			)}
 		</DropdownMenuItem>

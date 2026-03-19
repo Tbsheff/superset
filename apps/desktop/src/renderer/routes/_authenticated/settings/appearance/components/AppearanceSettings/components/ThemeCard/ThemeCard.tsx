@@ -80,7 +80,7 @@ export function ThemeCard({ theme, isSelected, onSelect }: ThemeCardProps) {
 				</div>
 				{isSelected && (
 					<div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-						<HiCheck className="h-3 w-3 text-primary-foreground" />
+						<Check className="h-3 w-3 text-primary-foreground" />
 					</div>
 				)}
 			</div>

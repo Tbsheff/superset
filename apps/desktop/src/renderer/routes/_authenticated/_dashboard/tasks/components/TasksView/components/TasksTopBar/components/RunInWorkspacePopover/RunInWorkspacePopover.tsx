@@ -49,9 +49,9 @@ function BatchStatusIcon({ status }: { status: TaskStatus }) {
 		case "creating":
 			return <Spinner className="size-3" />;
 		case "done":
-			return <HiCheck className="size-3 text-green-500" />;
+			return <Check className="size-3 text-green-500" />;
 		case "failed":
-			return <HiXMark className="size-3 text-destructive" />;
+			return <X className="size-3 text-destructive" />;
 	}
 }
 
@@ -275,7 +275,7 @@ export function RunInWorkspacePopover({
 					size="sm"
 					className="h-7 text-xs gap-1.5 bg-muted/50"
 				>
-					<HiMiniPlay className="size-3" />
+					<Play className="size-3" />
 					Run in Workspace
 				</Button>
 			</PopoverTrigger>

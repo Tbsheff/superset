@@ -67,7 +67,7 @@ export function AssigneeCell({ info }: AssigneeCellProps) {
 							image={task.assigneeAvatarUrl}
 						/>
 					) : (
-						<HiOutlineUserCircle className="size-5 text-muted-foreground" />
+						<CircleUser className="size-5 text-muted-foreground" />
 					)}
 				</button>
 			</DropdownMenuTrigger>
@@ -81,7 +81,7 @@ export function AssigneeCell({ info }: AssigneeCellProps) {
 						onSelect={() => handleSelectUser(null)}
 						className="flex items-center gap-2"
 					>
-						<HiOutlineUserCircle className="size-5 text-muted-foreground shrink-0" />
+						<CircleUser className="size-5 text-muted-foreground shrink-0" />
 						<span className="text-sm">No assignee</span>
 						{!assigneeId && !task.assigneeExternalId && (
 							<span className="ml-auto text-xs text-muted-foreground">✓</span>

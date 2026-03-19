@@ -76,8 +76,8 @@ export function ProjectsSettings({ searchQuery }: ProjectsSettingsProps) {
 									style={{ backgroundColor: group.project.color }}
 								/>
 								<span className="flex-1 truncate">{group.project.name}</span>
-								<HiChevronRight className="h-3.5 w-3.5 text-muted-foreground group-data-[state=open]:hidden" />
-								<HiChevronDown className="h-3.5 w-3.5 text-muted-foreground group-data-[state=closed]:hidden" />
+								<ChevronRight className="h-3.5 w-3.5 text-muted-foreground group-data-[state=open]:hidden" />
+								<ChevronDown className="h-3.5 w-3.5 text-muted-foreground group-data-[state=closed]:hidden" />
 							</CollapsibleTrigger>
 
 							{/* Sub-items: General + Cloud */}
@@ -106,8 +106,8 @@ export function ProjectsSettings({ searchQuery }: ProjectsSettingsProps) {
 												)}
 											>
 												<span className="flex-1 truncate">Cloud</span>
-												<HiChevronRight className="h-3 w-3 text-muted-foreground group-data-[state=open]:hidden" />
-												<HiChevronDown className="h-3 w-3 text-muted-foreground group-data-[state=closed]:hidden" />
+												<ChevronRight className="h-3 w-3 text-muted-foreground group-data-[state=open]:hidden" />
+												<ChevronDown className="h-3 w-3 text-muted-foreground group-data-[state=closed]:hidden" />
 											</CollapsibleTrigger>
 											<CollapsibleContent>
 												<div className="ml-3 border-l border-border pl-2 mt-0.5 mb-1">

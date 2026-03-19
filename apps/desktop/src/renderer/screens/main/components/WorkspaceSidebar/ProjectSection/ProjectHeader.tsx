@@ -327,7 +327,7 @@ export function ProjectHeader({
 									onContextMenu={(e) => e.stopPropagation()}
 									className="p-1 rounded hover:bg-muted transition-colors shrink-0 ml-1"
 								>
-									<HiMiniPlus className="size-4 text-muted-foreground" />
+									<Plus className="size-4 text-muted-foreground" />
 								</button>
 							</TooltipTrigger>
 							<TooltipContent side="bottom" sideOffset={4}>
@@ -342,7 +342,7 @@ export function ProjectHeader({
 							aria-expanded={!isCollapsed}
 							className="p-1 rounded hover:bg-muted transition-colors shrink-0 ml-1"
 						>
-							<HiChevronRight
+							<ChevronRight
 								className={cn(
 									"size-3.5 text-muted-foreground transition-transform duration-150",
 									!isCollapsed && "rotate-90",

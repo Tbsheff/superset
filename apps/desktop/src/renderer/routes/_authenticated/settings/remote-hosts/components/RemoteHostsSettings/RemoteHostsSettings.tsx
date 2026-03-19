@@ -273,7 +273,7 @@ export function RemoteHostsSettings({
 							}
 							size="sm"
 						>
-							<HiOutlinePlus className="h-4 w-4 mr-1.5" />
+							<Plus className="h-4 w-4 mr-1.5" />
 							Add
 						</Button>
 					</div>
@@ -331,7 +331,7 @@ export function RemoteHostsSettings({
 										size="sm"
 										onClick={() => deleteMutation.mutate(host.id)}
 									>
-										<HiOutlineTrash className="h-4 w-4 text-destructive" />
+										<Trash2 className="h-4 w-4 text-destructive" />
 									</Button>
 								</div>
 							</div>

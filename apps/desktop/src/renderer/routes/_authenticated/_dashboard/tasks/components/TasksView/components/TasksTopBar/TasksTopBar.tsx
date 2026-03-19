@@ -78,7 +78,7 @@ export function TasksTopBar({
 							onClick={onClearSelection}
 							aria-label="Clear selection"
 						>
-							<HiXMark />
+							<X />
 						</Button>
 						<span className="text-sm font-medium">
 							{selectedCount} selected
@@ -124,7 +124,7 @@ export function TasksTopBar({
 
 			{/* Search on the right */}
 			<div className="relative w-64">
-				<HiOutlineMagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+				<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
 				<Input
 					ref={searchInputRef}
 					type="text"

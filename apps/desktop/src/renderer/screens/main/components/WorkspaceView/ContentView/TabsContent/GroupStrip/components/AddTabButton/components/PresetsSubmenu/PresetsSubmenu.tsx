@@ -6,7 +6,7 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 } from "@superset/ui/dropdown-menu";
-import { HiMiniCog6Tooth, HiMiniCommandLine } from "react-icons/hi2";
+import { Settings, Terminal } from "lucide-react";
 import {
 	getPresetIcon,
 	useIsDarkTheme,
@@ -30,7 +30,7 @@ export function PresetsSubmenu({
 	return (
 		<DropdownMenuSub>
 			<DropdownMenuSubTrigger className="gap-2">
-				<HiMiniCommandLine className="size-4" />
+				<Terminal className="size-4" />
 				<span>Presets</span>
 			</DropdownMenuSubTrigger>
 			<DropdownMenuSubContent className="w-56">
@@ -51,7 +51,7 @@ export function PresetsSubmenu({
 										className="size-4 object-contain"
 									/>
 								) : (
-									<HiMiniCommandLine className="size-4" />
+									<Terminal className="size-4" />
 								)}
 								<span className="truncate">{preset.name || "default"}</span>
 								{hotkeyId ? <HotkeyMenuShortcut hotkeyId={hotkeyId} /> : null}
@@ -63,7 +63,7 @@ export function PresetsSubmenu({
 				)}
 				<DropdownMenuSeparator />
 				<DropdownMenuItem onClick={onConfigurePresets} className="gap-2">
-					<HiMiniCog6Tooth className="size-4" />
+					<Settings className="size-4" />
 					<span>Configure Presets</span>
 				</DropdownMenuItem>
 			</DropdownMenuSubContent>

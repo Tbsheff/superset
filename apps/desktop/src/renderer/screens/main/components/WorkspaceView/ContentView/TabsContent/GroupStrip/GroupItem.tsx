@@ -236,7 +236,7 @@ export function GroupItem({
 										className="cursor-pointer size-6 hover:bg-accent/40"
 										aria-label="Close tab"
 									>
-										<HiMiniXMark className="size-4" />
+										<X className="size-4" />
 									</Button>
 								</TooltipTrigger>
 								<TooltipContent side="top" showArrow={false}>
@@ -259,7 +259,7 @@ export function GroupItem({
 				</ContextMenuItem>
 				<ContextMenuSeparator />
 				<ContextMenuItem onSelect={onClose}>
-					<HiMiniXMark className="size-4 mr-2" />
+					<X className="size-4 mr-2" />
 					Close
 				</ContextMenuItem>
 			</ContextMenuContent>

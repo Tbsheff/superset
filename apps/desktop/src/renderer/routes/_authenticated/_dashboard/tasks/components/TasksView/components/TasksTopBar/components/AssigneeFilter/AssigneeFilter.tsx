@@ -135,7 +135,7 @@ export function AssigneeFilter({ value, onChange }: AssigneeFilterProps) {
 					{selectedUser ? (
 						<>
 							{selectedUser.id === "unassigned" ? (
-								<HiOutlineUserCircle className="size-4" />
+								<CircleUser className="size-4" />
 							) : (
 								<Avatar
 									size="xs"
@@ -147,11 +147,11 @@ export function AssigneeFilter({ value, onChange }: AssigneeFilterProps) {
 						</>
 					) : (
 						<>
-							<HiOutlineUserCircle className="size-4" />
+							<CircleUser className="size-4" />
 							<span className="text-sm">Assignee</span>
 						</>
 					)}
-					<HiChevronDown className="size-3" />
+					<ChevronDown className="size-3" />
 				</Button>
 			</PopoverTrigger>
 			<PopoverContent align="start" className="w-60 p-0">
@@ -190,13 +190,13 @@ export function AssigneeFilter({ value, onChange }: AssigneeFilterProps) {
 							<CommandGroup>
 								<CommandItem onSelect={() => handleSelect(null)}>
 									<span className="text-sm">All assignees</span>
-									{value === null && <HiCheck className="ml-auto size-3.5" />}
+									{value === null && <Check className="ml-auto size-3.5" />}
 								</CommandItem>
 								<CommandItem onSelect={() => handleSelect("unassigned")}>
-									<HiOutlineUserCircle className="size-4" />
+									<CircleUser className="size-4" />
 									<span className="text-sm">Unassigned</span>
 									{value === "unassigned" && (
-										<HiCheck className="ml-auto size-3.5" />
+										<Check className="ml-auto size-3.5" />
 									)}
 								</CommandItem>
 							</CommandGroup>
@@ -232,7 +232,7 @@ export function AssigneeFilter({ value, onChange }: AssigneeFilterProps) {
 													</span>
 												</div>
 												{user.id === value && (
-													<HiCheck className="ml-auto size-3.5 shrink-0" />
+													<Check className="ml-auto size-3.5 shrink-0" />
 												)}
 											</CommandItem>
 										))}
@@ -264,7 +264,7 @@ export function AssigneeFilter({ value, onChange }: AssigneeFilterProps) {
 													{ext.name || "External"}
 												</span>
 												{value === `ext:${ext.id}` && (
-													<HiCheck className="ml-auto size-3.5 shrink-0" />
+													<Check className="ml-auto size-3.5 shrink-0" />
 												)}
 											</CommandItem>
 										))}

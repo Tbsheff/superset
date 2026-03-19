@@ -179,7 +179,7 @@ export function ChatMastraMessageList({
 						<ConversationEmptyState
 							title="Start a conversation"
 							description="Ask anything to get started"
-							icon={<HiMiniChatBubbleLeftRight className="size-8" />}
+							icon={<MessagesSquare className="size-8" />}
 						/>
 					) : (
 						renderedMessages.map((message, messageIndex) => {

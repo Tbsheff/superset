@@ -373,7 +373,7 @@ export function PresetsSection({
 						className="gap-2"
 						onClick={handleAddRow}
 					>
-						<HiOutlinePlus className="h-4 w-4" />
+						<Plus className="h-4 w-4" />
 						Add Preset
 					</Button>
 				)}

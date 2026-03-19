@@ -59,7 +59,7 @@ export function UpdateRequiredPage({
 			<AppFrame>
 				<div className="flex h-full w-full flex-col items-center justify-center gap-6 bg-background p-8">
 					<div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/10">
-						<HiExclamationTriangle className="h-8 w-8 text-amber-500" />
+						<TriangleAlert className="h-8 w-8 text-amber-500" />
 					</div>
 
 					<div className="flex flex-col items-center gap-2 text-center">
@@ -101,7 +101,7 @@ export function UpdateRequiredPage({
 								disabled={isLoading || checkMutation.isPending}
 								className="gap-2"
 							>
-								<HiArrowPath
+								<RefreshCw
 									className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
 								/>
 								{isChecking

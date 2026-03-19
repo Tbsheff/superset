@@ -30,7 +30,7 @@ export function AssigneeMenuItems({
 				onSelect={() => onSelect(null)}
 				className="flex items-center gap-2"
 			>
-				<HiOutlineUserCircle className="size-5 text-muted-foreground shrink-0" />
+				<CircleUser className="size-5 text-muted-foreground shrink-0" />
 				<span className="text-sm">No assignee</span>
 				{!currentAssigneeId && !hasExternalAssignee && (
 					<span className="ml-auto text-xs text-muted-foreground">✓</span>

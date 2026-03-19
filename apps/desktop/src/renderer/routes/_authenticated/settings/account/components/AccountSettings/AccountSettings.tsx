@@ -138,7 +138,7 @@ export function AccountSettings({ visibleItems }: AccountSettingsProps) {
 													image={avatarPreview}
 												/>
 												<div className="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-													<HiOutlinePencil className="h-4 w-4 text-white" />
+													<Pencil className="h-4 w-4 text-white" />
 												</div>
 											</button>
 										</li>

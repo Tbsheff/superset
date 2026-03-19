@@ -197,7 +197,7 @@ export function MentionTrigger() {
 	return (
 		<PopoverTrigger asChild>
 			<PromptInputButton onClick={() => ctx?.setOpen(!ctx.open)}>
-				<HiMiniAtSymbol className="size-4" />
+				<AtSign className="size-4" />
 			</PromptInputButton>
 		</PopoverTrigger>
 	);

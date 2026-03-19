@@ -216,7 +216,7 @@ export function FileDiffHeader({
 										onClick={onStage}
 										disabled={isActioning}
 									>
-										<HiMiniPlus className="size-4" />
+										<Plus className="size-4" />
 									</Button>
 								</TooltipTrigger>
 								<TooltipContent side="bottom" showArrow={false}>
@@ -234,7 +234,7 @@ export function FileDiffHeader({
 										onClick={onUnstage}
 										disabled={isActioning}
 									>
-										<HiMiniMinus className="size-4" />
+										<Minus className="size-4" />
 									</Button>
 								</TooltipTrigger>
 								<TooltipContent side="bottom" showArrow={false}>

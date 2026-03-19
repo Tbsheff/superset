@@ -1,8 +1,7 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import type { ISearchOptions, SearchAddon } from "@xterm/addon-search";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, X } from "lucide-react";
-import { PiTextAa } from "react-icons/pi";
+import { CaseSensitive, ChevronDown, ChevronUp, X } from "lucide-react";
 
 interface TerminalSearchProps {
 	searchAddon: SearchAddon | null;
@@ -144,7 +143,7 @@ export function TerminalSearch({
 									: "text-muted-foreground hover:bg-muted-foreground/20 hover:text-foreground"
 							}`}
 						>
-							<PiTextAa className="size-3.5" />
+							<CaseSensitive className="size-3.5" />
 						</button>
 					</TooltipTrigger>
 					<TooltipContent side="bottom">Match case</TooltipContent>
@@ -156,7 +155,7 @@ export function TerminalSearch({
 							onClick={() => handleSearch("previous")}
 							className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted-foreground/20 hover:text-foreground"
 						>
-							<HiChevronUp className="size-3.5" />
+							<ChevronUp className="size-3.5" />
 						</button>
 					</TooltipTrigger>
 					<TooltipContent side="bottom">Previous (Shift+Enter)</TooltipContent>
@@ -168,7 +167,7 @@ export function TerminalSearch({
 							onClick={() => handleSearch("next")}
 							className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted-foreground/20 hover:text-foreground"
 						>
-							<HiChevronDown className="size-3.5" />
+							<ChevronDown className="size-3.5" />
 						</button>
 					</TooltipTrigger>
 					<TooltipContent side="bottom">Next (Enter)</TooltipContent>
@@ -180,7 +179,7 @@ export function TerminalSearch({
 							onClick={handleClose}
 							className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted-foreground/20 hover:text-foreground"
 						>
-							<HiMiniXMark className="size-3.5" />
+							<X className="size-3.5" />
 						</button>
 					</TooltipTrigger>
 					<TooltipContent side="bottom">Close (Esc)</TooltipContent>

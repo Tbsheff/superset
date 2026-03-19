@@ -10,11 +10,8 @@ import {
 } from "@superset/ui/context-menu";
 import { useLiveQuery } from "@tanstack/react-db";
 import { type ReactNode, useMemo } from "react";
-import {
-	HiOutlineDocumentDuplicate,
-	HiOutlineTrash,
-	HiOutlineUserCircle,
-} from "react-icons/hi2";
+import { CircleUser, Trash2 } from "lucide-react";
+import { HiOutlineDocumentDuplicate } from "react-icons/hi2";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 import type { TaskWithStatus } from "../../../../hooks/useTasksTable";
 import { compareStatusesForDropdown } from "../../../../utils/sorting";
@@ -122,7 +119,7 @@ export function TaskContextMenu({
 				{/* Assignee submenu */}
 				<ContextMenuSub>
 					<ContextMenuSubTrigger>
-						<HiOutlineUserCircle className="mr-2 size-4" />
+						<CircleUser className="mr-2 size-4" />
 						<span>Assignee</span>
 					</ContextMenuSubTrigger>
 					<ContextMenuSubContent className="w-56">
@@ -178,7 +175,7 @@ export function TaskContextMenu({
 					onClick={onDelete}
 					className="text-destructive focus:text-destructive"
 				>
-					<HiOutlineTrash className="text-destructive size-4" />
+					<Trash2 className="text-destructive size-4" />
 					<span>Delete</span>
 				</ContextMenuItem>
 			</ContextMenuContent>

@@ -90,9 +90,9 @@ function RingtoneCard({
 					)}
 				>
 					{isPlaying ? (
-						<HiStop className="h-4 w-4" />
+						<Square className="h-4 w-4" />
 					) : (
-						<HiPlay className="h-4 w-4 ml-0.5" />
+						<Play className="h-4 w-4 ml-0.5" />
 					)}
 				</button>
 			</div>
@@ -107,7 +107,7 @@ function RingtoneCard({
 				</div>
 				{isSelected && (
 					<div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-						<HiCheck className="h-3 w-3 text-primary-foreground" />
+						<Check className="h-3 w-3 text-primary-foreground" />
 					</div>
 				)}
 			</div>
@@ -299,7 +299,7 @@ export function RingtonesSettings({ visibleItems }: RingtonesSettingsProps) {
 								onClick={handleImportCustomRingtone}
 								disabled={importCustomRingtone.isPending}
 							>
-								<HiPlus className="mr-1.5 h-3.5 w-3.5" />
+								<Plus className="mr-1.5 h-3.5 w-3.5" />
 								{customRingtone ? "Replace Custom Audio" : "Add Custom Audio"}
 							</Button>
 						</div>

@@ -9,5 +9,5 @@ export function AllIssuesIcon({
 	color = "currentColor",
 	className,
 }: AllIssuesIconProps) {
-	return <HiOutlineRectangleStack className={className} style={{ color }} />;
+	return <Layers className={className} style={{ color }} />;
 }

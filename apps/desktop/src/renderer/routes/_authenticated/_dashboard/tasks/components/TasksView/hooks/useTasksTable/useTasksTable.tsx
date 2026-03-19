@@ -181,7 +181,7 @@ export function useTasksTable({
 									className="group w-full justify-start px-4 py-2 h-auto relative rounded-none bg-transparent flex items-center cursor-pointer border-0"
 									onClick={row.getToggleExpandedHandler()}
 								>
-									<HiChevronRight
+									<ChevronRight
 										className={`h-3 w-3 text-muted-foreground transition-transform duration-100 group-hover:text-foreground ${
 											row.getIsExpanded() ? "rotate-90" : ""
 										}`}

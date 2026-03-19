@@ -105,9 +105,9 @@ export function WorkspaceResourceSection({
 						}
 					>
 						{isProjectCollapsed ? (
-							<HiOutlineChevronRight className="h-3 w-3 text-muted-foreground" />
+							<ChevronRight className="h-3 w-3 text-muted-foreground" />
 						) : (
-							<HiOutlineChevronDown className="h-3 w-3 text-muted-foreground" />
+							<ChevronDown className="h-3 w-3 text-muted-foreground" />
 						)}
 					</button>
 					<div className="flex-1 min-w-0 py-2 pr-3 flex items-center justify-between">
@@ -166,9 +166,9 @@ export function WorkspaceResourceSection({
 												}
 											>
 												{isCollapsed ? (
-													<HiOutlineChevronRight className="h-3 w-3 text-muted-foreground" />
+													<ChevronRight className="h-3 w-3 text-muted-foreground" />
 												) : (
-													<HiOutlineChevronDown className="h-3 w-3 text-muted-foreground" />
+													<ChevronDown className="h-3 w-3 text-muted-foreground" />
 												)}
 											</button>
 										)}

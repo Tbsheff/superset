@@ -1,9 +1,9 @@
 import { Button } from "@superset/ui/button";
 import { Kbd, KbdGroup } from "@superset/ui/kbd";
 import { formatDistanceToNow } from "date-fns";
-import { FaGithub } from "react-icons/fa";
 import {
 	ExternalLink,
+	Github,
 	Globe,
 	LoaderCircle,
 	TriangleAlert,
@@ -169,7 +169,7 @@ export function WorkspaceHoverCardContent({
 						asChild
 					>
 						<a href={pr.url} target="_blank" rel="noopener noreferrer">
-							<FaGithub className="size-3" />
+							<Github className="size-3" />
 							View on GitHub
 							{hasOpenPRShortcut && (
 								<KbdGroup className="ml-auto">

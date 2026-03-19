@@ -98,7 +98,7 @@ function TaskDetailPage() {
 						className="h-8 w-8"
 						onClick={handleBack}
 					>
-						<HiArrowLeft className="w-4 h-4" />
+						<ArrowLeft className="w-4 h-4" />
 					</Button>
 					<span className="text-sm text-muted-foreground">{task.slug}</span>
 					{task.externalUrl && (

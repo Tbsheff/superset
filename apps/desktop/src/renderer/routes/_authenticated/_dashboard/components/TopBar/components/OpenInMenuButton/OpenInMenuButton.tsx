@@ -163,7 +163,7 @@ export const OpenInMenuButton = memo(function OpenInMenuButton({
 							isLoading && "opacity-50 pointer-events-none",
 						)}
 					>
-						<HiChevronDown className="size-3.5" />
+						<ChevronDown className="size-3.5" />
 					</button>
 				</DropdownMenuTrigger>
 

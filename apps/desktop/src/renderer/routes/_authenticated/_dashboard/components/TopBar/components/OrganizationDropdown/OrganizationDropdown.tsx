@@ -11,10 +11,9 @@ import {
 	DropdownMenuTrigger,
 } from "@superset/ui/dropdown-menu";
 import { useNavigate } from "@tanstack/react-router";
-import { Bug, Github, Keyboard } from "lucide-react";
+import { Bug, ChevronsUpDown, Github, Keyboard } from "lucide-react";
 import { FaDiscord, FaXTwitter } from "react-icons/fa6";
 import {
-	HiChevronUpDown,
 	HiOutlineBookOpen,
 	HiOutlineChatBubbleLeftRight,
 	HiOutlineCog6Tooth,
@@ -42,7 +41,7 @@ export function OrganizationDropdown() {
 					<span className="text-xs font-medium truncate max-w-32">
 						Superset
 					</span>
-					<HiChevronUpDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+					<ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
 				</button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end" className="w-56">

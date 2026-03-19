@@ -105,7 +105,7 @@ export function PresetBarItem({
 								{icon ? (
 									<img src={icon} alt="" className="size-3.5 object-contain" />
 								) : (
-									<HiMiniCommandLine className="size-3.5" />
+									<Terminal className="size-3.5" />
 								)}
 								<span className="truncate max-w-[120px]">
 									{preset.name || "default"}

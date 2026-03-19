@@ -28,7 +28,7 @@ export function PlusMenu({ onLinkIssue }: PlusMenuProps) {
 			</DropdownMenuTrigger>
 			<DropdownMenuContent side="top" align="end" className="w-52">
 				<DropdownMenuItem onSelect={() => attachments.openFileDialog()}>
-					<HiMiniPaperClip className="size-4" />
+					<Paperclip className="size-4" />
 					Add attachment
 					<DropdownMenuShortcut>⌘U</DropdownMenuShortcut>
 				</DropdownMenuItem>

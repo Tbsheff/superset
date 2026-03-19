@@ -17,7 +17,7 @@ import {
 	HiOutlineListBullet,
 	HiOutlineNumberedList,
 } from "react-icons/hi2";
-import { RiDoubleQuotesL } from "react-icons/ri";
+import { Quote } from "lucide-react";
 import tippy, { type Instance as TippyInstance } from "tippy.js";
 
 interface CommandItem {
@@ -78,7 +78,7 @@ const COMMANDS: CommandItem[] = [
 	},
 	{
 		title: "Blockquote",
-		icon: <RiDoubleQuotesL className="size-4" />,
+		icon: <Quote className="size-4" />,
 		command: (editor) => editor.chain().focus().toggleBlockquote().run(),
 		group: "blocks",
 	},

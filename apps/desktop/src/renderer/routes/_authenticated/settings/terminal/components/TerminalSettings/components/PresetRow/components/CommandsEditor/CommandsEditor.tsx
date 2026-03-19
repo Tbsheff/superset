@@ -74,7 +74,7 @@ export function CommandsEditor({
 							className="h-8 px-2 text-xs hover:bg-destructive/10 hover:text-destructive shrink-0"
 							aria-label="Delete command"
 						>
-							<HiMiniXMark className="h-3.5 w-3.5" />
+							<X className="h-3.5 w-3.5" />
 							Delete
 						</Button>
 					)}
@@ -87,7 +87,7 @@ export function CommandsEditor({
 				onClick={handleAddCommand}
 				className="w-fit mt-1"
 			>
-				<HiMiniPlus className="h-3.5 w-3.5" />
+				<Plus className="h-3.5 w-3.5" />
 				Add command
 			</Button>
 		</div>

@@ -185,7 +185,7 @@ export function IssuesGroup({ projectId }: IssuesGroupProps) {
 								image={task.assignee.image}
 							/>
 						) : (
-							<HiOutlineUserCircle className="size-5 text-muted-foreground" />
+							<CircleUser className="size-5 text-muted-foreground" />
 						)}
 					</span>
 					<span className="text-xs text-muted-foreground shrink-0 hidden group-data-[selected=true]:inline">

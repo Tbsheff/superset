@@ -58,7 +58,7 @@ export function ScrollToBottomButton({ terminal }: ScrollToBottomButtonProps) {
 						onClick={handleClick}
 						className="flex size-8 items-center justify-center rounded-full border border-border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
 					>
-						<HiArrowDown className="size-4" />
+						<ArrowDown className="size-4" />
 					</button>
 				</TooltipTrigger>
 				<TooltipContent side="left">

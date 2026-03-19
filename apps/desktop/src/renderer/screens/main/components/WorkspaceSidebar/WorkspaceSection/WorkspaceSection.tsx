@@ -243,7 +243,7 @@ export function WorkspaceSection({
 								onDoubleClick={handleDoubleClick}
 								className="flex items-center gap-1.5 flex-1 min-w-0 text-left cursor-pointer"
 							>
-								<HiChevronRight
+								<ChevronRight
 									className={cn(
 										"size-3 shrink-0 transition-transform duration-150",
 										!isCollapsed && "rotate-90",

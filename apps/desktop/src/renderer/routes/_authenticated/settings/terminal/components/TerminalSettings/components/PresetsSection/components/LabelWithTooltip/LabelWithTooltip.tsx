@@ -27,7 +27,7 @@ export function LabelWithTooltip({
 						className="text-muted-foreground hover:text-foreground transition-colors"
 						aria-label={`About ${label}`}
 					>
-						<HiOutlineQuestionMarkCircle className="h-3.5 w-3.5" />
+						<CircleHelp className="h-3.5 w-3.5" />
 					</button>
 				</TooltipTrigger>
 				<TooltipContent side="top" className="max-w-xs text-xs">

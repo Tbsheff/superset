@@ -27,7 +27,7 @@ export function SettingsSidebar() {
 				onClick={handleBack}
 				className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
 			>
-				<HiArrowLeft className="h-4 w-4" />
+				<ArrowLeft className="h-4 w-4" />
 				<span>Back</span>
 			</button>
 
@@ -36,7 +36,7 @@ export function SettingsSidebar() {
 
 			{/* Search input */}
 			<div className="relative px-1 mb-4">
-				<HiMagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+				<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
 				<input
 					type="text"
 					placeholder="Search settings..."
@@ -50,7 +50,7 @@ export function SettingsSidebar() {
 						onClick={() => setSearchQuery("")}
 						className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
 					>
-						<HiXMark className="h-4 w-4" />
+						<X className="h-4 w-4" />
 					</button>
 				)}
 			</div>
@@ -67,7 +67,7 @@ export function SettingsSidebar() {
 					rel="noopener noreferrer"
 					className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
 				>
-					<HiArrowTopRightOnSquare className="h-4 w-4" />
+					<ExternalLink className="h-4 w-4" />
 					<span>Documentation</span>
 				</a>
 			</div>

@@ -8,11 +8,8 @@ import {
 	SelectValue,
 } from "@superset/ui/select";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-	HiArrowsUpDown,
-	HiMagnifyingGlass,
-	HiOutlinePlus,
-} from "react-icons/hi2";
+import { Plus, Search } from "lucide-react";
+import { HiArrowsUpDown } from "react-icons/hi2";
 import { vanillaElectronTrpc } from "renderer/lib/vanilla-electron-trpc";
 import { SecretRow } from "./components/SecretRow";
 
@@ -98,7 +95,7 @@ export function EnvironmentVariablesList({
 		<div className="space-y-4">
 			<div className="flex items-center justify-end">
 				<Button size="sm" onClick={onAdd}>
-					<HiOutlinePlus className="h-4 w-4 mr-1.5" />
+					<Plus className="h-4 w-4 mr-1.5" />
 					Add Environment Variable
 				</Button>
 			</div>
@@ -106,7 +103,7 @@ export function EnvironmentVariablesList({
 			{secrets.length > 0 && (
 				<div className="flex items-center gap-3">
 					<div className="relative flex-1">
-						<HiMagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 						<Input
 							placeholder="Search by key name..."
 							value={searchQuery}

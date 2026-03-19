@@ -75,7 +75,7 @@ export function WorkspaceSidebarHeader({
 									: "text-muted-foreground hover:text-foreground hover:bg-accent/50",
 							)}
 						>
-							<HiOutlineClipboardDocumentList
+							<ClipboardList
 								className="size-4"
 								strokeWidth={STROKE_WIDTH}
 							/>
@@ -118,7 +118,7 @@ export function WorkspaceSidebarHeader({
 				)}
 			>
 				<div className="flex items-center justify-center size-5">
-					<HiOutlineClipboardDocumentList
+					<ClipboardList
 						className="size-4"
 						strokeWidth={STROKE_WIDTH}
 					/>

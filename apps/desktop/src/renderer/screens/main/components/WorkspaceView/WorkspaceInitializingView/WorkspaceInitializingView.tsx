@@ -215,7 +215,7 @@ export function WorkspaceInitializingView({
 					<div className="flex flex-col items-center max-w-sm text-center space-y-6">
 						{/* Error icon */}
 						<div className="flex items-center justify-center size-16 rounded-full bg-destructive/10">
-							<HiExclamationTriangle className="size-8 text-destructive" />
+							<TriangleAlert className="size-8 text-destructive" />
 						</div>
 
 						{/* Title and description */}

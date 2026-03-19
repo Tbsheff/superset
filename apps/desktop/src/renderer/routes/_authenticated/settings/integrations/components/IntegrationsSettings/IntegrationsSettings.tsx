@@ -18,8 +18,8 @@ import { Skeleton } from "@superset/ui/skeleton";
 import { toast } from "@superset/ui/sonner";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useCallback, useEffect, useState } from "react";
-import { FaGithub, FaSlack } from "react-icons/fa";
-import { CheckCircle2, ExternalLink } from "lucide-react";
+import { FaSlack } from "react-icons/fa";
+import { CheckCircle2, ExternalLink, Github } from "lucide-react";
 import { SiLinear } from "react-icons/si";
 import { vanillaElectronTrpc } from "renderer/lib/vanilla-electron-trpc";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
@@ -107,7 +107,7 @@ export function IntegrationsSettings({
 					className="inline-flex items-center gap-1 text-primary hover:underline"
 				>
 					Linear Settings → API
-					<HiOutlineArrowTopRightOnSquare className="h-3 w-3" />
+					<ExternalLink className="h-3 w-3" />
 				</a>
 			</p>
 		</div>
@@ -159,7 +159,7 @@ function GitHubIntegrationCard() {
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-3">
 						<div className="flex size-10 items-center justify-center rounded-lg border bg-muted/50">
-							<FaGithub className="size-6" />
+							<Github className="size-6" />
 						</div>
 						<div>
 							<div className="flex items-center gap-2">
@@ -168,7 +168,7 @@ function GitHubIntegrationCard() {
 									<Skeleton className="h-5 w-20" />
 								) : isConnected ? (
 									<Badge variant="default" className="gap-1">
-										<HiCheckCircle className="size-3" />
+										<CheckCircle2 className="size-3" />
 										Connected
 									</Badge>
 								) : (
@@ -345,7 +345,7 @@ function LinearIntegrationCard({
 								<span className="font-medium">Linear</span>
 								{isConnected ? (
 									<Badge variant="default" className="gap-1">
-										<HiCheckCircle className="size-3" />
+										<CheckCircle2 className="size-3" />
 										Connected
 									</Badge>
 								) : (
@@ -481,7 +481,7 @@ function IntegrationCard({
 									<Skeleton className="h-5 w-20" />
 								) : isConnected ? (
 									<Badge variant="default" className="gap-1">
-										<HiCheckCircle className="size-3" />
+										<CheckCircle2 className="size-3" />
 										Connected
 									</Badge>
 								) : comingSoon ? (
@@ -502,7 +502,7 @@ function IntegrationCard({
 						disabled={comingSoon}
 						className="gap-2"
 					>
-						<HiOutlineArrowTopRightOnSquare className="size-4" />
+						<ExternalLink className="size-4" />
 						{isConnected ? "Manage" : "Connect"}
 					</Button>
 				</div>

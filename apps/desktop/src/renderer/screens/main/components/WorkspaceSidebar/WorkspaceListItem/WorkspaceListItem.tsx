@@ -389,7 +389,7 @@ export function WorkspaceListItem({
 													className="flex items-center justify-center text-muted-foreground hover:text-foreground"
 													aria-label="Close workspace"
 												>
-													<HiMiniXMark className="size-3.5" />
+													<X className="size-3.5" />
 												</button>
 											</TooltipTrigger>
 											<TooltipContent side="top" sideOffset={4}>

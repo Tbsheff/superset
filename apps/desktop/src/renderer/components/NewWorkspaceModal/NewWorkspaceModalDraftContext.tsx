@@ -22,6 +22,7 @@ export interface NewWorkspaceModalDraft {
 	branchNameEdited: boolean;
 	baseBranch: string | null;
 	remoteHostId: string | null;
+	remoteRepoPath: string;
 	showAdvanced: boolean;
 	runSetupScript: boolean;
 	branchSearch: string;
@@ -42,6 +43,7 @@ const initialDraft: NewWorkspaceModalDraft = {
 	branchNameEdited: false,
 	baseBranch: null,
 	remoteHostId: null,
+	remoteRepoPath: "",
 	showAdvanced: false,
 	runSetupScript: true,
 	branchSearch: "",
@@ -146,6 +148,7 @@ export function NewWorkspaceModalDraftProvider({
 				branchNameEdited: state.branchNameEdited,
 				baseBranch: state.baseBranch,
 				remoteHostId: state.remoteHostId,
+				remoteRepoPath: state.remoteRepoPath,
 				showAdvanced: state.showAdvanced,
 				runSetupScript: state.runSetupScript,
 				branchSearch: state.branchSearch,

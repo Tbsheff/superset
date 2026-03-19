@@ -21,7 +21,7 @@ import {
 import {
 	INIT_STEP_MESSAGES,
 	INIT_STEP_ORDER,
-	isStepComplete,
+	REMOTE_INIT_STEP_ORDER,
 	type WorkspaceInitStep,
 } from "shared/types/workspace-init";
 
@@ -34,6 +34,10 @@ interface WorkspaceInitializingViewProps {
 
 // Steps to display in the progress view (skip pending and ready)
 const DISPLAY_STEPS: WorkspaceInitStep[] = INIT_STEP_ORDER.filter(
+	(step) => step !== "pending" && step !== "ready",
+);
+
+const REMOTE_DISPLAY_STEPS: WorkspaceInitStep[] = REMOTE_INIT_STEP_ORDER.filter(
 	(step) => step !== "pending" && step !== "ready",
 );
 
@@ -62,6 +66,13 @@ export function WorkspaceInitializingView({
 	const progress = useWorkspaceInitProgress(workspaceId);
 	const hasFailed = useHasWorkspaceFailed(workspaceId);
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+	const { data: workspace } = electronTrpc.workspaces.get.useQuery({
+		id: workspaceId,
+	});
+	const isRemote = !!workspace?.remoteHostId;
+	const displaySteps = isRemote ? REMOTE_DISPLAY_STEPS : DISPLAY_STEPS;
+	const stepOrder = isRemote ? REMOTE_INIT_STEP_ORDER : INIT_STEP_ORDER;
 
 	// Delay showing the interrupted UI to avoid flash during normal creation.
 	// If progress arrives within 500ms, we never show the interrupted state.
@@ -323,8 +334,13 @@ export function WorkspaceInitializingView({
 
 				{/* Step list */}
 				<div className="w-full space-y-2">
-					{DISPLAY_STEPS.map((step) => {
-						const isComplete = isStepComplete(step, currentStep);
+					{displaySteps.map((step) => {
+						const stepIdx =
+							currentStep === "failed" ? -1 : stepOrder.indexOf(step);
+						const currentIdx =
+							currentStep === "failed" ? -1 : stepOrder.indexOf(currentStep);
+						const isComplete =
+							stepIdx !== -1 && currentIdx !== -1 && stepIdx < currentIdx;
 						const isCurrent = step === currentStep;
 
 						return (

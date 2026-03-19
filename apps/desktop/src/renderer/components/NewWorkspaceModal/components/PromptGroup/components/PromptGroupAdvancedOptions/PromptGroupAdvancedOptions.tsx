@@ -49,8 +49,11 @@ interface PromptGroupAdvancedOptionsProps {
 	onSelectBaseBranch: (branchName: string) => void;
 	remoteHostId: string | null;
 	onRemoteHostIdChange: (value: string | null) => void;
+	remoteRepoPath: string;
+	onRemoteRepoPathChange: (value: string) => void;
 	runSetupScript: boolean;
 	onRunSetupScriptChange: (checked: boolean) => void;
+	isProjectRemote: boolean;
 }
 
 export function PromptGroupAdvancedOptions({
@@ -72,8 +75,11 @@ export function PromptGroupAdvancedOptions({
 	onSelectBaseBranch,
 	remoteHostId,
 	onRemoteHostIdChange,
+	remoteRepoPath,
+	onRemoteRepoPathChange,
 	runSetupScript,
 	onRunSetupScriptChange,
+	isProjectRemote,
 }: PromptGroupAdvancedOptionsProps) {
 	const { data: remoteHosts } = electronTrpc.remoteHosts.list.useQuery();
 	return (
@@ -190,7 +196,16 @@ export function PromptGroupAdvancedOptions({
 					)}
 				</div>
 
-				{remoteHosts && remoteHosts.length > 0 && (
+				{isProjectRemote ? (
+					<div className="space-y-1.5">
+						<span className="text-xs text-muted-foreground">Remote Host</span>
+						<p className="text-sm px-3 py-1.5 rounded-md border bg-muted/50 truncate">
+							{remoteHosts?.find((h) => h.id === remoteHostId)?.name ??
+								remoteHostId ??
+								"Remote"}
+						</p>
+					</div>
+				) : remoteHosts && remoteHosts.length > 0 ? (
 					<div className="space-y-1.5">
 						<span className="text-xs text-muted-foreground">Remote Host</span>
 						<Popover modal={false}>
@@ -249,6 +264,24 @@ export function PromptGroupAdvancedOptions({
 								</Command>
 							</PopoverContent>
 						</Popover>
+					</div>
+				) : null}
+
+				{!isProjectRemote && remoteHostId && (
+					<div className="space-y-1">
+						<label className="text-xs text-muted-foreground">
+							Remote repo path (optional)
+						</label>
+						<Input
+							placeholder="~/code/my-repo (leave empty to clone)"
+							value={remoteRepoPath}
+							onChange={(e) => onRemoteRepoPathChange(e.target.value)}
+							className="h-8 text-xs"
+						/>
+						<p className="text-[10px] text-muted-foreground">
+							Path to an existing clone on the remote machine. If empty, the
+							repo will be cloned automatically.
+						</p>
 					</div>
 				)}
 

@@ -57,6 +57,17 @@ function AuthenticatedLayout() {
 		},
 	});
 
+	// Sandbox state change subscription
+	electronTrpc.workspaces.onSandboxStateChange.useSubscription(undefined, {
+		onData: (change) => {
+			console.log("[sandbox-state]", change.projectId, change.state.status);
+			// TODO: Update a Zustand store for container status indicators
+		},
+		onError: (error) => {
+			console.error("[sandbox-state] Subscription error:", error);
+		},
+	});
+
 	// Menu navigation subscription
 	electronTrpc.menu.subscribe.useSubscription(undefined, {
 		onData: (event) => {

@@ -60,6 +60,7 @@ export function PromptGroup({ projectId }: PromptGroupProps) {
 		branchSearch,
 		prompt,
 		remoteHostId,
+		remoteRepoPath,
 		runSetupScript,
 		showAdvanced,
 	} = draft;
@@ -164,6 +165,12 @@ export function PromptGroup({ projectId }: PromptGroupProps) {
 		setBaseBranchOpen(false);
 	}, [projectId, updateDraft]);
 
+	useEffect(() => {
+		if (project?.remoteHostId && !draft.remoteHostId) {
+			updateDraft({ remoteHostId: project.remoteHostId });
+		}
+	}, [project?.remoteHostId, draft.remoteHostId, updateDraft]);
+
 	const handleAgentChange = (value: WorkspaceCreateAgent) => {
 		setSelectedAgent(value);
 		window.localStorage.setItem(AGENT_STORAGE_KEY, value);
@@ -223,6 +230,7 @@ export function PromptGroup({ projectId }: PromptGroupProps) {
 					baseBranch: baseBranch || undefined,
 					applyPrefix,
 					remoteHostId: remoteHostId || undefined,
+					remoteRepoPath: remoteRepoPath || undefined,
 				},
 				launchRequest ? { agentLaunchRequest: launchRequest } : undefined,
 			),
@@ -332,6 +340,11 @@ export function PromptGroup({ projectId }: PromptGroupProps) {
 				onSelectBaseBranch={handleBaseBranchSelect}
 				remoteHostId={remoteHostId}
 				onRemoteHostIdChange={(remoteHostId) => updateDraft({ remoteHostId })}
+				remoteRepoPath={remoteRepoPath}
+				onRemoteRepoPathChange={(remoteRepoPath) =>
+					updateDraft({ remoteRepoPath })
+				}
+				isProjectRemote={!!project?.remoteHostId}
 				runSetupScript={runSetupScript}
 				onRunSetupScriptChange={(runSetupScript) =>
 					updateDraft({ runSetupScript })

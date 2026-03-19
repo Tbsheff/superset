@@ -41,6 +41,20 @@ export function RemoteHostsSettings({
 		onSuccess: () => refetch(),
 	});
 	const testMutation = electronTrpc.remoteHosts.testConnection.useMutation();
+	const updateMutation = electronTrpc.remoteHosts.update.useMutation({
+		onSuccess: () => refetch(),
+	});
+
+	const updateHost = (
+		id: string,
+		updates: {
+			dockerMemoryLimit?: string | null;
+			dockerCpuLimit?: number | null;
+			idleTimeoutMinutes?: number | null;
+		},
+	) => {
+		updateMutation.mutate({ id, ...updates });
+	};
 
 	const [importDialogOpen, setImportDialogOpen] = useState(false);
 	const [sshCommand, setSshCommand] = useState("");
@@ -277,51 +291,108 @@ export function RemoteHostsSettings({
 					)}
 
 					{hosts?.map((host) => (
-						<div
-							key={host.id}
-							className="flex items-center justify-between rounded-lg border p-4"
-						>
-							<div className="flex items-center gap-3">
-								<div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
-									<LuPlug className="h-4 w-4" />
+						<div key={host.id} className="rounded-lg border p-4">
+							<div className="flex items-center justify-between">
+								<div className="flex items-center gap-3">
+									<div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+										<LuPlug className="h-4 w-4" />
+									</div>
+									<div>
+										<p className="text-sm font-medium">{host.name}</p>
+										<p className="text-xs text-muted-foreground">
+											{host.username}@{host.hostname}:{host.port ?? 22}
+										</p>
+									</div>
 								</div>
-								<div>
-									<p className="text-sm font-medium">{host.name}</p>
-									<p className="text-xs text-muted-foreground">
-										{host.username}@{host.hostname}:{host.port ?? 22}
-									</p>
+								<div className="flex items-center gap-2">
+									{testMutation.data && !testMutation.isPending && (
+										<span
+											className={`text-xs ${testMutation.data.success ? "text-green-500" : "text-red-500"}`}
+										>
+											{testMutation.data.success
+												? "Connected"
+												: testMutation.data.error}
+										</span>
+									)}
+									<Button
+										variant="ghost"
+										size="sm"
+										onClick={() => handleTest(host)}
+										disabled={testMutation.isPending}
+									>
+										{testMutation.isPending ? (
+											<LuPlugZap className="h-4 w-4 animate-pulse" />
+										) : (
+											<LuUnplug className="h-4 w-4" />
+										)}
+										<span className="ml-1.5">Test</span>
+									</Button>
+									<Button
+										variant="ghost"
+										size="sm"
+										onClick={() => deleteMutation.mutate(host.id)}
+									>
+										<HiOutlineTrash className="h-4 w-4 text-destructive" />
+									</Button>
 								</div>
 							</div>
-							<div className="flex items-center gap-2">
-								{testMutation.data && !testMutation.isPending && (
-									<span
-										className={`text-xs ${testMutation.data.success ? "text-green-500" : "text-red-500"}`}
-									>
-										{testMutation.data.success
-											? "Connected"
-											: testMutation.data.error}
-									</span>
-								)}
-								<Button
-									variant="ghost"
-									size="sm"
-									onClick={() => handleTest(host)}
-									disabled={testMutation.isPending}
-								>
-									{testMutation.isPending ? (
-										<LuPlugZap className="h-4 w-4 animate-pulse" />
-									) : (
-										<LuUnplug className="h-4 w-4" />
-									)}
-									<span className="ml-1.5">Test</span>
-								</Button>
-								<Button
-									variant="ghost"
-									size="sm"
-									onClick={() => deleteMutation.mutate(host.id)}
-								>
-									<HiOutlineTrash className="h-4 w-4 text-destructive" />
-								</Button>
+							<div className="mt-3 border-t pt-3">
+								<p className="text-xs font-medium text-muted-foreground mb-2">
+									Docker Settings
+								</p>
+								<div className="grid grid-cols-3 gap-2">
+									<div>
+										<label className="text-xs text-muted-foreground">
+											Memory Limit
+										</label>
+										<Input
+											placeholder="e.g. 8g"
+											defaultValue={host.dockerMemoryLimit ?? ""}
+											onBlur={(e) =>
+												updateHost(host.id, {
+													dockerMemoryLimit: e.target.value || null,
+												})
+											}
+											className="h-7 text-xs"
+										/>
+									</div>
+									<div>
+										<label className="text-xs text-muted-foreground">
+											CPU Limit
+										</label>
+										<Input
+											placeholder="e.g. 4"
+											type="number"
+											defaultValue={host.dockerCpuLimit ?? ""}
+											onBlur={(e) =>
+												updateHost(host.id, {
+													dockerCpuLimit: e.target.value
+														? Number(e.target.value)
+														: null,
+												})
+											}
+											className="h-7 text-xs"
+										/>
+									</div>
+									<div>
+										<label className="text-xs text-muted-foreground">
+											Idle Timeout (min)
+										</label>
+										<Input
+											placeholder="e.g. 30"
+											type="number"
+											defaultValue={host.idleTimeoutMinutes ?? ""}
+											onBlur={(e) =>
+												updateHost(host.id, {
+													idleTimeoutMinutes: e.target.value
+														? Number(e.target.value)
+														: null,
+												})
+											}
+											className="h-7 text-xs"
+										/>
+									</div>
+								</div>
 							</div>
 						</div>
 					))}

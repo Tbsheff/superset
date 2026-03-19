@@ -71,7 +71,7 @@ export function FileViewerToolbar({
 		copyTimerRef.current = setTimeout(() => setCopied(false), 1500);
 	};
 	return (
-		<div className="flex h-full w-full items-center justify-between px-3">
+		<div className="flex h-full w-full items-center justify-between bg-muted/15 px-3">
 			<div className="flex min-w-0 items-center gap-2">
 				<Tooltip open={copied ? true : undefined}>
 					<TooltipTrigger asChild>
@@ -79,7 +79,7 @@ export function FileViewerToolbar({
 							type="button"
 							onClick={handleCopyPath}
 							className={cn(
-								"truncate text-xs text-muted-foreground/80 hover:text-foreground transition-colors text-left",
+								"truncate font-mono text-xs text-muted-foreground/80 hover:text-foreground transition-colors text-left",
 								!isPinned && "italic",
 							)}
 						>
@@ -92,7 +92,7 @@ export function FileViewerToolbar({
 					</TooltipContent>
 				</Tooltip>
 			</div>
-			<div className="flex items-center gap-1">
+			<div className="flex items-center gap-1 bg-muted/15 rounded-md px-1">
 				<ToggleGroup
 					type="single"
 					value={viewMode}
@@ -103,21 +103,21 @@ export function FileViewerToolbar({
 					{hasRenderedMode && (
 						<ToggleGroupItem
 							value="rendered"
-							className="h-6 px-2 text-xs text-muted-foreground data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-sm"
+							className="h-6 px-2 text-xs text-muted-foreground data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:font-medium data-[state=on]:shadow-sm"
 						>
 							Rendered
 						</ToggleGroupItem>
 					)}
 					<ToggleGroupItem
 						value="raw"
-						className="h-6 px-2 text-xs text-muted-foreground data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-sm"
+						className="h-6 px-2 text-xs text-muted-foreground data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:font-medium data-[state=on]:shadow-sm"
 					>
 						Raw
 					</ToggleGroupItem>
 					{hasDiff && (
 						<ToggleGroupItem
 							value="diff"
-							className="h-6 px-2 text-xs text-muted-foreground data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-sm"
+							className="h-6 px-2 text-xs text-muted-foreground data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:font-medium data-[state=on]:shadow-sm"
 						>
 							Changes
 						</ToggleGroupItem>

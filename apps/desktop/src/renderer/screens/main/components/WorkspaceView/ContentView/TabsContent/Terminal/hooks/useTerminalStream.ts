@@ -117,9 +117,15 @@ export function useTerminalStream({
 				return;
 			}
 
+			if (event.code === "WRITE_QUEUE_FULL") {
+				// Backpressure signal — already throttled at source, just log quietly
+				console.warn("[Terminal] write queue full, some input was dropped");
+				return;
+			}
+
 			toast.error("Terminal error", { description: message });
 
-			if (event.code === "WRITE_QUEUE_FULL" || event.code === "WRITE_FAILED") {
+			if (event.code === "WRITE_FAILED") {
 				adapter.writeln(`\r\n[Terminal] ${message}`);
 			} else {
 				setConnectionError(message);

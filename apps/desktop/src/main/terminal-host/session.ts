@@ -13,7 +13,6 @@ import type { Socket } from "node:net";
 import * as path from "node:path";
 import { getShellArgs } from "../lib/agent-setup/shell-wrappers";
 import { buildSafeEnv } from "../lib/terminal/env";
-import { WasmHeadlessEmulator as HeadlessEmulator } from "../lib/terminal-host/wasm-headless-emulator";
 import type {
 	CreateOrAttachRequest,
 	IpcEvent,
@@ -23,6 +22,7 @@ import type {
 	TerminalExitEvent,
 	TerminalSnapshot,
 } from "../lib/terminal-host/types";
+import { WasmHeadlessEmulator as HeadlessEmulator } from "../lib/terminal-host/wasm-headless-emulator";
 import { treeKillAsync } from "../lib/tree-kill";
 import {
 	createFrameHeader,
@@ -107,6 +107,9 @@ export class Session {
 	private subprocessStdinQueuedBytes = 0;
 	private subprocessStdinDrainArmed = false;
 	private ptyPid: number | null = null;
+
+	// Throttle WRITE_QUEUE_FULL errors to prevent spam (once per second max)
+	private lastWriteQueueFullWarnAt = 0;
 
 	// Promise that resolves when PTY is ready to accept writes
 	private ptyReadyPromise: Promise<void>;
@@ -401,14 +404,18 @@ export class Session {
 			this.subprocessStdinQueuedBytes + frameSize >
 			MAX_SUBPROCESS_STDIN_QUEUE_BYTES
 		) {
-			console.warn(
-				`[Session ${this.sessionId}] stdin queue full (${this.subprocessStdinQueuedBytes} bytes), dropping frame`,
-			);
-			this.broadcastEvent("error", {
-				type: "error",
-				error: "Write queue full - input dropped",
-				code: "WRITE_QUEUE_FULL",
-			} satisfies TerminalErrorEvent);
+			const now = Date.now();
+			if (now - this.lastWriteQueueFullWarnAt >= 1000) {
+				this.lastWriteQueueFullWarnAt = now;
+				console.warn(
+					`[Session ${this.sessionId}] stdin queue full (${this.subprocessStdinQueuedBytes} bytes), dropping frame`,
+				);
+				this.broadcastEvent("error", {
+					type: "error",
+					error: "Write queue full - input dropped",
+					code: "WRITE_QUEUE_FULL",
+				} satisfies TerminalErrorEvent);
+			}
 			return false;
 		}
 

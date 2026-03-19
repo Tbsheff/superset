@@ -170,6 +170,8 @@ export class TerminalHostClient extends EventEmitter {
 	private notifyDrainArmed = false;
 	private disconnectArmed = false;
 	private clientId = randomUUID();
+	// Throttle WRITE_QUEUE_FULL errors per session (ms of last emission)
+	private writeQueueFullLastEmit = new Map<string, number>();
 
 	constructor() {
 		super();
@@ -656,6 +658,7 @@ export class TerminalHostClient extends EventEmitter {
 		this.notifyQueue = [];
 		this.notifyQueueBytes = 0;
 		this.notifyDrainArmed = false;
+		this.writeQueueFullLastEmit.clear();
 
 		this.controlParser = new NdjsonParser();
 		this.streamParser = new NdjsonParser();
@@ -1316,13 +1319,19 @@ export class TerminalHostClient extends EventEmitter {
 			.then(() => {
 				const sent = this.sendNotification("write", request);
 				if (!sent) {
-					// Queue full - notify the session so it can surface the error to the user
-					this.emit(
-						"terminalError",
-						request.sessionId,
-						"Write queue full - input dropped",
-						"WRITE_QUEUE_FULL",
-					);
+					// Throttle to one error per second per session to prevent spam
+					const now = Date.now();
+					const last =
+						this.writeQueueFullLastEmit.get(request.sessionId) ?? 0;
+					if (now - last >= 1000) {
+						this.writeQueueFullLastEmit.set(request.sessionId, now);
+						this.emit(
+							"terminalError",
+							request.sessionId,
+							"Write queue full - input dropped",
+							"WRITE_QUEUE_FULL",
+						);
+					}
 				}
 			})
 			.catch((error) => {

@@ -1,12 +1,17 @@
 import { EventEmitter } from "node:events";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { app } from "electron";
 import type { SandboxState } from "@superset/local-db";
-import { projects, remoteHosts, workspaces, worktrees } from "@superset/local-db";
+import {
+	projects,
+	remoteHosts,
+	workspaces,
+	worktrees,
+} from "@superset/local-db";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { eq } from "drizzle-orm";
+import { app } from "electron";
 import { appState } from "main/lib/app-state";
 import { localDb } from "main/lib/local-db";
 import { restartDaemon as restartDaemonShared } from "main/lib/terminal";
@@ -17,8 +22,8 @@ import {
 import { getTerminalHostClient } from "main/lib/terminal-host/client";
 import type { TerminalRuntime } from "main/lib/workspace-runtime";
 import {
-	getWorkspaceRuntimeRegistry,
 	getSshConnectionManager,
+	getWorkspaceRuntimeRegistry,
 } from "main/lib/workspace-runtime";
 import { z } from "zod";
 import { publicProcedure, router } from "../..";
@@ -238,7 +243,7 @@ export const createTerminalRouter = () => {
 					persistedThemeState: appState.data.themeState,
 				});
 
-					// Ensure SSH connection exists for remote workspaces before resolving runtime
+				// Ensure SSH connection exists for remote workspaces before resolving runtime
 				if (isRemote && workspace?.remoteHostId) {
 					const sshManager = getSshConnectionManager();
 					if (!sshManager.getConnection(workspace.remoteHostId)) {
@@ -253,7 +258,10 @@ export const createTerminalRouter = () => {
 								hostname: hostConfig.hostname,
 								port: hostConfig.port ?? 22,
 								username: hostConfig.username,
-								authMethod: hostConfig.authMethod as "key" | "agent" | "password",
+								authMethod: hostConfig.authMethod as
+									| "key"
+									| "agent"
+									| "password",
 								privateKeyPath: hostConfig.privateKeyPath ?? undefined,
 							});
 						}
@@ -269,24 +277,41 @@ export const createTerminalRouter = () => {
 									"main/lib/devcontainer/container-manager"
 								);
 								const lastChecked = containerHealthCache.get(state.containerId);
-								if (lastChecked && Date.now() - lastChecked < HEALTH_CHECK_TTL) {
+								if (
+									lastChecked &&
+									Date.now() - lastChecked < HEALTH_CHECK_TTL
+								) {
 									// Container was verified healthy recently, skip check
 								} else {
-									const info = await inspectContainer(client, state.containerId);
+									const info = await inspectContainer(
+										client,
+										state.containerId,
+									);
 									if (info.status === "running") {
 										containerHealthCache.set(state.containerId, Date.now());
-									} else if (info.status === "not_found" || info.status === "exited") {
+									} else if (
+										info.status === "not_found" ||
+										info.status === "exited"
+									) {
 										const { getProjectPaths, slugifyName } = await import(
 											"main/lib/devcontainer/types"
 										);
 										const slug = slugifyName(project.name ?? "");
 										const paths = getProjectPaths(slug);
 										// Ensure devcontainer.json exists (may have been cleaned up)
-										const { detectExistingConfig, generateDefaultConfig } = await import("main/lib/devcontainer/default-config");
-										const effectiveRepoDir = project.mainRepoPath ?? paths.repoDir;
-										const existingConfig = await detectExistingConfig(client, effectiveRepoDir);
+										const { detectExistingConfig, generateDefaultConfig } =
+											await import("main/lib/devcontainer/default-config");
+										const effectiveRepoDir =
+											project.mainRepoPath ?? paths.repoDir;
+										const existingConfig = await detectExistingConfig(
+											client,
+											effectiveRepoDir,
+										);
 										if (!existingConfig) {
-											await generateDefaultConfig(client, { projectName: project.name ?? "project", repoDir: effectiveRepoDir });
+											await generateDefaultConfig(client, {
+												projectName: project.name ?? "project",
+												repoDir: effectiveRepoDir,
+											});
 										}
 										const result = await devcontainerUp(
 											client,

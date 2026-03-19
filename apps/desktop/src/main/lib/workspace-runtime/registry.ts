@@ -86,8 +86,13 @@ class DefaultWorkspaceRuntimeRegistry implements WorkspaceRuntimeRegistry {
 						const cached = this.devcontainerRuntimes.get(project.id);
 						if (cached) {
 							// Update SSH client if connection was re-established (e.g. after app restart)
-							const currentClient = getSshConnectionManager().getConnection(project.remoteHostId);
-							if (currentClient && cached.terminal instanceof DevcontainerTerminalRuntime) {
+							const currentClient = getSshConnectionManager().getConnection(
+								project.remoteHostId,
+							);
+							if (
+								currentClient &&
+								cached.terminal instanceof DevcontainerTerminalRuntime
+							) {
 								cached.terminal.updateClient(currentClient);
 							}
 							// Invalidate cache if the container changed (e.g. after restart)

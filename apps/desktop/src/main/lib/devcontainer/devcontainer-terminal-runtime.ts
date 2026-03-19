@@ -114,126 +114,121 @@ export class DevcontainerTerminalRuntime
 		params: CreateSessionParams,
 	): Promise<SessionResult> => {
 		const { paneId, workspaceId, cols = 80, rows = 24 } = params;
-
-		try {
-			// Reuse existing alive session
-			const existing = this.sessions.get(paneId);
-			if (existing?.isAlive) {
-				return {
-					isNew: false,
-					scrollback: "",
-					wasRecovered: false,
-				};
-			}
-
-			const {
-				containerId,
-				workDir,
-				remoteUser,
-				envVars = {},
-				agentCommand,
-				sessionType = "terminal",
-			} = this.sessionConfig;
-
-			const sessionId = nanoid();
-			const cwd = params.cwd ?? workDir;
-
-			let scriptPath: string | null = null;
-			let dockerExecCmd: string;
-
-			if (sessionType === "agent" && agentCommand) {
-				// Write agent script inside the container via stdin pipe
-				scriptPath = `/tmp/superset-agent-${sessionId}.sh`;
-				const scriptContent = `#!/bin/bash\n${agentCommand}\n`;
-
-				const writeAgentScript = (): Promise<void> =>
-					new Promise<void>((resolve, reject) => {
-						this.client.exec(
-							`bash -l -c 'docker exec -i ${containerId} bash -c '"'"'cat > ${scriptPath} && chmod +x ${scriptPath}'"'"''`,
-							(err, stream) => {
-								if (err) {
-									reject(err);
-									return;
-								}
-								stream.on("close", (code: number) => {
-									if (code === 0) resolve();
-									else
-										reject(
-											new Error(
-												`Failed to write agent script into container: exit code ${code}`,
-											),
-										);
-								});
-								stream.end(scriptContent);
-							},
-						);
-					});
-
-				// FIFO creation and script write are independent SSH operations — run in parallel
-				const [fifoPath] = await Promise.all([
-					createEnvFifo(this.client, sessionId, envVars),
-					writeAgentScript(),
-				]);
-
-				dockerExecCmd = `docker exec -it --env-file ${fifoPath} -u ${remoteUser} -w ${cwd} ${containerId} bash -l ${scriptPath}`;
-			} else {
-				// Interactive login shell — only FIFO needed
-				const fifoPath = await createEnvFifo(this.client, sessionId, envVars);
-				dockerExecCmd = `docker exec -it --env-file ${fifoPath} -u ${remoteUser} -w ${cwd} ${containerId} /bin/bash -l`;
-			}
-
-			const channel = await sshExecPty(this.client, dockerExecCmd, {
-				cols,
-				rows,
-			});
-
-			const session: DevcontainerSession = {
-				sessionId,
-				paneId,
-				workspaceId,
-				channel,
-				cols,
-				rows,
-				isAlive: true,
-				cwd,
-				lastActive: Date.now(),
-				sessionType,
-				scriptPath,
-			};
-
-			this.sessions.set(paneId, session);
-
-			channel.on("data", (data: Buffer) => {
-				session.lastActive = Date.now();
-				this.emit(`data:${paneId}`, data.toString());
-			});
-
-			channel.stderr.on("data", (data: Buffer) => {
-				session.lastActive = Date.now();
-				this.emit(`data:${paneId}`, data.toString());
-			});
-
-			channel.on("close", () => {
-				session.isAlive = false;
-				this._cleanupScriptFile(session);
-				this.emit(`exit:${paneId}`, 0, undefined, "exited");
-			});
-
-			channel.on("error", (channelErr: Error) => {
-				this.emit(`error:${paneId}`, {
-					error: channelErr.message,
-					code: "DOCKER_EXEC_CHANNEL_ERROR",
-				});
-			});
-
+		// Reuse existing alive session
+		const existing = this.sessions.get(paneId);
+		if (existing?.isAlive) {
 			return {
-				isNew: true,
+				isNew: false,
 				scrollback: "",
 				wasRecovered: false,
 			};
-		} catch (error) {
-			throw error;
 		}
+
+		const {
+			containerId,
+			workDir,
+			remoteUser,
+			envVars = {},
+			agentCommand,
+			sessionType = "terminal",
+		} = this.sessionConfig;
+
+		const sessionId = nanoid();
+		const cwd = params.cwd ?? workDir;
+
+		let scriptPath: string | null = null;
+		let dockerExecCmd: string;
+
+		if (sessionType === "agent" && agentCommand) {
+			// Write agent script inside the container via stdin pipe
+			scriptPath = `/tmp/superset-agent-${sessionId}.sh`;
+			const scriptContent = `#!/bin/bash\n${agentCommand}\n`;
+
+			const writeAgentScript = (): Promise<void> =>
+				new Promise<void>((resolve, reject) => {
+					this.client.exec(
+						`bash -l -c 'docker exec -i ${containerId} bash -c '"'"'cat > ${scriptPath} && chmod +x ${scriptPath}'"'"''`,
+						(err, stream) => {
+							if (err) {
+								reject(err);
+								return;
+							}
+							stream.on("close", (code: number) => {
+								if (code === 0) resolve();
+								else
+									reject(
+										new Error(
+											`Failed to write agent script into container: exit code ${code}`,
+										),
+									);
+							});
+							stream.end(scriptContent);
+						},
+					);
+				});
+
+			// FIFO creation and script write are independent SSH operations — run in parallel
+			const [fifoPath] = await Promise.all([
+				createEnvFifo(this.client, sessionId, envVars),
+				writeAgentScript(),
+			]);
+
+			dockerExecCmd = `docker exec -it --env-file ${fifoPath} -u ${remoteUser} -w ${cwd} ${containerId} bash -l ${scriptPath}`;
+		} else {
+			// Interactive login shell — only FIFO needed
+			const fifoPath = await createEnvFifo(this.client, sessionId, envVars);
+			dockerExecCmd = `docker exec -it --env-file ${fifoPath} -u ${remoteUser} -w ${cwd} ${containerId} /bin/bash -l`;
+		}
+
+		const channel = await sshExecPty(this.client, dockerExecCmd, {
+			cols,
+			rows,
+		});
+
+		const session: DevcontainerSession = {
+			sessionId,
+			paneId,
+			workspaceId,
+			channel,
+			cols,
+			rows,
+			isAlive: true,
+			cwd,
+			lastActive: Date.now(),
+			sessionType,
+			scriptPath,
+		};
+
+		this.sessions.set(paneId, session);
+
+		channel.on("data", (data: Buffer) => {
+			session.lastActive = Date.now();
+			this.emit(`data:${paneId}`, data.toString());
+		});
+
+		channel.stderr.on("data", (data: Buffer) => {
+			session.lastActive = Date.now();
+			this.emit(`data:${paneId}`, data.toString());
+		});
+
+		channel.on("close", () => {
+			session.isAlive = false;
+			this._cleanupScriptFile(session);
+			this.emit(`exit:${paneId}`, 0, undefined, "exited");
+		});
+
+		channel.on("error", (channelErr: Error) => {
+			this.emit(`error:${paneId}`, {
+				error: channelErr.message,
+				code: "DOCKER_EXEC_CHANNEL_ERROR",
+			});
+		});
+
+		return {
+			isNew: true,
+			scrollback: "",
+			wasRecovered: false,
+		};
 	};
 
 	write: TerminalRuntime["write"] = (params) => {

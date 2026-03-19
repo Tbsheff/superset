@@ -299,7 +299,9 @@ export const createDeleteProcedures = () => {
 
 					if (remoteProject?.remoteHostId && remoteProject.sandboxState) {
 						try {
-							const state = JSON.parse(remoteProject.sandboxState) as SandboxState;
+							const state = JSON.parse(
+								remoteProject.sandboxState,
+							) as SandboxState;
 							if (state.status === "ready" && state.containerId) {
 								const manager = getSshConnectionManager();
 								const client = manager.getConnection(

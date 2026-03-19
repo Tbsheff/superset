@@ -1,6 +1,7 @@
 import { projects, workspaces, worktrees } from "@superset/local-db";
 import { observable } from "@trpc/server/observable";
 import { eq } from "drizzle-orm";
+import { slugifyName } from "main/lib/devcontainer/types";
 import { localDb } from "main/lib/local-db";
 import { workspaceInitManager } from "main/lib/workspace-init-manager";
 import type { WorkspaceInitProgress } from "shared/types/workspace-init";
@@ -10,7 +11,6 @@ import { publicProcedure, router } from "../../..";
 import { getPresetsForTrigger } from "../../settings";
 import { getProject, getWorkspaceWithRelations } from "../utils/db-helpers";
 import { listBranches } from "../utils/git";
-import { slugifyName } from "main/lib/devcontainer/types";
 import { initRemoteWorkspace } from "../utils/remote-workspace-init";
 import { resolveWorktreePath } from "../utils/resolve-worktree-path";
 import { loadSetupConfig } from "../utils/setup";

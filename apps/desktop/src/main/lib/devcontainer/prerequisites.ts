@@ -93,11 +93,9 @@ async function checkNodeJs(client: Client): Promise<PrerequisiteResult> {
 }
 
 async function checkDiskSpace(client: Client): Promise<PrerequisiteResult> {
-	const result = await sshExec(
-		client,
-		"df -k ~ | tail -1 | awk '{print $4}'",
-		{ timeout: 5_000 },
-	);
+	const result = await sshExec(client, "df -k ~ | tail -1 | awk '{print $4}'", {
+		timeout: 5_000,
+	});
 	if (result.code !== 0) {
 		return { passed: true }; // Can't check — don't block
 	}

@@ -209,7 +209,9 @@ export async function destroyContainer(
 		containerId ? `docker rm -f ${containerId}` : "",
 		`docker ps -a --filter "label=superset.project=${projectId}" -q | xargs -r docker rm -f`,
 		`rm -rf ${paths.baseDir}`,
-	].filter(Boolean).join("; ");
+	]
+		.filter(Boolean)
+		.join("; ");
 
 	await sshExec(client, cmds, { timeout: 15_000 }).catch(() => {});
 }

@@ -1,6 +1,7 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { projects, remoteHosts, settings } from "@superset/local-db";
+import { eq, isNotNull } from "drizzle-orm";
 import {
 	app,
 	BrowserWindow,
@@ -10,7 +11,6 @@ import {
 	protocol,
 	session,
 } from "electron";
-import { isNotNull, eq } from "drizzle-orm";
 import { makeAppSetup } from "lib/electron-app/factories/app/setup";
 import {
 	handleAuthCallback,
@@ -35,7 +35,6 @@ import {
 	stopIntegrationSync,
 } from "./lib/integration-sync";
 import { localDb } from "./lib/local-db";
-import { getSshConnectionManager } from "./lib/workspace-runtime";
 import { outlit } from "./lib/outlit";
 import { ensureProjectIconsDir, getProjectIconPath } from "./lib/project-icons";
 import {
@@ -43,6 +42,7 @@ import {
 	reconcileDaemonSessions,
 } from "./lib/terminal";
 import { disposeTray, initTray } from "./lib/tray";
+import { getSshConnectionManager } from "./lib/workspace-runtime";
 import { MainWindow } from "./windows/main";
 
 console.log("[main] Local database ready:", !!localDb);
@@ -321,7 +321,11 @@ if (!gotTheLock) {
 					.from(remoteHosts)
 					.where(eq(remoteHosts.id, hostId))
 					.get();
-				if (hostConfig?.hostname && hostConfig.username && hostConfig.authMethod) {
+				if (
+					hostConfig?.hostname &&
+					hostConfig.username &&
+					hostConfig.authMethod
+				) {
 					getSshConnectionManager()
 						.connect({
 							id: hostConfig.id,

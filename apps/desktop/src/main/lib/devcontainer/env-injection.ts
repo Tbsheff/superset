@@ -55,4 +55,3 @@ export async function cleanupStaleFifos(client: Client): Promise<void> {
 		timeout: 5_000,
 	}).catch(() => {});
 }
-

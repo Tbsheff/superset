@@ -14,6 +14,7 @@ import { and, desc, eq, inArray, isNotNull, isNull, not } from "drizzle-orm";
 import type { BrowserWindow } from "electron";
 import { dialog } from "electron";
 import { track } from "main/lib/analytics";
+import { slugifyName } from "main/lib/devcontainer/types";
 import { localDb } from "main/lib/local-db";
 import {
 	deleteProjectIcon,
@@ -41,7 +42,6 @@ import {
 	sanitizeAuthorPrefix,
 } from "../workspaces/utils/git";
 import { getSimpleGitWithShellPath } from "../workspaces/utils/git-client";
-import { slugifyName } from "main/lib/devcontainer/types";
 import { initRemoteWorkspace } from "../workspaces/utils/remote-workspace-init";
 import { getDefaultProjectColor } from "./utils/colors";
 import { discoverAndSaveProjectIcon } from "./utils/favicon-discovery";

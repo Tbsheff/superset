@@ -1,6 +1,7 @@
 import { projects, settings, workspaces, worktrees } from "@superset/local-db";
 import { and, eq, isNull, not } from "drizzle-orm";
 import { track } from "main/lib/analytics";
+import { slugifyName } from "main/lib/devcontainer/types";
 import { localDb } from "main/lib/local-db";
 import { workspaceInitManager } from "main/lib/workspace-init-manager";
 import { z } from "zod";
@@ -37,7 +38,6 @@ import {
 	worktreeExists,
 } from "../utils/git";
 import { getGitRemoteUrl } from "../utils/github/github";
-import { slugifyName } from "main/lib/devcontainer/types";
 import { initRemoteWorkspace } from "../utils/remote-workspace-init";
 import { resolveWorktreePath } from "../utils/resolve-worktree-path";
 import { copySupersetConfigToWorktree, loadSetupConfig } from "../utils/setup";

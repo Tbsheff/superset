@@ -310,6 +310,8 @@ const handlers: Record<string, RequestHandler> = {
 			return;
 		}
 
+		await loadWasmVt();
+
 		const request = payload as CreateOrAttachRequest;
 		log("info", `Creating/attaching session: ${request.sessionId}`);
 

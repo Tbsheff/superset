@@ -809,11 +809,12 @@ async function main() {
 	setupSignalHandlers();
 
 	try {
-		// Load WASM VT module before accepting connections.
-		// All WasmHeadlessEmulator instances share this singleton.
-		log("info", "Loading libghostty-vt WASM module...");
-		await loadWasmVt();
-		log("info", "WASM VT module loaded");
+		// Start server immediately so client can connect within SPAWN_WAIT_MS.
+		// WASM VT loads in parallel — it's only needed when WasmHeadlessEmulator
+		// creates snapshots, not for accepting connections.
+		loadWasmVt()
+			.then(() => log("info", "WASM VT module loaded"))
+			.catch((err) => log("error", "Failed to load WASM VT module", { error: err }));
 
 		await startServer();
 	} catch (error) {

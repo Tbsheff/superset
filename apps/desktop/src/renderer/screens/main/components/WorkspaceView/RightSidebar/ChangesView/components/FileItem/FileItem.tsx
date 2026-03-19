@@ -209,7 +209,7 @@ export function FileItem({
 			{...fileDragProps}
 			className={cn(
 				"group w-full flex items-stretch gap-1 px-1.5 text-left rounded-md",
-				"hover:bg-accent/50 cursor-pointer transition-colors",
+				"hover:bg-accent/30 cursor-pointer transition-colors",
 				isHighlighted && "bg-accent",
 			)}
 		>
@@ -219,7 +219,7 @@ export function FileItem({
 				onClick={handleClick}
 				onDoubleClick={handleDoubleClick}
 				className={cn(
-					"flex items-center gap-1.5 flex-1 min-w-0 overflow-hidden",
+					"flex items-center gap-2 flex-1 min-w-0 overflow-hidden",
 					hasIndent ? "py-1" : "py-1.5",
 				)}
 			>
@@ -238,7 +238,7 @@ export function FileItem({
 						<TooltipContent side="right">{file.path}</TooltipContent>
 					</Tooltip>
 					{showStatsDisplay && (
-						<span className="flex items-center gap-0.5 text-xs font-mono shrink-0 whitespace-nowrap opacity-60">
+						<span className="flex items-center gap-0.5 text-xs font-mono tabular-nums shrink-0 whitespace-nowrap opacity-60">
 							{file.additions > 0 && (
 								<span className="text-green-600 dark:text-green-500">
 									+{file.additions}

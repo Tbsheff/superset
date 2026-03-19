@@ -45,10 +45,10 @@ function TabButton({
 						type="button"
 						onClick={onClick}
 						className={cn(
-							"flex items-center justify-center shrink-0 h-full w-10 transition-all",
+							"flex items-center justify-center shrink-0 h-8 my-1 w-10 rounded-md transition-all",
 							isActive
-								? "text-foreground bg-border/30"
-								: "text-muted-foreground/70 hover:text-muted-foreground hover:bg-tertiary/20",
+								? "text-foreground bg-accent/60"
+								: "text-muted-foreground/70 hover:text-muted-foreground hover:bg-accent/30",
 						)}
 					>
 						{icon}
@@ -66,10 +66,10 @@ function TabButton({
 			type="button"
 			onClick={onClick}
 			className={cn(
-				"flex items-center gap-2 shrink-0 px-3 h-full transition-all text-sm",
+				"flex items-center gap-2 shrink-0 px-3 h-8 my-1 rounded-md transition-all text-sm",
 				isActive
-					? "text-foreground bg-border/30"
-					: "text-muted-foreground/70 hover:text-muted-foreground hover:bg-tertiary/20",
+					? "text-foreground bg-accent/60"
+					: "text-muted-foreground/70 hover:text-muted-foreground hover:bg-accent/30",
 			)}
 		>
 			{icon}
@@ -161,7 +161,7 @@ export function RightSidebar() {
 	return (
 		<aside className="h-full flex flex-col overflow-hidden">
 			<div className="flex items-center bg-background shrink-0 h-10 border-b">
-				<div className="flex items-center h-full">
+				<div className="flex items-center gap-0.5 px-1 h-full">
 					{showChangesTab && (
 						<TabButton
 							isActive={rightSidebarTab === RightSidebarTab.Changes}

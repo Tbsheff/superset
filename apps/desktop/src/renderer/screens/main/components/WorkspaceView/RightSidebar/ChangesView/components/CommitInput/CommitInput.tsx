@@ -212,7 +212,7 @@ export function CommitInput({
 				placeholder="Commit message"
 				value={commitMessage}
 				onChange={(e) => setCommitMessage(e.target.value)}
-				className="min-h-[52px] resize-none text-[10px] bg-background"
+				className="min-h-[52px] resize-none text-xs bg-background"
 				onKeyDown={(e) => {
 					if (
 						e.key === "Enter" &&
@@ -224,13 +224,13 @@ export function CommitInput({
 					}
 				}}
 			/>
-			<ButtonGroup className="w-full">
+			<ButtonGroup className="w-full rounded-lg overflow-hidden">
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<Button
 							variant="secondary"
 							size="sm"
-							className="flex-1 gap-1.5 h-7 text-xs"
+							className="flex-1 gap-1.5 h-8 text-xs"
 							onClick={primary.handler}
 							disabled={primary.disabled}
 						>
@@ -249,7 +249,7 @@ export function CommitInput({
 							variant="secondary"
 							size="sm"
 							disabled={isPending}
-							className="h-7 px-1.5"
+							className="h-8 px-1.5"
 						>
 							<VscChevronDown className="size-3.5" />
 						</Button>

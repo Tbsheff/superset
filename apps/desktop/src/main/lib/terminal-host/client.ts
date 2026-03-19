@@ -82,7 +82,9 @@ const REQUEST_TIMEOUT_MS = 30000;
 const SPAWN_LOCK_TIMEOUT_MS = 10000; // Max time to hold spawn lock
 
 // Queue limits
-const MAX_NOTIFY_QUEUE_BYTES = 2_000_000; // 2MB cap to prevent OOM
+// Large cap needed for session restore: snapshot ANSI dumps can be several MB
+// and arrive as rapid-fire write notifications before the socket drains.
+const MAX_NOTIFY_QUEUE_BYTES = 64_000_000; // 64MB cap to prevent OOM
 const MAX_DAEMON_LOG_BYTES = 5 * 1024 * 1024; // 5MB cap for daemon.log
 
 // =============================================================================

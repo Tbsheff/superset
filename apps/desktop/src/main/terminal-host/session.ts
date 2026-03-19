@@ -43,9 +43,10 @@ const ATTACH_FLUSH_TIMEOUT_MS = 500;
 /**
  * Maximum bytes allowed in subprocess stdin queue.
  * Prevents OOM if subprocess stdin is backpressured (e.g., slow PTY consumer).
- * 2MB is generous - typical large paste is ~50KB.
+ * 64MB matches the subprocess PTY write hard limit. Session restore snapshot
+ * replays can push several MB of ANSI through this queue rapidly.
  */
-const MAX_SUBPROCESS_STDIN_QUEUE_BYTES = 2_000_000;
+const MAX_SUBPROCESS_STDIN_QUEUE_BYTES = 64_000_000;
 
 type SpawnProcess = (
 	command: string,

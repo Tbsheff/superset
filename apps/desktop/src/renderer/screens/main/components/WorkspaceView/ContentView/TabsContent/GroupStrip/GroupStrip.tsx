@@ -339,7 +339,7 @@ export function GroupStrip() {
 		<div className="flex h-9 min-w-0 flex-1 items-stretch">
 			<div
 				ref={scrollContainerRef}
-				className="flex min-w-0 flex-1 items-stretch overflow-x-auto overflow-y-hidden"
+				className="relative flex min-w-0 flex-1 items-stretch overflow-x-auto overflow-y-hidden"
 				style={{ scrollbarWidth: "none" }}
 			>
 				<div ref={tabsTrackRef} className="flex items-stretch">
@@ -378,6 +378,9 @@ export function GroupStrip() {
 						<div className="shrink-0">{plusControl}</div>
 					)}
 				</div>
+				{hasHorizontalOverflow && (
+					<div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-r from-transparent to-tertiary z-10" />
+				)}
 			</div>
 			{hasHorizontalOverflow && (
 				<div className="shrink-0 bg-background/95 pr-1">{plusControl}</div>

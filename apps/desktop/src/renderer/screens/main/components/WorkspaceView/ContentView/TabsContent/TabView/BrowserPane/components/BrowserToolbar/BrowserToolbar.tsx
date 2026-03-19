@@ -1,11 +1,6 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-	TbArrowLeft,
-	TbArrowRight,
-	TbLoader2,
-	TbRefresh,
-} from "react-icons/tb";
+import { ArrowLeft, ArrowRight, Loader2, RefreshCw } from "lucide-react";
 import { UrlSuggestions } from "./components/UrlSuggestions";
 import { useUrlAutocomplete } from "./hooks/useUrlAutocomplete";
 
@@ -122,7 +117,7 @@ export function BrowserToolbar({
 							disabled={!canGoBack}
 							className={`rounded p-1 transition-colors ${canGoBack ? "text-muted-foreground/60 hover:text-muted-foreground" : "opacity-30 pointer-events-none"}`}
 						>
-							<TbArrowLeft className="size-3.5" />
+							<ArrowLeft className="size-3.5" />
 						</button>
 					</TooltipTrigger>
 					<TooltipContent side="bottom" showArrow={false}>
@@ -137,7 +132,7 @@ export function BrowserToolbar({
 							disabled={!canGoForward}
 							className={`rounded p-1 transition-colors ${canGoForward ? "text-muted-foreground/60 hover:text-muted-foreground" : "opacity-30 pointer-events-none"}`}
 						>
-							<TbArrowRight className="size-3.5" />
+							<ArrowRight className="size-3.5" />
 						</button>
 					</TooltipTrigger>
 					<TooltipContent side="bottom" showArrow={false}>
@@ -152,9 +147,9 @@ export function BrowserToolbar({
 							className="rounded p-1 text-muted-foreground/60 transition-colors hover:text-muted-foreground"
 						>
 							{isLoading ? (
-								<TbLoader2 className="size-3.5 animate-spin" />
+								<Loader2 className="size-3.5 animate-spin" />
 							) : (
-								<TbRefresh className="size-3.5" />
+								<RefreshCw className="size-3.5" />
 							)}
 						</button>
 					</TooltipTrigger>

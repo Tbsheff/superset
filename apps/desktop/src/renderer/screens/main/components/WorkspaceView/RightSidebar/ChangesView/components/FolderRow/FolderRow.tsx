@@ -14,7 +14,7 @@ import {
 import { cn } from "@superset/ui/utils";
 import { type ReactNode, useState } from "react";
 import { ChevronRight, ClipboardCopy, Minus, Plus, RotateCcw } from "lucide-react";
-import { VscFolderOpened, VscLinkExternal } from "react-icons/vsc";
+import { ExternalLink, FolderOpen } from "lucide-react";
 import { toAbsoluteWorkspacePath } from "shared/absolute-paths";
 import { usePathActions } from "../../hooks";
 import { DiscardConfirmDialog } from "../DiscardConfirmDialog";
@@ -203,11 +203,11 @@ export function FolderRow({
 			)}
 			<ContextMenuSeparator />
 			<ContextMenuItem onClick={revealInFinder}>
-				<VscFolderOpened className="mr-2 size-4" />
+				<FolderOpen className="mr-2 size-4" />
 				Reveal in Finder
 			</ContextMenuItem>
 			<ContextMenuItem onClick={openInEditor}>
-				<VscLinkExternal className="mr-2 size-4" />
+				<ExternalLink className="mr-2 size-4" />
 				Open in Editor
 			</ContextMenuItem>
 

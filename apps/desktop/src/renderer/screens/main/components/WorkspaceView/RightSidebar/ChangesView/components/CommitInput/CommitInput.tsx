@@ -12,14 +12,14 @@ import { Textarea } from "@superset/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { useState } from "react";
 import {
-	VscArrowDown,
-	VscArrowUp,
-	VscCheck,
-	VscChevronDown,
-	VscLinkExternal,
-	VscRefresh,
-	VscSync,
-} from "react-icons/vsc";
+	ArrowDown,
+	ArrowUp,
+	Check,
+	ChevronDown,
+	ExternalLink,
+	RefreshCw,
+	RefreshCcw,
+} from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useCreateOrOpenPR } from "renderer/screens/main/hooks";
 import { getPrimaryAction } from "./utils/getPrimaryAction";
@@ -183,13 +183,13 @@ export function CommitInput({
 		...primaryAction,
 		icon:
 			primaryAction.action === "commit" ? (
-				<VscCheck className="size-4" />
+				<Check className="size-4" />
 			) : primaryAction.action === "sync" ? (
-				<VscSync className="size-4" />
+				<RefreshCcw className="size-4" />
 			) : primaryAction.action === "pull" ? (
-				<VscArrowDown className="size-4" />
+				<ArrowDown className="size-4" />
 			) : (
-				<VscArrowUp className="size-4" />
+				<ArrowUp className="size-4" />
 			),
 		handler:
 			primaryAction.action === "commit"
@@ -253,7 +253,7 @@ export function CommitInput({
 							className="h-8 px-1.5"
 							title="More actions"
 						>
-							<VscChevronDown className="size-3.5" />
+							<ChevronDown className="size-3.5" />
 						</Button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end" className="w-48 text-xs">
@@ -262,7 +262,7 @@ export function CommitInput({
 							disabled={!canCommit}
 							className="text-xs"
 						>
-							<VscCheck className="size-3.5" />
+							<Check className="size-3.5" />
 							Commit
 						</DropdownMenuItem>
 						<DropdownMenuItem
@@ -270,7 +270,7 @@ export function CommitInput({
 							disabled={!canCommit}
 							className="text-xs"
 						>
-							<VscArrowUp className="size-3.5" />
+							<ArrowUp className="size-3.5" />
 							Commit & Push
 						</DropdownMenuItem>
 						{!hasExistingPR && canCreatePR && (
@@ -279,7 +279,7 @@ export function CommitInput({
 								disabled={!canCommit}
 								className="text-xs"
 							>
-								<VscLinkExternal className="size-3.5" />
+								<ExternalLink className="size-3.5" />
 								Commit, Push & Create PR
 							</DropdownMenuItem>
 						)}
@@ -291,7 +291,7 @@ export function CommitInput({
 							disabled={pushCount === 0 && hasUpstream}
 							className="text-xs"
 						>
-							<VscArrowUp className="size-3.5" />
+							<ArrowUp className="size-3.5" />
 							<span className="flex-1">
 								{hasUpstream || hasExistingPR ? "Push" : "Publish Branch"}
 							</span>
@@ -306,7 +306,7 @@ export function CommitInput({
 							disabled={pullCount === 0}
 							className="text-xs"
 						>
-							<VscArrowDown className="size-3.5" />
+							<ArrowDown className="size-3.5" />
 							<span className="flex-1">Pull</span>
 							{pullCount > 0 && (
 								<span className="text-xs text-muted-foreground">
@@ -319,15 +319,15 @@ export function CommitInput({
 							disabled={pushCount === 0 && pullCount === 0}
 							className="text-xs"
 						>
-							<VscSync className="size-3.5" />
+							<RefreshCcw className="size-3.5" />
 							Sync
 						</DropdownMenuItem>
 						<DropdownMenuItem onClick={handleFetch} className="text-xs">
-							<VscRefresh className="size-3.5" />
+							<RefreshCw className="size-3.5" />
 							Fetch
 						</DropdownMenuItem>
 						<DropdownMenuItem onClick={handleFetchAndPull} className="text-xs">
-							<VscRefresh className="size-3.5" />
+							<RefreshCw className="size-3.5" />
 							Fetch & Pull
 						</DropdownMenuItem>
 
@@ -335,12 +335,12 @@ export function CommitInput({
 
 						{hasExistingPR ? (
 							<DropdownMenuItem onClick={handleOpenPR} className="text-xs">
-								<VscLinkExternal className="size-3.5" />
+								<ExternalLink className="size-3.5" />
 								Open Pull Request
 							</DropdownMenuItem>
 						) : canCreatePR ? (
 							<DropdownMenuItem onClick={handleCreatePR} className="text-xs">
-								<VscLinkExternal className="size-3.5" />
+								<ExternalLink className="size-3.5" />
 								Create Pull Request
 							</DropdownMenuItem>
 						) : null}

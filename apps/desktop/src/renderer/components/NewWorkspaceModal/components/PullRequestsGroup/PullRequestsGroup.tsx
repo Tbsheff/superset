@@ -6,11 +6,7 @@ import { useLiveQuery } from "@tanstack/react-db";
 import { useNavigate } from "@tanstack/react-router";
 import Fuse from "fuse.js";
 import { useMemo } from "react";
-import { ArrowUpRight, Github } from "lucide-react";
-import {
-	GoGitPullRequest,
-	GoGitPullRequestDraft,
-} from "react-icons/go";
+import { ArrowUpRight, Github, GitPullRequest, GitPullRequestDraft } from "lucide-react";
 import { useDebouncedValue } from "renderer/hooks/useDebouncedValue";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useCreateFromPr } from "renderer/react-query/workspaces/useCreateFromPr";
@@ -155,7 +151,7 @@ export function PullRequestsGroup({
 				}}
 				className="group h-12"
 			>
-				<GoGitPullRequest className="size-4 shrink-0 text-emerald-500" />
+				<GitPullRequest className="size-4 shrink-0 text-emerald-500" />
 				<span
 					className="text-muted-foreground shrink-0 text-xs tabular-nums truncate"
 					style={{ width: "2.8rem" }}
@@ -258,9 +254,9 @@ export function PullRequestsGroup({
 					{workspaceByBranch.has(pr.headBranch) ? (
 						<ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
 					) : pr.isDraft ? (
-						<GoGitPullRequestDraft className="size-4 shrink-0 text-muted-foreground" />
+						<GitPullRequestDraft className="size-4 shrink-0 text-muted-foreground" />
 					) : (
-						<GoGitPullRequest className="size-4 shrink-0 text-emerald-500" />
+						<GitPullRequest className="size-4 shrink-0 text-emerald-500" />
 					)}
 					<span
 						className="text-muted-foreground shrink-0 text-xs tabular-nums truncate"

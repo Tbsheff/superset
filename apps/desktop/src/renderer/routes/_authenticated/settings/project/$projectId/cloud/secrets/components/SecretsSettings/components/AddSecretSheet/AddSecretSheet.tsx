@@ -14,8 +14,7 @@ import { Textarea } from "@superset/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { cn } from "@superset/ui/utils";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CircleHelp, Plus, Trash2 } from "lucide-react";
-import { HiOutlineArrowDownTray } from "react-icons/hi2";
+import { CircleHelp, Download, Plus, Trash2 } from "lucide-react";
 import { vanillaElectronTrpc } from "renderer/lib/vanilla-electron-trpc";
 import { parseEnvContent, validateEnvContent } from "../../utils/env-file";
 
@@ -326,7 +325,7 @@ export function AddSecretSheet({
 							className="gap-1.5"
 							onClick={() => fileInputRef.current?.click()}
 						>
-							<HiOutlineArrowDownTray className="h-3.5 w-3.5" />
+							<Download className="h-3.5 w-3.5" />
 							Import .env
 						</Button>
 						<span className="text-xs text-muted-foreground">

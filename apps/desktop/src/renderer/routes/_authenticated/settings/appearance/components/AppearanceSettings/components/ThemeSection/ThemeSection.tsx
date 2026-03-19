@@ -2,11 +2,7 @@ import { COMPANY } from "@superset/shared/constants";
 import { Button } from "@superset/ui/button";
 import { toast } from "@superset/ui/sonner";
 import { type ChangeEvent, useRef, useState } from "react";
-import { ExternalLink } from "lucide-react";
-import {
-	HiOutlineArrowDownTray,
-	HiOutlineArrowUpTray,
-} from "react-icons/hi2";
+import { Download, ExternalLink, Upload } from "lucide-react";
 import {
 	SYSTEM_THEME_ID,
 	useSetTheme,
@@ -141,7 +137,7 @@ export function ThemeSection() {
 						onClick={() => fileInputRef.current?.click()}
 						disabled={isImporting}
 					>
-						<HiOutlineArrowUpTray className="mr-1.5 h-4 w-4" />
+						<Upload className="mr-1.5 h-4 w-4" />
 						{isImporting ? "Importing..." : "Import Theme"}
 					</Button>
 					<Button
@@ -150,7 +146,7 @@ export function ThemeSection() {
 						size="sm"
 						onClick={handleDownloadBaseTheme}
 					>
-						<HiOutlineArrowDownTray className="mr-1.5 h-4 w-4" />
+						<Download className="mr-1.5 h-4 w-4" />
 						Download Base File
 					</Button>
 					<a

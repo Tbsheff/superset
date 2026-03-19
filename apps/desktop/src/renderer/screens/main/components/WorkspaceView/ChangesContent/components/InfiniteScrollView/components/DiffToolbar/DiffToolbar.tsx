@@ -12,12 +12,7 @@ import {
 	ChevronDown,
 	ChevronUp,
 } from "lucide-react";
-import {
-	TbFocus2,
-	TbFold,
-	TbLayoutSidebarRightFilled,
-	TbListDetails,
-} from "react-icons/tb";
+import { Columns2, FoldVertical, Rows2, ScanSearch } from "lucide-react";
 import type { ChangeCategory, DiffViewMode } from "shared/changes-types";
 import type { SectionInfo } from "../../hooks/useFocusMode";
 
@@ -184,7 +179,7 @@ export function DiffToolbar({
 							}
 							aria-pressed={focusMode}
 						>
-							<TbFocus2 className="size-4" />
+							<ScanSearch className="size-4" />
 						</button>
 					</TooltipTrigger>
 					<TooltipContent side="bottom" showArrow={false}>
@@ -208,9 +203,9 @@ export function DiffToolbar({
 							}
 						>
 							{diffViewMode === "side-by-side" ? (
-								<TbLayoutSidebarRightFilled className="size-4" />
+								<Columns2 className="size-4" />
 							) : (
-								<TbListDetails className="size-4" />
+								<Rows2 className="size-4" />
 							)}
 						</button>
 					</TooltipTrigger>
@@ -238,7 +233,7 @@ export function DiffToolbar({
 							}
 							aria-pressed={hideUnchangedRegions}
 						>
-							<TbFold className="size-4" />
+							<FoldVertical className="size-4" />
 						</button>
 					</TooltipTrigger>
 					<TooltipContent side="bottom" showArrow={false}>

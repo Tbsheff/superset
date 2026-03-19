@@ -11,14 +11,8 @@ import {
 	DropdownMenuTrigger,
 } from "@superset/ui/dropdown-menu";
 import { useNavigate } from "@tanstack/react-router";
-import { Bug, ChevronsUpDown, Github, Keyboard } from "lucide-react";
+import { BookOpen, Bug, ChevronsUpDown, Github, Keyboard, Mail, MessagesSquare, Settings } from "lucide-react";
 import { FaDiscord, FaXTwitter } from "react-icons/fa6";
-import {
-	HiOutlineBookOpen,
-	HiOutlineChatBubbleLeftRight,
-	HiOutlineCog6Tooth,
-	HiOutlineEnvelope,
-} from "react-icons/hi2";
 import { useHotkeyText } from "renderer/stores/hotkeys";
 
 export function OrganizationDropdown() {
@@ -48,7 +42,7 @@ export function OrganizationDropdown() {
 				<DropdownMenuItem
 					onSelect={() => navigate({ to: "/settings/account" })}
 				>
-					<HiOutlineCog6Tooth className="h-4 w-4" />
+					<Settings className="h-4 w-4" />
 					<span>Settings</span>
 					{settingsHotkey !== "Unassigned" && (
 						<DropdownMenuShortcut>{settingsHotkey}</DropdownMenuShortcut>
@@ -59,7 +53,7 @@ export function OrganizationDropdown() {
 
 				{/* Help & Support */}
 				<DropdownMenuItem onClick={() => openExternal(COMPANY.DOCS_URL)}>
-					<HiOutlineBookOpen className="h-4 w-4" />
+					<BookOpen className="h-4 w-4" />
 					Documentation
 				</DropdownMenuItem>
 				<DropdownMenuItem
@@ -79,7 +73,7 @@ export function OrganizationDropdown() {
 				</DropdownMenuItem>
 				<DropdownMenuSub>
 					<DropdownMenuSubTrigger>
-						<HiOutlineChatBubbleLeftRight className="h-4 w-4" />
+						<MessagesSquare className="h-4 w-4" />
 						Contact Us
 					</DropdownMenuSubTrigger>
 					<DropdownMenuSubContent sideOffset={8} className="w-56">
@@ -95,7 +89,7 @@ export function OrganizationDropdown() {
 							<FaXTwitter className="h-4 w-4" />X
 						</DropdownMenuItem>
 						<DropdownMenuItem onClick={() => openExternal(COMPANY.MAIL_TO)}>
-							<HiOutlineEnvelope className="h-4 w-4" />
+							<Mail className="h-4 w-4" />
 							Email Founders
 						</DropdownMenuItem>
 					</DropdownMenuSubContent>

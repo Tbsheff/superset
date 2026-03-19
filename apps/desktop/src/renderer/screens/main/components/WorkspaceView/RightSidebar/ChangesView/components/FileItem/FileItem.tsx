@@ -10,7 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { cn } from "@superset/ui/utils";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ClipboardCopy, Minus, Plus, RotateCcw } from "lucide-react";
-import { VscFolderOpened, VscLinkExternal, VscTrash } from "react-icons/vsc";
+import { ExternalLink, FolderOpen, Trash2 } from "lucide-react";
 import { toAbsoluteWorkspacePath } from "shared/absolute-paths";
 import type { ChangeCategory, ChangedFile } from "shared/changes-types";
 import { createFileKey, useScrollContext } from "../../../../ChangesContent";
@@ -163,7 +163,7 @@ export function FileItem({
 						key: "discard",
 						label: discardLabel,
 						icon: isDeleteAction ? (
-							<VscTrash className="size-3" />
+							<Trash2 className="size-3" />
 						) : (
 							<RotateCcw className="size-3" />
 						),
@@ -270,11 +270,11 @@ export function FileItem({
 					</ContextMenuItem>
 					<ContextMenuSeparator />
 					<ContextMenuItem onClick={revealInFinder}>
-						<VscFolderOpened className="mr-2 size-4" />
+						<FolderOpen className="mr-2 size-4" />
 						Reveal in Finder
 					</ContextMenuItem>
 					<ContextMenuItem onClick={openInEditor}>
-						<VscLinkExternal className="mr-2 size-4" />
+						<ExternalLink className="mr-2 size-4" />
 						Open in Editor
 					</ContextMenuItem>
 
@@ -301,7 +301,7 @@ export function FileItem({
 							className="text-destructive focus:text-destructive"
 						>
 							{isDeleteAction ? (
-								<VscTrash className="mr-2 size-4" />
+								<Trash2 className="mr-2 size-4" />
 							) : (
 								<RotateCcw className="mr-2 size-4" />
 							)}

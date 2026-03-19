@@ -11,13 +11,7 @@ import {
 	useRef,
 	useState,
 } from "react";
-import {
-	HiOutlineCheckCircle,
-	HiOutlineCodeBracket,
-	HiOutlineListBullet,
-	HiOutlineNumberedList,
-} from "react-icons/hi2";
-import { Quote } from "lucide-react";
+import { CheckCircle2, Code, List, ListOrdered, Quote } from "lucide-react";
 import tippy, { type Instance as TippyInstance } from "tippy.js";
 
 interface CommandItem {
@@ -53,26 +47,26 @@ const COMMANDS: CommandItem[] = [
 	// Lists group
 	{
 		title: "Bulleted list",
-		icon: <HiOutlineListBullet className="size-4" />,
+		icon: <List className="size-4" />,
 		command: (editor) => editor.chain().focus().toggleBulletList().run(),
 		group: "lists",
 	},
 	{
 		title: "Numbered list",
-		icon: <HiOutlineNumberedList className="size-4" />,
+		icon: <ListOrdered className="size-4" />,
 		command: (editor) => editor.chain().focus().toggleOrderedList().run(),
 		group: "lists",
 	},
 	{
 		title: "Checklist",
-		icon: <HiOutlineCheckCircle className="size-4" />,
+		icon: <CheckCircle2 className="size-4" />,
 		command: (editor) => editor.chain().focus().toggleTaskList().run(),
 		group: "lists",
 	},
 	// Blocks group
 	{
 		title: "Code block",
-		icon: <HiOutlineCodeBracket className="size-4" />,
+		icon: <Code className="size-4" />,
 		command: (editor) => editor.chain().focus().toggleCodeBlock().run(),
 		group: "blocks",
 	},

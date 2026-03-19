@@ -8,8 +8,7 @@ import {
 	SelectValue,
 } from "@superset/ui/select";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Search } from "lucide-react";
-import { HiArrowsUpDown } from "react-icons/hi2";
+import { ArrowUpDown, Plus, Search } from "lucide-react";
 import { vanillaElectronTrpc } from "renderer/lib/vanilla-electron-trpc";
 import { SecretRow } from "./components/SecretRow";
 
@@ -116,7 +115,7 @@ export function EnvironmentVariablesList({
 						onValueChange={(v) => setSortOrder(v as SortOrder)}
 					>
 						<SelectTrigger className="w-[180px] shrink-0">
-							<HiArrowsUpDown className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+							<ArrowUpDown className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>

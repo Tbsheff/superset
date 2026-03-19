@@ -1,17 +1,19 @@
 import { cn } from "@superset/ui/utils";
 import { Link, useMatchRoute } from "@tanstack/react-router";
 import {
-	HiOutlineBell,
-	HiOutlineCommandLine,
-	HiOutlineDevicePhoneMobile,
-	HiOutlinePaintBrush,
-	HiOutlinePuzzlePiece,
-	HiOutlineServerStack,
-	HiOutlineShieldCheck,
-	HiOutlineSparkles,
-	HiOutlineUser,
-} from "react-icons/hi2";
-import { Brain, GitBranch, Keyboard } from "lucide-react";
+	Bell,
+	Brain,
+	GitBranch,
+	Keyboard,
+	Paintbrush,
+	Puzzle,
+	Server,
+	Shield,
+	Smartphone,
+	Sparkles,
+	Terminal,
+	User,
+} from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import type { SettingsSection } from "renderer/stores/settings-state";
 
@@ -54,19 +56,19 @@ const SECTION_GROUPS: SectionGroup[] = [
 				id: "/settings/account",
 				section: "account",
 				label: "Account",
-				icon: <HiOutlineUser className="h-4 w-4" />,
+				icon: <User className="h-4 w-4" />,
 			},
 			{
 				id: "/settings/appearance",
 				section: "appearance",
 				label: "Appearance",
-				icon: <HiOutlinePaintBrush className="h-4 w-4" />,
+				icon: <Paintbrush className="h-4 w-4" />,
 			},
 			{
 				id: "/settings/ringtones",
 				section: "ringtones",
 				label: "Notifications",
-				icon: <HiOutlineBell className="h-4 w-4" />,
+				icon: <Bell className="h-4 w-4" />,
 			},
 			{
 				id: "/settings/keyboard",
@@ -83,7 +85,7 @@ const SECTION_GROUPS: SectionGroup[] = [
 				id: "/settings/behavior",
 				section: "behavior",
 				label: "General",
-				icon: <HiOutlineSparkles className="h-4 w-4" />,
+				icon: <Sparkles className="h-4 w-4" />,
 			},
 			{
 				id: "/settings/git",
@@ -95,7 +97,7 @@ const SECTION_GROUPS: SectionGroup[] = [
 				id: "/settings/terminal",
 				section: "terminal",
 				label: "Terminal",
-				icon: <HiOutlineCommandLine className="h-4 w-4" />,
+				icon: <Terminal className="h-4 w-4" />,
 			},
 			{
 				id: "/settings/models",
@@ -112,19 +114,19 @@ const SECTION_GROUPS: SectionGroup[] = [
 				id: "/settings/integrations",
 				section: "integrations",
 				label: "Integrations",
-				icon: <HiOutlinePuzzlePiece className="h-4 w-4" />,
+				icon: <Puzzle className="h-4 w-4" />,
 			},
 			{
 				id: "/settings/devices",
 				section: "devices",
 				label: "Devices",
-				icon: <HiOutlineDevicePhoneMobile className="h-4 w-4" />,
+				icon: <Smartphone className="h-4 w-4" />,
 			},
 			{
 				id: "/settings/remote-hosts",
 				section: "remote-hosts",
 				label: "Remote Hosts",
-				icon: <HiOutlineServerStack className="h-4 w-4" />,
+				icon: <Server className="h-4 w-4" />,
 			},
 		],
 	},
@@ -135,7 +137,7 @@ const SECTION_GROUPS: SectionGroup[] = [
 				id: "/settings/permissions",
 				section: "permissions",
 				label: "Permissions",
-				icon: <HiOutlineShieldCheck className="h-4 w-4" />,
+				icon: <Shield className="h-4 w-4" />,
 				macOnly: true,
 			},
 		],

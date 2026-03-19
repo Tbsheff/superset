@@ -8,12 +8,7 @@ import {
 } from "@superset/ui/dropdown-menu";
 import { toast } from "@superset/ui/sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
-import {
-	VscChevronDown,
-	VscGitMerge,
-	VscGitPullRequest,
-	VscLoading,
-} from "react-icons/vsc";
+import { ChevronDown, GitMerge, GitPullRequest, Loader2 } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { PRIcon } from "renderer/screens/main/components/PRIcon";
 import { useCreateOrOpenPR } from "renderer/screens/main/hooks";
@@ -58,7 +53,7 @@ export function PRButton({
 
 	if (isLoading) {
 		return (
-			<VscLoading className="w-4 h-4 animate-spin text-muted-foreground" />
+			<Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
 		);
 	}
 
@@ -68,7 +63,7 @@ export function PRButton({
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<span className="flex items-center ml-auto text-muted-foreground/40">
-							<VscGitPullRequest className="w-4 h-4" />
+							<GitPullRequest className="w-4 h-4" />
 						</span>
 					</TooltipTrigger>
 					<TooltipContent side="top">
@@ -88,9 +83,9 @@ export function PRButton({
 						disabled={isCreatePending}
 					>
 						{isCreatePending ? (
-							<VscLoading className="w-4 h-4 animate-spin text-muted-foreground" />
+							<Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
 						) : (
-							<VscGitPullRequest className="w-4 h-4 text-muted-foreground" />
+							<GitPullRequest className="w-4 h-4 text-muted-foreground" />
 						)}
 					</button>
 				</TooltipTrigger>
@@ -138,7 +133,7 @@ export function PRButton({
 						className="flex items-center px-1 py-0.5 hover:bg-accent transition-colors"
 						disabled={mergePRMutation.isPending}
 					>
-						<VscChevronDown className="size-3 text-muted-foreground" />
+						<ChevronDown className="size-3 text-muted-foreground" />
 					</button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-44">
@@ -150,7 +145,7 @@ export function PRButton({
 						className="text-xs"
 						disabled={mergePRMutation.isPending}
 					>
-						<VscGitMerge className="size-3.5" />
+						<GitMerge className="size-3.5" />
 						Squash and merge
 					</DropdownMenuItem>
 					<DropdownMenuItem
@@ -158,7 +153,7 @@ export function PRButton({
 						className="text-xs"
 						disabled={mergePRMutation.isPending}
 					>
-						<VscGitMerge className="size-3.5" />
+						<GitMerge className="size-3.5" />
 						Create merge commit
 					</DropdownMenuItem>
 					<DropdownMenuItem
@@ -166,7 +161,7 @@ export function PRButton({
 						className="text-xs"
 						disabled={mergePRMutation.isPending}
 					>
-						<VscGitMerge className="size-3.5" />
+						<GitMerge className="size-3.5" />
 						Rebase and merge
 					</DropdownMenuItem>
 				</DropdownMenuContent>

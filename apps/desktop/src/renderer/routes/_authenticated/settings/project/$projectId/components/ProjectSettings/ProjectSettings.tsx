@@ -25,12 +25,7 @@ import { Switch } from "@superset/ui/switch";
 import { cn } from "@superset/ui/utils";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-	HiOutlineCog6Tooth,
-	HiOutlineFolderOpen,
-	HiOutlinePaintBrush,
-} from "react-icons/hi2";
-import { ImagePlus, Trash2 } from "lucide-react";
+import { FolderOpen, ImagePlus, Paintbrush, Settings, Trash2 } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import {
 	useImportAllWorktrees,
@@ -298,7 +293,7 @@ export function ProjectSettings({
 
 			<div className="space-y-4">
 				<SettingsSection
-					icon={<HiOutlineCog6Tooth className="h-4 w-4" />}
+					icon={<Settings className="h-4 w-4" />}
 					title="Branch Prefix"
 					description="Override the default prefix for new workspaces."
 				>
@@ -351,7 +346,7 @@ export function ProjectSettings({
 				</SettingsSection>
 
 				<SettingsSection
-					icon={<HiOutlineCog6Tooth className="h-4 w-4" />}
+					icon={<Settings className="h-4 w-4" />}
 					title="Workspace Base Branch"
 					description="Set the default base branch for new workspaces in this repository."
 				>
@@ -401,7 +396,7 @@ export function ProjectSettings({
 				</SettingsSection>
 
 				<SettingsSection
-					icon={<HiOutlineFolderOpen className="h-4 w-4" />}
+					icon={<FolderOpen className="h-4 w-4" />}
 					title="Worktrees"
 					description="Manage worktree location and import existing worktrees."
 				>
@@ -529,7 +524,7 @@ export function ProjectSettings({
 				</div>
 
 				<SettingsSection
-					icon={<HiOutlinePaintBrush className="h-4 w-4" />}
+					icon={<Paintbrush className="h-4 w-4" />}
 					title="Appearance"
 					description="Customize this project's sidebar look."
 				>

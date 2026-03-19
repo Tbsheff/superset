@@ -1,11 +1,5 @@
 import type { ReactNode } from "react";
-import {
-	VscCopy,
-	VscDiffAdded,
-	VscDiffModified,
-	VscDiffRemoved,
-	VscDiffRenamed,
-} from "react-icons/vsc";
+import { Copy, FileEdit, FileMinus, FilePlus, FileOutput } from "lucide-react";
 import type { FileStatus } from "shared/changes-types";
 
 export function getStatusColor(status: FileStatus): string {
@@ -31,15 +25,15 @@ export function getStatusIndicator(status: FileStatus): ReactNode {
 	switch (status) {
 		case "added":
 		case "untracked":
-			return <VscDiffAdded className={iconClass} />;
+			return <FilePlus className={iconClass} />;
 		case "modified":
-			return <VscDiffModified className={iconClass} />;
+			return <FileEdit className={iconClass} />;
 		case "deleted":
-			return <VscDiffRemoved className={iconClass} />;
+			return <FileMinus className={iconClass} />;
 		case "renamed":
-			return <VscDiffRenamed className={iconClass} />;
+			return <FileOutput className={iconClass} />;
 		case "copied":
-			return <VscCopy className={iconClass} />;
+			return <Copy className={iconClass} />;
 		default:
 			return null;
 	}

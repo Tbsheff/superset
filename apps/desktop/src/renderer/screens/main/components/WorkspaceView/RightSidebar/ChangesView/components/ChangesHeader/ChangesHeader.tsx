@@ -17,13 +17,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@superset/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-	VscCheck,
-	VscGitStash,
-	VscGitStashApply,
-	VscRefresh,
-	VscSourceControl,
-} from "react-icons/vsc";
+import { Check, GitBranch, RefreshCw } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import type { ChangesViewMode } from "../../types";
 import { ViewModeToggle } from "../ViewModeToggle";
@@ -107,7 +101,7 @@ function BaseBranchSelector({ worktreePath }: { worktreePath: string }) {
 							disabled={isLoading}
 							title="Change base branch"
 						>
-							<VscSourceControl className="size-3.5" />
+							<GitBranch className="size-3.5" />
 						</Button>
 					</PopoverTrigger>
 				</TooltipTrigger>
@@ -140,7 +134,7 @@ function BaseBranchSelector({ worktreePath }: { worktreePath: string }) {
 									)}
 								</span>
 								{branch === effectiveBaseBranch && (
-									<VscCheck className="size-3.5 shrink-0 text-primary" />
+									<Check className="size-3.5 shrink-0 text-primary" />
 								)}
 							</CommandItem>
 						))}
@@ -174,7 +168,7 @@ function StashDropdown({
 							disabled={isPending}
 							title="Stash changes"
 						>
-							<VscGitStash className="size-4" />
+							<GitBranch className="size-4" />
 						</Button>
 					</DropdownMenuTrigger>
 				</TooltipTrigger>
@@ -184,19 +178,19 @@ function StashDropdown({
 			</Tooltip>
 			<DropdownMenuContent align="start" className="w-52">
 				<DropdownMenuItem onClick={onStash} className="text-[13px]">
-					<VscGitStash className="size-4" />
+					<GitBranch className="size-4" />
 					Stash Changes
 				</DropdownMenuItem>
 				<DropdownMenuItem
 					onClick={onStashIncludeUntracked}
 					className="text-[13px]"
 				>
-					<VscGitStash className="size-4" />
+					<GitBranch className="size-4" />
 					Stash (Include Untracked)
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem onClick={onStashPop} className="text-[13px]">
-					<VscGitStashApply className="size-4" />
+					<GitBranch className="size-4" />
 					Pop Stash
 				</DropdownMenuItem>
 			</DropdownMenuContent>
@@ -232,7 +226,7 @@ function RefreshButton({ onRefresh }: { onRefresh: () => void }) {
 					className="size-6 p-0"
 					title="Refresh changes"
 				>
-					<VscRefresh
+					<RefreshCw
 						className={`size-3.5 ${isSpinning ? "animate-spin" : ""}`}
 					/>
 				</Button>

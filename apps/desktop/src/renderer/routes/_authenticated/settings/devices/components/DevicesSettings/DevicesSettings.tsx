@@ -1,17 +1,13 @@
 import { eq } from "@tanstack/db";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useMemo } from "react";
-import {
-	HiOutlineComputerDesktop,
-	HiOutlineDevicePhoneMobile,
-	HiOutlineGlobeAlt,
-} from "react-icons/hi2";
+import { type LucideIcon, Globe, Monitor, Smartphone } from "lucide-react";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 
-const DEVICE_ICONS: Record<string, typeof HiOutlineComputerDesktop> = {
-	desktop: HiOutlineComputerDesktop,
-	mobile: HiOutlineDevicePhoneMobile,
-	web: HiOutlineGlobeAlt,
+const DEVICE_ICONS: Record<string, LucideIcon> = {
+	desktop: Monitor,
+	mobile: Smartphone,
+	web: Globe,
 };
 
 const ONLINE_THRESHOLD_MS = 30_000;
@@ -67,7 +63,7 @@ export function DevicesSettings() {
 			<div className="space-y-3">
 				{devices?.map((device) => {
 					const Icon =
-						DEVICE_ICONS[device.deviceType] || HiOutlineComputerDesktop;
+						DEVICE_ICONS[device.deviceType] || Monitor;
 					return (
 						<div
 							key={device.id}

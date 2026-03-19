@@ -10,8 +10,7 @@ import {
 } from "@superset/ui/context-menu";
 import { useLiveQuery } from "@tanstack/react-db";
 import { type ReactNode, useMemo } from "react";
-import { CircleUser, Trash2 } from "lucide-react";
-import { HiOutlineDocumentDuplicate } from "react-icons/hi2";
+import { CircleUser, Copy, Trash2 } from "lucide-react";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 import type { TaskWithStatus } from "../../../../hooks/useTasksTable";
 import { compareStatusesForDropdown } from "../../../../utils/sorting";
@@ -156,7 +155,7 @@ export function TaskContextMenu({
 				{/* Copy submenu */}
 				<ContextMenuSub>
 					<ContextMenuSubTrigger>
-						<HiOutlineDocumentDuplicate className="mr-2 size-4" />
+						<Copy className="mr-2 size-4" />
 						<span>Copy</span>
 					</ContextMenuSubTrigger>
 					<ContextMenuSubContent className="w-48">

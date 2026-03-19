@@ -2,12 +2,7 @@ import { ToggleGroup, ToggleGroupItem } from "@superset/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { cn } from "@superset/ui/utils";
 import { useEffect, useRef, useState } from "react";
-import {
-	TbFold,
-	TbLayoutSidebarRightFilled,
-	TbListDetails,
-	TbPinFilled,
-} from "react-icons/tb";
+import { Columns2, FoldVertical, Pin, Rows2 } from "lucide-react";
 import type { DiffViewMode } from "shared/changes-types";
 import type { FileViewerMode } from "shared/tabs-types";
 import { PaneToolbarActions } from "../../../components";
@@ -139,9 +134,9 @@ export function FileViewerToolbar({
 									className="rounded p-0.5 text-muted-foreground/50 transition-colors hover:text-muted-foreground"
 								>
 									{diffViewMode === "side-by-side" ? (
-										<TbLayoutSidebarRightFilled className="size-3.5" />
+										<Columns2 className="size-3.5" />
 									) : (
-										<TbListDetails className="size-3.5" />
+										<Rows2 className="size-3.5" />
 									)}
 								</button>
 							</TooltipTrigger>
@@ -163,7 +158,7 @@ export function FileViewerToolbar({
 											: "text-muted-foreground/50",
 									)}
 								>
-									<TbFold className="size-3.5" />
+									<FoldVertical className="size-3.5" />
 								</button>
 							</TooltipTrigger>
 							<TooltipContent side="bottom" showArrow={false}>
@@ -187,7 +182,7 @@ export function FileViewerToolbar({
 										onClick={onPin}
 										className="rounded p-0.5 text-muted-foreground/50 transition-colors hover:text-muted-foreground"
 									>
-										<TbPinFilled className="size-3.5" />
+										<Pin className="size-3.5" />
 									</button>
 								</TooltipTrigger>
 								<TooltipContent side="bottom" showArrow={false}>

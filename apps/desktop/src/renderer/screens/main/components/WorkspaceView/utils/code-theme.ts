@@ -68,8 +68,16 @@ export function getDiffViewerStyle(
 		"--diffs-selection-color-override": MIDNIGHT_DIFF_COLORS.selection,
 		"--diffs-fg-number-addition-override": "rgba(63, 185, 80, 0.9)",
 		"--diffs-fg-number-deletion-override": "rgba(212, 97, 74, 0.9)",
-		"--diffs-bg-addition-emphasis-override": "rgba(0, 162, 64, 0.30)",
-		"--diffs-bg-deletion-emphasis-override": "rgba(212, 97, 74, 0.35)",
+		// Override the row and gutter backgrounds directly — the library's default
+		// formula (color-mix bg 80% + color 20%) produces an imperceptibly faint wash.
+		"--diffs-bg-addition-override": "rgba(0, 162, 64, 0.18)",
+		"--diffs-bg-addition-number-override": "rgba(0, 162, 64, 0.12)",
+		"--diffs-bg-addition-hover-override": "rgba(0, 162, 64, 0.25)",
+		"--diffs-bg-deletion-override": "rgba(212, 97, 74, 0.18)",
+		"--diffs-bg-deletion-number-override": "rgba(212, 97, 74, 0.12)",
+		"--diffs-bg-deletion-hover-override": "rgba(212, 97, 74, 0.25)",
+		"--diffs-bg-addition-emphasis-override": "rgba(0, 162, 64, 0.40)",
+		"--diffs-bg-deletion-emphasis-override": "rgba(212, 97, 74, 0.45)",
 		"--diffs-addition-bar-color": MIDNIGHT_DIFF_COLORS.additionBar,
 		"--diffs-deletion-bar-color": MIDNIGHT_DIFF_COLORS.deletionBar,
 		backgroundColor: MIDNIGHT_DIFF_COLORS.background,

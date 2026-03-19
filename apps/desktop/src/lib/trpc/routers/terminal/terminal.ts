@@ -265,35 +265,36 @@ export const createTerminalRouter = () => {
 									if (info.status === "running") {
 										containerHealthCache.set(state.containerId, Date.now());
 									} else if (info.status === "not_found" || info.status === "exited") {
-									const { getProjectPaths, slugifyName } = await import(
-										"main/lib/devcontainer/types"
-									);
-									const slug = slugifyName(project.name ?? "");
-									const paths = getProjectPaths(slug);
-									// Ensure devcontainer.json exists (may have been cleaned up)
-									const { detectExistingConfig, generateDefaultConfig } = await import("main/lib/devcontainer/default-config");
-									const effectiveRepoDir = project.mainRepoPath ?? paths.repoDir;
-									const existingConfig = await detectExistingConfig(client, effectiveRepoDir);
-									if (!existingConfig) {
-										await generateDefaultConfig(client, { projectName: project.name ?? "project", repoDir: effectiveRepoDir });
-									}
-									const result = await devcontainerUp(
-										client,
-										{ ...paths, repoDir: effectiveRepoDir },
-										project.id,
-										{ hasExistingConfig: existingConfig !== null },
-									);
-									localDb
-										.update(projects)
-										.set({
-											sandboxState: JSON.stringify({
-												status: "ready",
-												containerId: result.containerId,
-												readyAt: Date.now(),
-											}),
-										})
-										.where(eq(projects.id, project.id))
-										.run();
+										const { getProjectPaths, slugifyName } = await import(
+											"main/lib/devcontainer/types"
+										);
+										const slug = slugifyName(project.name ?? "");
+										const paths = getProjectPaths(slug);
+										// Ensure devcontainer.json exists (may have been cleaned up)
+										const { detectExistingConfig, generateDefaultConfig } = await import("main/lib/devcontainer/default-config");
+										const effectiveRepoDir = project.mainRepoPath ?? paths.repoDir;
+										const existingConfig = await detectExistingConfig(client, effectiveRepoDir);
+										if (!existingConfig) {
+											await generateDefaultConfig(client, { projectName: project.name ?? "project", repoDir: effectiveRepoDir });
+										}
+										const result = await devcontainerUp(
+											client,
+											{ ...paths, repoDir: effectiveRepoDir },
+											project.id,
+											{ hasExistingConfig: existingConfig !== null },
+										);
+										localDb
+											.update(projects)
+											.set({
+												sandboxState: JSON.stringify({
+													status: "ready",
+													containerId: result.containerId,
+													readyAt: Date.now(),
+												}),
+											})
+											.where(eq(projects.id, project.id))
+											.run();
+										containerHealthCache.set(result.containerId, Date.now());
 									} // end if not_found/exited
 								} // end TTL cache else
 							}

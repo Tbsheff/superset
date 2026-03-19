@@ -104,7 +104,6 @@ export async function devcontainerUp(
 	}
 
 	const cmd = args.join(" ");
-	console.log("[container-manager] devcontainerUp cmd:", cmd);
 	const result = await sshExec(client, cmd, { timeout: 600_000 });
 
 	if (result.code !== 0) {

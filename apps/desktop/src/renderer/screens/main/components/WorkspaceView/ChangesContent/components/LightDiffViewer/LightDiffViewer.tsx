@@ -90,23 +90,9 @@ export function LightDiffViewer({
 					color: #e6edf3 !important;
 				}
 
-				/* Word-level diff highlights — more saturated inline emphasis */
+				/* Word-level diff highlights — border-radius for inline emphasis */
 				[data-diff-span] {
 					border-radius: 2px;
-				}
-				[data-line-type='change-addition'] [data-diff-span] {
-					background-color: rgba(46, 160, 67, 0.45) !important;
-				}
-				[data-line-type='change-deletion'] [data-diff-span] {
-					background-color: rgba(248, 81, 73, 0.45) !important;
-				}
-
-				/* Line number color tints on changed lines */
-				[data-line-type='change-addition'] [data-column-number] {
-					color: rgba(63, 185, 80, 0.85) !important;
-				}
-				[data-line-type='change-deletion'] [data-column-number] {
-					color: rgba(248, 81, 73, 0.85) !important;
 				}
 
 				/* Split mode: replace gap with a 1px divider line */

@@ -108,7 +108,7 @@ export function LightDiffViewer({
 
 	const diffOptions = useMemo(
 		() => ({
-			diffStyle: viewMode === "side-by-side" ? "split" : "unified",
+			diffStyle: (viewMode === "side-by-side" ? "split" : "unified") as "split" | "unified",
 			expandUnchanged: !hideUnchangedRegions,
 			theme: shikiTheme,
 			themeType: "dark" as const,

@@ -46,14 +46,19 @@ export function getCodeSyntaxHighlighting(): Extension {
 	return cachedSyntaxHighlighting;
 }
 
+const diffViewerStyleCache = new Map<string, CSSProperties>();
+
 export function getDiffViewerStyle(
 	fontSettings: CodeThemeFontSettings,
 ): CSSProperties {
 	const fontFamily = fontSettings.fontFamily ?? DEFAULT_CODE_EDITOR_FONT_FAMILY;
 	const fontSize = fontSettings.fontSize ?? DEFAULT_CODE_EDITOR_FONT_SIZE;
 	const lineHeight = Math.round(fontSize * 1.5);
+	const cacheKey = `${fontFamily}:${fontSize}`;
+	const cached = diffViewerStyleCache.get(cacheKey);
+	if (cached) return cached;
 
-	return {
+	const style = {
 		"--diffs-font-family": fontFamily,
 		"--diffs-font-size": `${fontSize}px`,
 		"--diffs-line-height": `${lineHeight}px`,
@@ -83,4 +88,6 @@ export function getDiffViewerStyle(
 		backgroundColor: MIDNIGHT_DIFF_COLORS.background,
 		color: MIDNIGHT_CODE_COLORS.foreground,
 	} as CSSProperties;
+	diffViewerStyleCache.set(cacheKey, style);
+	return style;
 }

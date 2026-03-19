@@ -1,6 +1,7 @@
 import { MultiFileDiff } from "@pierre/diffs/react";
 import { cn } from "@superset/ui/utils";
 import type { CSSProperties } from "react";
+import { useMemo } from "react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import {
 	getDiffsTheme,
@@ -45,26 +46,8 @@ export function LightDiffViewer({
 			: undefined,
 	});
 
-	return (
-		<MultiFileDiff
-			oldFile={{ name: filePath, contents: contents.original }}
-			newFile={{ name: filePath, contents: contents.modified }}
-			className={cn(className)}
-			style={{
-				...diffStyle,
-				...style,
-			}}
-			options={{
-				diffStyle: viewMode === "side-by-side" ? "split" : "unified",
-				expandUnchanged: !hideUnchangedRegions,
-				theme: shikiTheme,
-				themeType: "dark",
-				overflow: "wrap",
-				disableFileHeader: true,
-				diffIndicators: "bars",
-				hunkSeparators: "line-info",
-				lineDiffType: "word",
-				unsafeCSS: `
+	const unsafeCSS = useMemo(
+		() => `
 				* { user-select: text; -webkit-user-select: text; }
 
 				/* Separator polish */
@@ -120,7 +103,35 @@ export function LightDiffViewer({
 					color: #d4614a !important;
 				}
 			`,
+		[],
+	);
+
+	const diffOptions = useMemo(
+		() => ({
+			diffStyle: viewMode === "side-by-side" ? "split" : "unified",
+			expandUnchanged: !hideUnchangedRegions,
+			theme: shikiTheme,
+			themeType: "dark" as const,
+			overflow: "wrap" as const,
+			disableFileHeader: true,
+			diffIndicators: "bars" as const,
+			hunkSeparators: "line-info" as const,
+			lineDiffType: "word" as const,
+			unsafeCSS,
+		}),
+		[viewMode, hideUnchangedRegions, shikiTheme, unsafeCSS],
+	);
+
+	return (
+		<MultiFileDiff
+			oldFile={{ name: filePath, contents: contents.original }}
+			newFile={{ name: filePath, contents: contents.modified }}
+			className={cn(className)}
+			style={{
+				...diffStyle,
+				...style,
 			}}
+			options={diffOptions}
 		/>
 	);
 }

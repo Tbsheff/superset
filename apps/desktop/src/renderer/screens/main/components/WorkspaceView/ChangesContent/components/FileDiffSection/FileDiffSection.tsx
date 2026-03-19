@@ -246,6 +246,7 @@ export function FileDiffSection({
 			},
 			{
 				enabled: shouldLoadDiff,
+				gcTime: 30_000,
 			},
 		);
 	const hasRenderedDiff = canShowDiffBody && !!diffData;

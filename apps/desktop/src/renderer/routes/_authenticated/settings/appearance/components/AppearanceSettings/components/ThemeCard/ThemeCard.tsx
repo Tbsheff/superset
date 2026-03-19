@@ -41,23 +41,23 @@ export function ThemeCard({ theme, isSelected, onSelect }: ThemeCardProps) {
 				<div className="space-y-1">
 					<div className="flex items-center gap-1">
 						<span
-							className="text-[11px] font-mono"
+							className="text-xs font-mono"
 							style={{ color: terminal.green }}
 						>
 							$
 						</span>
-						<span className="text-[11px] font-mono" style={{ color: fgColor }}>
+						<span className="text-xs font-mono" style={{ color: fgColor }}>
 							npm run dev
 						</span>
 					</div>
 					<div
-						className="text-[11px] font-mono"
+						className="text-xs font-mono"
 						style={{ color: terminal.cyan }}
 					>
 						Starting development server...
 					</div>
 					<div
-						className="text-[11px] font-mono"
+						className="text-xs font-mono"
 						style={{ color: terminal.yellow }}
 					>
 						Ready on http://localhost:3000

@@ -75,7 +75,7 @@ export function WorkspaceHoverCardContent({
 				)}
 				{branchName && (
 					<div className="space-y-0.5">
-						<span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+						<span className="text-xs uppercase tracking-wide text-muted-foreground">
 							Branch
 						</span>
 						{repoUrl && branchExistsOnRemote ? (
@@ -174,7 +174,7 @@ export function WorkspaceHoverCardContent({
 							{hasOpenPRShortcut && (
 								<KbdGroup className="ml-auto">
 									{openPRDisplay.map((key) => (
-										<Kbd key={key} className="h-4 min-w-4 text-[10px]">
+										<Kbd key={key} className="h-4 min-w-4 text-xs">
 											{key}
 										</Kbd>
 									))}

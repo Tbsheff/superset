@@ -107,7 +107,7 @@ export function MergedPortBadge({ port }: MergedPortBadgeProps) {
 						</div>
 					)}
 					{canJumpToTerminal && (
-						<div className="text-muted-foreground/70 text-[10px]">
+						<div className="text-muted-foreground/70 text-xs">
 							Click to open workspace
 						</div>
 					)}

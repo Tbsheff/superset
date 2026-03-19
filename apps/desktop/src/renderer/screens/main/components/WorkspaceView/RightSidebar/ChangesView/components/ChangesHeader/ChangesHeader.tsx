@@ -267,7 +267,7 @@ function ReviewTag({
 
 	return (
 		<span
-			className={`ml-auto text-[10px] font-medium px-1.5 py-0.5 rounded-md shrink-0 truncate max-w-[140px] ${reviewTagStyles[status]}`}
+			className={`ml-auto text-xs font-medium px-1.5 py-0.5 rounded-md shrink-0 truncate max-w-[140px] ${reviewTagStyles[status]}`}
 			title={label}
 		>
 			{label}

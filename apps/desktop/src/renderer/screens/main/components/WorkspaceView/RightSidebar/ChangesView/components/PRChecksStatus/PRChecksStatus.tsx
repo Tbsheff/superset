@@ -76,7 +76,7 @@ export function PRChecksStatus({ pr }: PRChecksStatusProps) {
 			<button
 				type="button"
 				onClick={() => setChecksExpanded(!checksExpanded)}
-				className="flex items-center gap-1.5 text-[11px] text-foreground/75 hover:text-foreground transition-colors"
+				className="flex items-center gap-1.5 text-xs text-foreground/75 hover:text-foreground transition-colors"
 			>
 				{checksExpanded ? (
 					<LuChevronDown className="size-3 shrink-0" />
@@ -92,7 +92,7 @@ export function PRChecksStatus({ pr }: PRChecksStatusProps) {
 			</button>
 
 			{checksExpanded && (
-				<div className="mt-1 ml-5 space-y-px text-[11px]">
+				<div className="mt-1 ml-5 space-y-px text-xs">
 					{relevantChecks.map((check) => (
 						<CheckRow key={check.name} check={check} />
 					))}

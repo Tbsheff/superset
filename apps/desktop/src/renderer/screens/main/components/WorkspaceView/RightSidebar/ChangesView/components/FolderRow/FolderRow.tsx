@@ -96,7 +96,7 @@ function FolderRowHeader({
 					{name}
 				</span>
 				{fileCount !== undefined && (
-					<span className="text-[10px] text-muted-foreground shrink-0 tabular-nums">
+					<span className="text-xs text-muted-foreground shrink-0 tabular-nums">
 						{fileCount}
 					</span>
 				)}
@@ -271,7 +271,7 @@ export function FolderRow({
 				<CollapsibleContent
 					className={cn(
 						"min-w-0",
-						isGrouped && "ml-1.5 border-l border-border pl-0.5",
+						isGrouped && "ml-1.5 border-l border-border/40 pl-0.5",
 					)}
 				>
 					{children}

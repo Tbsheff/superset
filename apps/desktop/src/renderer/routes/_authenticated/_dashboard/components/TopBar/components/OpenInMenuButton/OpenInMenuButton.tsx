@@ -135,7 +135,7 @@ export const OpenInMenuButton = memo(function OpenInMenuButton({
 								? `Open in ${currentApp.displayLabel ?? currentApp.label}`
 								: "Select an editor from the dropdown"}
 							{currentApp && showOpenInShortcut && (
-								<kbd className="px-1 py-0.5 text-[10px] font-mono bg-foreground/10 text-foreground/70 rounded">
+								<kbd className="px-1 py-0.5 text-xs font-mono bg-foreground/10 text-foreground/70 rounded">
 									{openInShortcut}
 								</kbd>
 							)}

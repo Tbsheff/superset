@@ -652,7 +652,7 @@ export function ChangesView({
 				}
 			/>
 
-			<div className="border-b border-border">
+			<div className="border-b border-border/40">
 				{githubStatus?.pr && <PRChecksStatus pr={githubStatus.pr} />}
 				<CommitInput
 					worktreePath={worktreePath}

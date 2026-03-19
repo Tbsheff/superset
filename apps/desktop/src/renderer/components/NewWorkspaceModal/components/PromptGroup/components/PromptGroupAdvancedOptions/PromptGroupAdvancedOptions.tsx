@@ -140,7 +140,7 @@ export function PromptGroupAdvancedOptions({
 											{effectiveBaseBranch || "Select branch..."}
 										</span>
 										{effectiveBaseBranch === defaultBranch && (
-											<span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+											<span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
 												default
 											</span>
 										)}
@@ -172,7 +172,7 @@ export function PromptGroupAdvancedOptions({
 													<GoGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
 													<span className="truncate">{branch.name}</span>
 													{branch.name === defaultBranch && (
-														<span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+														<span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
 															default
 														</span>
 													)}
@@ -278,7 +278,7 @@ export function PromptGroupAdvancedOptions({
 							onChange={(e) => onRemoteRepoPathChange(e.target.value)}
 							className="h-8 text-xs"
 						/>
-						<p className="text-[10px] text-muted-foreground">
+						<p className="text-xs text-muted-foreground">
 							Path to an existing clone on the remote machine. If empty, the
 							repo will be cloned automatically.
 						</p>

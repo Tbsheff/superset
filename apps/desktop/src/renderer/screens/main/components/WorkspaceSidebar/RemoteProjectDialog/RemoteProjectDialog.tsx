@@ -157,14 +157,14 @@ export function RemoteProjectDialog({
 									if (remoteRepoPath) setRemoteRepoPath("");
 								}}
 							/>
-							<p className="text-[10px] text-muted-foreground">
+							<p className="text-xs text-muted-foreground">
 								Clones this URL onto the remote host.
 							</p>
 						</div>
 
 						<div className="flex items-center gap-3">
 							<Separator className="flex-1" />
-							<span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+							<span className="text-xs text-muted-foreground uppercase tracking-wider">
 								or
 							</span>
 							<Separator className="flex-1" />
@@ -183,7 +183,7 @@ export function RemoteProjectDialog({
 									if (repoUrl) setRepoUrl("");
 								}}
 							/>
-							<p className="text-[10px] text-muted-foreground">
+							<p className="text-xs text-muted-foreground">
 								Path to an existing clone on the remote host.
 							</p>
 						</div>

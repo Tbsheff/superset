@@ -53,7 +53,7 @@ function LevelIndicators({ level }: { level: number }) {
 		<div className="flex self-stretch shrink-0">
 			{Array.from({ length: level }).map((_, i) => (
 				// biome-ignore lint/suspicious/noArrayIndexKey: static visual dividers that never reorder
-				<div key={i} className="w-3 self-stretch border-r border-border" />
+				<div key={i} className="w-3 self-stretch border-r border-border/40" />
 			))}
 		</div>
 	);

@@ -114,7 +114,7 @@ export function WorkspaceResourceSection({
 						<div className="flex items-center gap-1.5 min-w-0 mr-2">
 							<span
 								className={cn(
-									"text-[11px] font-semibold uppercase tracking-wide truncate min-w-0",
+									"text-xs font-semibold uppercase tracking-wide truncate min-w-0",
 									projectClasses.labelClass || "text-muted-foreground",
 								)}
 							>
@@ -238,7 +238,7 @@ export function WorkspaceResourceSection({
 												>
 													<span
 														className={cn(
-															"text-[11px] text-muted-foreground truncate min-w-0 mr-2",
+															"text-xs text-muted-foreground truncate min-w-0 mr-2",
 															sessionClasses.labelClass,
 														)}
 													>
@@ -247,7 +247,7 @@ export function WorkspaceResourceSection({
 													<div
 														className={cn(
 															METRIC_COLS,
-															"text-[11px]",
+															"text-xs",
 															sessionClasses.metricClass,
 														)}
 													>

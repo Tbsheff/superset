@@ -39,20 +39,20 @@ export function SystemThemeCard({
 					<div className="space-y-1">
 						<div className="flex items-center gap-1">
 							<span
-								className="text-[11px] font-mono"
+								className="text-xs font-mono"
 								style={{ color: darkTerminal.green }}
 							>
 								$
 							</span>
 							<span
-								className="text-[11px] font-mono"
+								className="text-xs font-mono"
 								style={{ color: darkTerminal.foreground }}
 							>
 								dev
 							</span>
 						</div>
 						<div
-							className="text-[11px] font-mono"
+							className="text-xs font-mono"
 							style={{ color: darkTerminal.cyan }}
 						>
 							Starting...
@@ -79,20 +79,20 @@ export function SystemThemeCard({
 					<div className="space-y-1">
 						<div className="flex items-center gap-1">
 							<span
-								className="text-[11px] font-mono"
+								className="text-xs font-mono"
 								style={{ color: lightTerminal.green }}
 							>
 								$
 							</span>
 							<span
-								className="text-[11px] font-mono"
+								className="text-xs font-mono"
 								style={{ color: lightTerminal.foreground }}
 							>
 								dev
 							</span>
 						</div>
 						<div
-							className="text-[11px] font-mono"
+							className="text-xs font-mono"
 							style={{ color: lightTerminal.cyan }}
 						>
 							Starting...

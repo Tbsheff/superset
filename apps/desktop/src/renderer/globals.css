@@ -138,7 +138,7 @@
 
 @layer base {
 	* {
-		@apply border-border antialiased;
+		@apply border-border/40 antialiased;
 	}
 
 	button,

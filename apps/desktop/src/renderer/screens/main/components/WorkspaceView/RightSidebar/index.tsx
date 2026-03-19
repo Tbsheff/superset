@@ -160,7 +160,7 @@ export function RightSidebar() {
 
 	return (
 		<aside className="h-full flex flex-col overflow-hidden">
-			<div className="flex items-center bg-background shrink-0 h-10 border-b">
+			<div className="flex items-center bg-background shrink-0 h-10 border-b border-border/40">
 				<div className="flex items-center gap-0.5 px-1 h-full">
 					{showChangesTab && (
 						<TabButton

@@ -45,7 +45,7 @@ export function WorkspaceSidebarHeader({
 
 	if (isCollapsed) {
 		return (
-			<div className="flex flex-col items-center border-b border-border py-2 gap-2">
+			<div className="flex flex-col items-center border-b border-border/40 py-2 gap-2">
 				<Tooltip delayDuration={300}>
 					<TooltipTrigger asChild>
 						<button
@@ -91,7 +91,7 @@ export function WorkspaceSidebarHeader({
 	}
 
 	return (
-		<div className="flex flex-col gap-1.5 border-b border-border px-2 pt-2 pb-2">
+		<div className="flex flex-col gap-1.5 border-b border-border/40 px-2 pt-2 pb-2">
 			<button
 				type="button"
 				onClick={handleWorkspacesClick}

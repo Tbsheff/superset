@@ -91,7 +91,7 @@ export function SecretRow({ secret, onEdit, onDeleted }: SecretRowProps) {
 					{secret.key}
 				</span>
 				{secret.sensitive && (
-					<span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+					<span className="text-xs font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
 						Sensitive
 					</span>
 				)}

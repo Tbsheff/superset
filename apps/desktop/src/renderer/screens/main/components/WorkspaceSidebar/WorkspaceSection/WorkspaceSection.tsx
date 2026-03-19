@@ -217,7 +217,7 @@ export function WorkspaceSection({
 							sectionDrag(sectionDrop(node));
 						}}
 						className={cn(
-							"flex items-center w-full pl-2 pr-2 py-2 text-[11px] font-medium uppercase tracking-wider",
+							"flex items-center w-full pl-2 pr-2 py-2 text-xs font-medium uppercase tracking-wider",
 							"text-muted-foreground hover:bg-muted/50 transition-colors",
 							dropZone.isDropTarget &&
 								!dropZone.isDragOver &&
@@ -234,7 +234,7 @@ export function WorkspaceSection({
 									onChange={setRenameValue}
 									onSubmit={handleSubmitRename}
 									onCancel={handleCancelRename}
-									className="h-5 px-1 py-0 text-[11px] tracking-wider font-medium bg-transparent border-none outline-none flex-1 min-w-0 text-muted-foreground"
+									className="h-5 px-1 py-0 text-xs tracking-wider font-medium bg-transparent border-none outline-none flex-1 min-w-0 text-muted-foreground"
 								/>
 							</div>
 						) : (
@@ -251,7 +251,7 @@ export function WorkspaceSection({
 									)}
 								/>
 								<span className="truncate">{name}</span>
-								<span className="text-[10px] tabular-nums font-normal">
+								<span className="text-xs tabular-nums font-normal">
 									({workspaces.length})
 								</span>
 							</button>

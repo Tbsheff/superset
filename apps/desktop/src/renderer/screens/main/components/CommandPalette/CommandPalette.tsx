@@ -92,7 +92,7 @@ export function CommandPalette({
 						<FileIcon fileName={file.name} className="size-3.5 shrink-0" />
 						<span className="truncate font-medium">{file.name}</span>
 						{scope === "global" && file.workspaceName && (
-							<span className="shrink-0 text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+							<span className="shrink-0 text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
 								{file.workspaceName}
 							</span>
 						)}

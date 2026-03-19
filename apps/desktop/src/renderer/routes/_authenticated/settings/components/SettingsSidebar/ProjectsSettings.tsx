@@ -37,7 +37,7 @@ export function ProjectsSettings({ searchQuery }: ProjectsSettingsProps) {
 
 	return (
 		<div className="mt-4 mb-4">
-			<h2 className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-[0.1em] px-3 mb-1">
+			<h2 className="text-xs font-medium text-muted-foreground/60 uppercase tracking-[0.1em] px-3 mb-1">
 				Projects
 				{searchQuery && hasProjectMatches && (
 					<span className="ml-2 text-xs bg-accent/50 px-1.5 py-0.5 rounded">

@@ -237,7 +237,7 @@ export function CommitInput({
 							{primary.icon}
 							<span>{primary.label}</span>
 							{countBadge && (
-								<span className="text-[10px] opacity-70">{countBadge}</span>
+								<span className="text-xs opacity-70">{countBadge}</span>
 							)}
 						</Button>
 					</TooltipTrigger>
@@ -294,7 +294,7 @@ export function CommitInput({
 								{hasUpstream || hasExistingPR ? "Push" : "Publish Branch"}
 							</span>
 							{pushCount > 0 && (
-								<span className="text-[10px] text-muted-foreground">
+								<span className="text-xs text-muted-foreground">
 									{pushCount}
 								</span>
 							)}
@@ -307,7 +307,7 @@ export function CommitInput({
 							<VscArrowDown className="size-3.5" />
 							<span className="flex-1">Pull</span>
 							{pullCount > 0 && (
-								<span className="text-[10px] text-muted-foreground">
+								<span className="text-xs text-muted-foreground">
 									{pullCount}
 								</span>
 							)}

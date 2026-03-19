@@ -138,9 +138,6 @@ export class DevcontainerTerminalRuntime
 			const sessionId = nanoid();
 			const cwd = params.cwd ?? workDir;
 
-			// Create FIFO for env var injection
-			const fifoPath = await createEnvFifo(this.client, sessionId, envVars);
-
 			let scriptPath: string | null = null;
 			let dockerExecCmd: string;
 
@@ -149,33 +146,39 @@ export class DevcontainerTerminalRuntime
 				scriptPath = `/tmp/superset-agent-${sessionId}.sh`;
 				const scriptContent = `#!/bin/bash\n${agentCommand}\n`;
 
-				// Write script content into the container by piping stdin through docker exec.
-				// bash -l on the outer SSH command ensures docker is in PATH.
-				await new Promise<void>((resolve, reject) => {
-					this.client.exec(
-						`bash -l -c 'docker exec -i ${containerId} bash -c '"'"'cat > ${scriptPath} && chmod +x ${scriptPath}'"'"''`,
-						(err, stream) => {
-							if (err) {
-								reject(err);
-								return;
-							}
-							stream.on("close", (code: number) => {
-								if (code === 0) resolve();
-								else
-									reject(
-										new Error(
-											`Failed to write agent script into container: exit code ${code}`,
-										),
-									);
-							});
-							stream.end(scriptContent);
-						},
-					);
-				});
+				const writeAgentScript = (): Promise<void> =>
+					new Promise<void>((resolve, reject) => {
+						this.client.exec(
+							`bash -l -c 'docker exec -i ${containerId} bash -c '"'"'cat > ${scriptPath} && chmod +x ${scriptPath}'"'"''`,
+							(err, stream) => {
+								if (err) {
+									reject(err);
+									return;
+								}
+								stream.on("close", (code: number) => {
+									if (code === 0) resolve();
+									else
+										reject(
+											new Error(
+												`Failed to write agent script into container: exit code ${code}`,
+											),
+										);
+								});
+								stream.end(scriptContent);
+							},
+						);
+					});
+
+				// FIFO creation and script write are independent SSH operations — run in parallel
+				const [fifoPath] = await Promise.all([
+					createEnvFifo(this.client, sessionId, envVars),
+					writeAgentScript(),
+				]);
 
 				dockerExecCmd = `docker exec -it --env-file ${fifoPath} -u ${remoteUser} -w ${cwd} ${containerId} bash -l ${scriptPath}`;
 			} else {
-				// Interactive login shell
+				// Interactive login shell — only FIFO needed
+				const fifoPath = await createEnvFifo(this.client, sessionId, envVars);
 				dockerExecCmd = `docker exec -it --env-file ${fifoPath} -u ${remoteUser} -w ${cwd} ${containerId} /bin/bash -l`;
 			}
 

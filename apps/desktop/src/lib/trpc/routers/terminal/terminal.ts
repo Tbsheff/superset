@@ -1,6 +1,7 @@
 import { EventEmitter } from "node:events";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { app } from "electron";
 import type { SandboxState } from "@superset/local-db";
 import { projects, remoteHosts, workspaces, worktrees } from "@superset/local-db";
 import { TRPCError } from "@trpc/server";
@@ -92,6 +93,16 @@ export const createTerminalRouter = () => {
 
 	// Track cleanup functions for per-pane runtime→bridge forwarding
 	const paneForwarders = new Map<string, () => void>();
+
+	// Clean up all forwarders and health cache when the app is about to quit
+	// to prevent event listener leaks when the main window closes.
+	app.once("before-quit", () => {
+		for (const cleanup of paneForwarders.values()) {
+			cleanup();
+		}
+		paneForwarders.clear();
+		containerHealthCache.clear();
+	});
 
 	function getTerminalForWorkspace(workspaceId: string): TerminalRuntime {
 		return registry.getForWorkspaceId(workspaceId).terminal;

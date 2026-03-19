@@ -1,12 +1,12 @@
-import type { Terminal as XTerm } from "@xterm/xterm";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import { useEffect, useState } from "react";
 import { useAppHotkey } from "renderer/stores/hotkeys";
+import type { ResttyAdapter } from "../restty/ResttyAdapter";
 import { scrollToBottom } from "../utils";
 
 export interface UseTerminalHotkeysOptions {
 	isFocused: boolean;
-	xtermRef: MutableRefObject<XTerm | null>;
+	adapterRef: MutableRefObject<ResttyAdapter | null>;
 }
 
 export interface UseTerminalHotkeysReturn {
@@ -16,7 +16,7 @@ export interface UseTerminalHotkeysReturn {
 
 export function useTerminalHotkeys({
 	isFocused,
-	xtermRef,
+	adapterRef,
 }: UseTerminalHotkeysOptions): UseTerminalHotkeysReturn {
 	const [isSearchOpen, setIsSearchOpen] = useState(false);
 
@@ -27,12 +27,12 @@ export function useTerminalHotkeys({
 	}, [isFocused]);
 
 	useEffect(() => {
-		const xterm = xtermRef.current;
-		if (!xterm) return;
+		const adapter = adapterRef.current;
+		if (!adapter) return;
 		if (isFocused) {
-			xterm.focus();
+			adapter.focus();
 		}
-	}, [isFocused, xtermRef]);
+	}, [isFocused, adapterRef]);
 
 	useAppHotkey(
 		"FIND_IN_TERMINAL",
@@ -44,8 +44,8 @@ export function useTerminalHotkeys({
 	useAppHotkey(
 		"SCROLL_TO_BOTTOM",
 		() => {
-			if (xtermRef.current) {
-				scrollToBottom(xtermRef.current);
+			if (adapterRef.current) {
+				scrollToBottom(adapterRef.current);
 			}
 		},
 		{ enabled: isFocused, preventDefault: true },

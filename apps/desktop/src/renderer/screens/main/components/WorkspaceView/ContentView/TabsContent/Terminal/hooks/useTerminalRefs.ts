@@ -1,7 +1,7 @@
-import type { ITheme } from "@xterm/xterm";
 import type { MutableRefObject } from "react";
 import { useRef } from "react";
 import { useTerminalCallbacksStore } from "renderer/stores/tabs/terminal-callbacks";
+import type { GhosttyTheme } from "restty";
 
 type RegisterCallback = (paneId: string, callback: () => void) => void;
 type RegisterGetSelectionCallback = (
@@ -18,7 +18,8 @@ export interface UseTerminalRefsOptions {
 	paneId: string;
 	tabId: string;
 	focusedPaneId: string | undefined;
-	terminalTheme: ITheme | null;
+	terminalTheme: GhosttyTheme | null;
+	paneInitialCommands?: string[];
 	paneInitialCwd?: string;
 	clearPaneInitialData: (paneId: string) => void;
 	workspaceCwd: string | null | undefined;
@@ -30,7 +31,8 @@ export interface UseTerminalRefsOptions {
 export interface UseTerminalRefsReturn {
 	isFocused: boolean;
 	isFocusedRef: MutableRefObject<boolean>;
-	initialThemeRef: MutableRefObject<ITheme | null>;
+	initialThemeRef: MutableRefObject<GhosttyTheme | null>;
+	paneInitialCommandsRef: MutableRefObject<string[] | undefined>;
 	paneInitialCwdRef: MutableRefObject<string | undefined>;
 	clearPaneInitialDataRef: MutableRefObject<(paneId: string) => void>;
 	workspaceCwdRef: MutableRefObject<string | null>;
@@ -54,6 +56,7 @@ export function useTerminalRefs({
 	tabId,
 	focusedPaneId,
 	terminalTheme,
+	paneInitialCommands,
 	paneInitialCwd,
 	clearPaneInitialData,
 	workspaceCwd,
@@ -61,13 +64,16 @@ export function useTerminalRefs({
 	setPaneName,
 	setFocusedPane,
 }: UseTerminalRefsOptions): UseTerminalRefsReturn {
-	const initialThemeRef = useRef(terminalTheme);
+	// biome-ignore lint/suspicious/noExplicitAny: theme migration pending
+	const initialThemeRef = useRef(terminalTheme as any as GhosttyTheme | null);
 	const isFocused = focusedPaneId === paneId;
 	const isFocusedRef = useRef(isFocused);
 	isFocusedRef.current = isFocused;
 
+	const paneInitialCommandsRef = useRef(paneInitialCommands);
 	const paneInitialCwdRef = useRef(paneInitialCwd);
 	const clearPaneInitialDataRef = useRef(clearPaneInitialData);
+	paneInitialCommandsRef.current = paneInitialCommands;
 	paneInitialCwdRef.current = paneInitialCwd;
 	clearPaneInitialDataRef.current = clearPaneInitialData;
 
@@ -114,6 +120,7 @@ export function useTerminalRefs({
 		isFocused,
 		isFocusedRef,
 		initialThemeRef,
+		paneInitialCommandsRef,
 		paneInitialCwdRef,
 		clearPaneInitialDataRef,
 		workspaceCwdRef,

@@ -1,16 +1,10 @@
-import type { FitAddon } from "@xterm/addon-fit";
-import type { SearchAddon } from "@xterm/addon-search";
-import type { Terminal as XTerm } from "@xterm/xterm";
 import { useEffect, useRef, useState } from "react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useTabsStore } from "renderer/stores/tabs/store";
 import { useTerminalTheme } from "renderer/stores/theme";
-import { SessionKilledOverlay } from "./components";
-import {
-	DEFAULT_TERMINAL_FONT_FAMILY,
-	DEFAULT_TERMINAL_FONT_SIZE,
-} from "./config";
-import { getDefaultTerminalBg, type TerminalRendererRef } from "./helpers";
+import { ConnectionErrorOverlay, SessionKilledOverlay } from "./components";
+import { DEFAULT_TERMINAL_FONT_SIZE } from "./config";
+import { getDefaultTerminalBg } from "./helpers";
 import {
 	useFileLinkClick,
 	useTerminalColdRestore,
@@ -23,6 +17,8 @@ import {
 	useTerminalRestore,
 	useTerminalStream,
 } from "./hooks";
+import type { ResttyAdapter } from "./restty/ResttyAdapter";
+import type { SearchShim } from "./restty/SearchShim";
 import { ScrollToBottomButton } from "./ScrollToBottomButton";
 import { TerminalSearch } from "./TerminalSearch";
 import type {
@@ -37,6 +33,7 @@ const stripLeadingEmoji = (text: string) =>
 
 export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 	const pane = useTabsStore((s) => s.panes[paneId]);
+	const paneInitialCommands = pane?.initialCommands;
 	const paneInitialCwd = pane?.initialCwd;
 	const clearPaneInitialData = useTabsStore((s) => s.clearPaneInitialData);
 
@@ -66,10 +63,8 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 		}
 	};
 	const terminalRef = useRef<HTMLDivElement>(null);
-	const xtermRef = useRef<XTerm | null>(null);
-	const fitAddonRef = useRef<FitAddon | null>(null);
-	const searchAddonRef = useRef<SearchAddon | null>(null);
-	const rendererRef = useRef<TerminalRendererRef | null>(null);
+	const adapterRef = useRef<ResttyAdapter | null>(null);
+	const searchShimRef = useRef<SearchShim | null>(null);
 	const isExitedRef = useRef(false);
 	const [exitStatus, setExitStatus] = useState<"killed" | "exited" | null>(
 		null,
@@ -120,26 +115,18 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 		workspaceCwd,
 	});
 
-	// URL click handler - opens in app browser or system browser based on setting
-	const { data: openLinksInApp } =
-		electronTrpc.settings.getOpenLinksInApp.useQuery();
-	const openInBrowserPane = useTabsStore((s) => s.openInBrowserPane);
-	const handleUrlClickRef = useRef<((url: string) => void) | undefined>(
-		undefined,
-	);
-	handleUrlClickRef.current = openLinksInApp
-		? (url: string) => openInBrowserPane(workspaceId, url)
-		: undefined;
-
 	// Refs for stream event handlers (populated after useTerminalStream)
-	// These allow flushPendingEvents to call the handlers via refs
 	const handleTerminalExitRef = useRef<
-		(exitCode: number, xterm: XTerm, reason?: TerminalExitReason) => void
+		(
+			exitCode: number,
+			adapter: ResttyAdapter,
+			reason?: TerminalExitReason,
+		) => void
 	>(() => {});
 	const handleStreamErrorRef = useRef<
 		(
 			event: Extract<TerminalStreamEvent, { type: "error" }>,
-			xterm: XTerm,
+			adapter: ResttyAdapter,
 		) => void
 	>(() => {});
 
@@ -147,6 +134,7 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 		isFocused,
 		isFocusedRef,
 		initialThemeRef,
+		paneInitialCommandsRef,
 		paneInitialCwdRef,
 		clearPaneInitialDataRef,
 		workspaceCwdRef,
@@ -165,7 +153,9 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 		paneId,
 		tabId,
 		focusedPaneId,
-		terminalTheme,
+		// biome-ignore lint/suspicious/noExplicitAny: theme migration pending
+		terminalTheme: terminalTheme as any,
+		paneInitialCommands,
 		paneInitialCwd,
 		clearPaneInitialData,
 		workspaceCwd,
@@ -183,17 +173,17 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 		flushPendingEvents,
 	} = useTerminalRestore({
 		paneId,
-		xtermRef,
-		fitAddonRef,
+		adapterRef,
 		pendingEventsRef,
 		isAlternateScreenRef,
 		isBracketedPasteRef,
 		modeScanBufferRef,
 		updateCwdFromData,
 		updateModesFromData,
-		onExitEvent: (exitCode, xterm, reason) =>
-			handleTerminalExitRef.current(exitCode, xterm, reason),
-		onErrorEvent: (event, xterm) => handleStreamErrorRef.current(event, xterm),
+		onExitEvent: (exitCode, adapter, reason) =>
+			handleTerminalExitRef.current(exitCode, adapter, reason),
+		onErrorEvent: (event, adapter) =>
+			handleStreamErrorRef.current(event, adapter),
 		onDisconnectEvent: (reason) =>
 			setConnectionError(reason || "Connection to terminal daemon lost"),
 	});
@@ -209,8 +199,7 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 		paneId,
 		tabId,
 		workspaceId,
-		xtermRef,
-		fitAddonRef,
+		adapterRef,
 		isStreamReadyRef,
 		isExitedRef,
 		wasKilledByUserRef,
@@ -232,15 +221,11 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 	const connectionErrorRef = useRef(connectionError);
 	connectionErrorRef.current = connectionError;
 
-	// Auto-retry connection with exponential backoff
-	const retryCountRef = useRef(0);
-	const MAX_RETRIES = 5;
-
 	// Stream handling
 	const { handleTerminalExit, handleStreamError, handleStreamData } =
 		useTerminalStream({
 			paneId,
-			xtermRef,
+			adapterRef,
 			isStreamReadyRef,
 			isExitedRef,
 			wasKilledByUserRef,
@@ -257,61 +242,25 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 
 	// Stream subscription
 	electronTrpc.terminal.stream.useSubscription(paneId, {
-		onData: (event) => {
-			if (connectionErrorRef.current && event.type === "data") {
-				setConnectionError(null);
-				retryCountRef.current = 0;
-			}
-			handleStreamData(event);
-		},
-		onError: (error) => {
-			console.error("[Terminal] Stream subscription error:", {
-				paneId,
-				error: error instanceof Error ? error.message : String(error),
-			});
-			setConnectionError(
-				error instanceof Error ? error.message : "Connection to terminal lost",
-			);
-		},
+		onData: handleStreamData,
 		enabled: true,
 	});
 
-	// Auto-retry when connection error is set
-	useEffect(() => {
-		if (!connectionError) return;
-		if (isExitedRef.current) return;
-		if (retryCountRef.current >= MAX_RETRIES) return;
-
-		if (retryCountRef.current === 0) {
-			xtermRef.current?.writeln(
-				"\r\n\x1b[90m[Connection lost. Reconnecting...]\x1b[0m",
-			);
-		}
-
-		const delay = Math.min(1000 * 2 ** retryCountRef.current, 10_000);
-		retryCountRef.current++;
-
-		const timeout = setTimeout(handleRetryConnection, delay);
-		return () => clearTimeout(timeout);
-	}, [connectionError, handleRetryConnection]);
-
 	const { isSearchOpen, setIsSearchOpen } = useTerminalHotkeys({
 		isFocused,
-		xtermRef,
+		adapterRef,
 	});
 	useEffect(() => {
 		if (!isRestoredMode) return;
 		handleStartShell();
 	}, [isRestoredMode, handleStartShell]);
-	const { xtermInstance, restartTerminal } = useTerminalLifecycle({
+	const { adapterInstance, restartTerminal } = useTerminalLifecycle({
 		paneId,
 		tabIdRef,
 		workspaceId,
 		terminalRef,
-		xtermRef,
-		fitAddonRef,
-		searchAddonRef,
-		rendererRef,
+		adapterRef,
+		searchShimRef,
 		isExitedRef,
 		wasKilledByUserRef,
 		commandBufferRef,
@@ -321,7 +270,7 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 		initialThemeRef,
 		workspaceCwdRef,
 		handleFileLinkClickRef,
-		handleUrlClickRef,
+		paneInitialCommandsRef,
 		paneInitialCwdRef,
 		clearPaneInitialDataRef,
 		setConnectionError,
@@ -354,10 +303,12 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 		unregisterPasteCallbackRef,
 	});
 
+	// Apply theme changes
 	useEffect(() => {
-		const xterm = xtermRef.current;
-		if (!xterm || !terminalTheme) return;
-		xterm.options.theme = terminalTheme;
+		const adapter = adapterRef.current;
+		if (!adapter || !terminalTheme) return;
+		// biome-ignore lint/suspicious/noExplicitAny: theme migration pending
+		adapter.applyTheme(terminalTheme as any);
 	}, [terminalTheme]);
 
 	const { data: fontSettings } = electronTrpc.settings.getFontSettings.useQuery(
@@ -367,18 +318,17 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 		},
 	);
 
+	// Apply font size changes (restty supports setFontSize natively)
 	useEffect(() => {
-		const xterm = xtermRef.current;
-		if (!xterm || !fontSettings) return;
-		const family =
-			fontSettings.terminalFontFamily || DEFAULT_TERMINAL_FONT_FAMILY;
+		const adapter = adapterRef.current;
+		if (!adapter || !fontSettings) return;
 		const size = fontSettings.terminalFontSize ?? DEFAULT_TERMINAL_FONT_SIZE;
-		xterm.options.fontFamily = family;
-		xterm.options.fontSize = size;
-		fitAddonRef.current?.fit();
+		adapter.setFontSize(size);
+		// Note: restty font family is set at creation time via fontSources
+		// Dynamic font family changes would require recreating the instance
 	}, [fontSettings]);
 
-	const terminalBg = terminalTheme?.background ?? getDefaultTerminalBg();
+	const terminalBg = getDefaultTerminalBg();
 
 	const handleDragOver = (event: React.DragEvent) => {
 		event.preventDefault();
@@ -413,17 +363,18 @@ export const Terminal = ({ paneId, tabId, workspaceId }: TerminalProps) => {
 			onDrop={handleDrop}
 		>
 			<TerminalSearch
-				searchAddon={searchAddonRef.current}
+				searchShim={searchShimRef.current}
 				isOpen={isSearchOpen}
 				onClose={() => setIsSearchOpen(false)}
 			/>
-			<ScrollToBottomButton terminal={xtermInstance} />
+			<ScrollToBottomButton adapter={adapterInstance} />
 			{exitStatus === "killed" && !connectionError && !isRestoredMode && (
 				<SessionKilledOverlay onRestart={restartTerminal} />
 			)}
-			<div className="h-full w-full p-2">
-				<div ref={terminalRef} className="h-full w-full" />
-			</div>
+			{connectionError && (
+				<ConnectionErrorOverlay onRetry={handleRetryConnection} />
+			)}
+			<div ref={terminalRef} className="h-full w-full" />
 		</div>
 	);
 };

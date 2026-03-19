@@ -1,7 +1,6 @@
-import type { FitAddon } from "@xterm/addon-fit";
-import type { Terminal as XTerm } from "@xterm/xterm";
 import { useCallback, useRef, useState } from "react";
 import { electronTrpcClient as trpcClient } from "renderer/lib/trpc-client";
+import type { ResttyAdapter } from "../restty/ResttyAdapter";
 import { coldRestoreState } from "../state";
 import type {
 	CreateOrAttachMutate,
@@ -14,8 +13,7 @@ export interface UseTerminalColdRestoreOptions {
 	paneId: string;
 	tabId: string;
 	workspaceId: string;
-	xtermRef: React.MutableRefObject<XTerm | null>;
-	fitAddonRef: React.MutableRefObject<FitAddon | null>;
+	adapterRef: React.MutableRefObject<ResttyAdapter | null>;
 	isStreamReadyRef: React.MutableRefObject<boolean>;
 	isExitedRef: React.MutableRefObject<boolean>;
 	wasKilledByUserRef: React.MutableRefObject<boolean>;
@@ -52,8 +50,7 @@ export function useTerminalColdRestore({
 	paneId,
 	tabId,
 	workspaceId,
-	xtermRef,
-	fitAddonRef,
+	adapterRef,
 	isStreamReadyRef,
 	isExitedRef,
 	wasKilledByUserRef,
@@ -77,27 +74,29 @@ export function useTerminalColdRestore({
 
 	const handleRetryConnection = useCallback(() => {
 		setConnectionError(null);
-		const xterm = xtermRef.current;
-		if (!xterm) return;
+		const adapter = adapterRef.current;
+		if (!adapter) return;
 
 		isStreamReadyRef.current = false;
 		pendingInitialStateRef.current = null;
+
+		adapter.clear();
+		adapter.writeln("Retrying connection...\r\n");
 
 		createOrAttachRef.current(
 			{
 				paneId,
 				tabId,
 				workspaceId,
-				cols: xterm.cols,
-				rows: xterm.rows,
+				cols: adapter.cols,
+				rows: adapter.rows,
 			},
 			{
 				onSuccess: (result: CreateOrAttachResult) => {
-					const currentXterm = xtermRef.current;
-					if (!currentXterm) return;
+					const currentAdapter = adapterRef.current;
+					if (!currentAdapter) return;
 
 					setConnectionError(null);
-					currentXterm.writeln("\x1b[90m[Reconnected]\x1b[0m");
 
 					if (result.isColdRestore) {
 						const scrollback =
@@ -110,12 +109,12 @@ export function useTerminalColdRestore({
 						setIsRestoredMode(true);
 						setRestoredCwd(result.previousCwd || null);
 
-						currentXterm.clear();
+						currentAdapter.clear();
 						if (scrollback) {
-							currentXterm.write(scrollback, () => {
+							currentAdapter.write(scrollback, () => {
 								requestAnimationFrame(() => {
-									if (xtermRef.current !== currentXterm) return;
-									scrollToBottom(currentXterm);
+									if (adapterRef.current !== currentAdapter) return;
+									scrollToBottom(currentAdapter);
 								});
 							});
 						}
@@ -128,7 +127,7 @@ export function useTerminalColdRestore({
 					maybeApplyInitialState();
 
 					if (isFocusedRef.current) {
-						currentXterm.focus();
+						currentAdapter.focus();
 					}
 				},
 				onError: (error: { message?: string }) => {
@@ -150,7 +149,7 @@ export function useTerminalColdRestore({
 		paneId,
 		tabId,
 		workspaceId,
-		xtermRef,
+		adapterRef,
 		isStreamReadyRef,
 		isExitedRef,
 		wasKilledByUserRef,
@@ -165,9 +164,8 @@ export function useTerminalColdRestore({
 	]);
 
 	const handleStartShell = useCallback(() => {
-		const xterm = xtermRef.current;
-		const fitAddon = fitAddonRef.current;
-		if (!xterm || !fitAddon) return;
+		const adapter = adapterRef.current;
+		if (!adapter) return;
 
 		// Drop any queued events from the pre-restore session
 		pendingEventsRef.current = [];
@@ -181,7 +179,9 @@ export function useTerminalColdRestore({
 		});
 
 		// Add visual separator
-		xterm.write("\r\n\x1b[90m─── Session Contents Restored ───\x1b[0m\r\n\r\n");
+		adapter.write(
+			"\r\n\x1b[90m─── Session Contents Restored ───\x1b[0m\r\n\r\n",
+		);
 
 		// Reset state for new session
 		isStreamReadyRef.current = false;
@@ -197,8 +197,8 @@ export function useTerminalColdRestore({
 				paneId,
 				tabId,
 				workspaceId,
-				cols: xterm.cols,
-				rows: xterm.rows,
+				cols: adapter.cols,
+				rows: adapter.rows,
 				cwd: restoredCwdRef.current || undefined,
 				skipColdRestore: true,
 				allowKilled: true,
@@ -212,9 +212,9 @@ export function useTerminalColdRestore({
 					coldRestoreState.delete(paneId);
 
 					setTimeout(() => {
-						const currentXterm = xtermRef.current;
-						if (currentXterm) {
-							currentXterm.focus();
+						const currentAdapter = adapterRef.current;
+						if (currentAdapter) {
+							currentAdapter.focus();
 						}
 					}, 0);
 				},
@@ -232,8 +232,7 @@ export function useTerminalColdRestore({
 		paneId,
 		tabId,
 		workspaceId,
-		xtermRef,
-		fitAddonRef,
+		adapterRef,
 		isStreamReadyRef,
 		isExitedRef,
 		wasKilledByUserRef,

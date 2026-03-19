@@ -105,6 +105,7 @@ function BaseBranchSelector({ worktreePath }: { worktreePath: string }) {
 							size="icon"
 							className="size-6 p-0"
 							disabled={isLoading}
+							title="Change base branch"
 						>
 							<VscSourceControl className="size-3.5" />
 						</Button>
@@ -171,6 +172,7 @@ function StashDropdown({
 							size="icon"
 							className="size-6 p-0"
 							disabled={isPending}
+							title="Stash operations"
 						>
 							<VscGitStash className="size-4" />
 						</Button>
@@ -225,6 +227,7 @@ function RefreshButton({ onRefresh }: { onRefresh: () => void }) {
 					onClick={handleClick}
 					disabled={isSpinning}
 					className="size-6 p-0"
+					title="Refresh changes"
 				>
 					<VscRefresh
 						className={`size-3.5 ${isSpinning ? "animate-spin" : ""}`}

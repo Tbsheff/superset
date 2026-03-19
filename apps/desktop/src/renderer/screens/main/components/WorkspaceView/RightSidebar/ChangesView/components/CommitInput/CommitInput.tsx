@@ -233,6 +233,7 @@ export function CommitInput({
 							className="flex-1 gap-1.5 h-8 text-xs"
 							onClick={primary.handler}
 							disabled={primary.disabled}
+							title={primary.tooltip}
 						>
 							{primary.icon}
 							<span>{primary.label}</span>
@@ -250,6 +251,7 @@ export function CommitInput({
 							size="sm"
 							disabled={isPending}
 							className="h-8 px-1.5"
+							title="More actions"
 						>
 							<VscChevronDown className="size-3.5" />
 						</Button>

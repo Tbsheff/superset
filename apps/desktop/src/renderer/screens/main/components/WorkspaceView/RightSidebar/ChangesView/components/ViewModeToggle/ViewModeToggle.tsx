@@ -29,6 +29,11 @@ export function ViewModeToggle({
 							? "Switch to tree view"
 							: "Switch to grouped view"
 					}
+					title={
+						viewMode === "grouped"
+							? "Switch to tree view"
+							: "Switch to grouped view"
+					}
 				>
 					{viewMode === "grouped" ? (
 						<VscListTree className="size-3.5" />

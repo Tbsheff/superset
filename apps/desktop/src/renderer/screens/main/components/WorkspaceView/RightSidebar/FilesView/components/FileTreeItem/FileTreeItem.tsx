@@ -141,7 +141,7 @@ export function FileTreeItem({
 				className="size-4 shrink-0"
 			/>
 
-			<span className="flex-1 min-w-0 text-xs truncate">{entry.name}</span>
+			<span className="flex-1 min-w-0 text-xs truncate text-muted-foreground/70">{entry.name}</span>
 		</div>
 	);
 

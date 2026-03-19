@@ -37,6 +37,7 @@ import {
 	worktreeExists,
 } from "../utils/git";
 import { getGitRemoteUrl } from "../utils/github/github";
+import { slugifyName } from "main/lib/devcontainer/types";
 import { initRemoteWorkspace } from "../utils/remote-workspace-init";
 import { resolveWorktreePath } from "../utils/resolve-worktree-path";
 import { copySupersetConfigToWorktree, loadSetupConfig } from "../utils/setup";
@@ -556,10 +557,7 @@ export const createCreateProcedures = () => {
 					void initRemoteWorkspace({
 						workspaceId: workspace.id,
 						projectId: input.projectId,
-						projectSlug: project.name
-							.toLowerCase()
-							.replace(/[^a-z0-9]+/g, "-")
-							.replace(/^-|-$/g, ""),
+						projectSlug: slugifyName(project.name),
 						remoteHostId: effectiveRemoteHostId,
 						branch,
 						repoUrl,

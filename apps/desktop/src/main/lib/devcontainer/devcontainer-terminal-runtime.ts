@@ -75,7 +75,7 @@ export class DevcontainerTerminalRuntime
 {
 	private sessions = new Map<string, DevcontainerSession>();
 	client: Client;
-	private sessionConfig: DevcontainerSessionConfig;
+	readonly sessionConfig: DevcontainerSessionConfig;
 
 	readonly capabilities: TerminalCapabilities = {
 		persistent: false,
@@ -115,21 +115,10 @@ export class DevcontainerTerminalRuntime
 	): Promise<SessionResult> => {
 		const { paneId, workspaceId, cols = 80, rows = 24 } = params;
 
-		console.log(
-			"[devcontainer-terminal] createOrAttach called, paneId:",
-			paneId,
-			"containerId:",
-			this.sessionConfig.containerId,
-		);
-
 		try {
 			// Reuse existing alive session
 			const existing = this.sessions.get(paneId);
 			if (existing?.isAlive) {
-				console.log(
-					"[devcontainer-terminal] Reusing existing session for paneId:",
-					paneId,
-				);
 				return {
 					isNew: false,
 					scrollback: "",
@@ -150,12 +139,7 @@ export class DevcontainerTerminalRuntime
 			const cwd = params.cwd ?? workDir;
 
 			// Create FIFO for env var injection
-			console.log(
-				"[devcontainer-terminal] Creating env FIFO for sessionId:",
-				sessionId,
-			);
 			const fifoPath = await createEnvFifo(this.client, sessionId, envVars);
-			console.log("[devcontainer-terminal] FIFO created at:", fifoPath);
 
 			let scriptPath: string | null = null;
 			let dockerExecCmd: string;
@@ -195,23 +179,10 @@ export class DevcontainerTerminalRuntime
 				dockerExecCmd = `docker exec -it --env-file ${fifoPath} -u ${remoteUser} -w ${cwd} ${containerId} /bin/bash -l`;
 			}
 
-			console.log(
-				"[devcontainer-terminal] Opening channel for",
-				paneId,
-				"type:",
-				sessionType,
-				"cmd:",
-				dockerExecCmd,
-			);
-
 			const channel = await sshExecPty(this.client, dockerExecCmd, {
 				cols,
 				rows,
 			});
-			console.log(
-				"[devcontainer-terminal] sshExecPty resolved for paneId:",
-				paneId,
-			);
 
 			const session: DevcontainerSession = {
 				sessionId,
@@ -252,20 +223,12 @@ export class DevcontainerTerminalRuntime
 				});
 			});
 
-			console.log(
-				"[devcontainer-terminal] Channel open for",
-				paneId,
-				"sessionId:",
-				sessionId,
-			);
-
 			return {
 				isNew: true,
 				scrollback: "",
 				wasRecovered: false,
 			};
 		} catch (error) {
-			console.log("[devcontainer-terminal] Error in createOrAttach:", error);
 			throw error;
 		}
 	};

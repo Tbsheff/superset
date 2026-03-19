@@ -1,5 +1,5 @@
 import type { Client } from "ssh2";
-import { sshExec } from "./ssh-exec";
+import { shellQuote, sshExec } from "./ssh-exec";
 
 /**
  * Create a FIFO on the remote host and write env vars to it in the background.
@@ -37,7 +37,7 @@ export async function createEnvFifo(
 	// The printf + rm runs as a single background command on the remote.
 	sshExec(
 		client,
-		`printf '%s\\n' ${shellEscapeForPrintf(content)} > ${fifoPath}; rm -f ${fifoPath}`,
+		`printf '%s\\n' ${shellQuote(content)} > ${fifoPath}; rm -f ${fifoPath}`,
 		{ timeout: 30_000 },
 	).catch(() => {
 		// Best-effort cleanup if the FIFO write fails (e.g., docker exec never reads it)
@@ -56,10 +56,3 @@ export async function cleanupStaleFifos(client: Client): Promise<void> {
 	}).catch(() => {});
 }
 
-/**
- * Escape content for printf to write to FIFO.
- * We use single-quoted strings to prevent shell interpretation.
- */
-function shellEscapeForPrintf(s: string): string {
-	return `'${s.replace(/'/g, "'\\''")}'`;
-}

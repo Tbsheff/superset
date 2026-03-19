@@ -1,5 +1,6 @@
 import type { Client } from "ssh2";
 import { sshExec, sshWriteFile } from "./ssh-exec";
+import { slugifyName } from "./types";
 
 interface DefaultConfigOptions {
 	projectName: string;
@@ -36,11 +37,7 @@ export async function generateDefaultConfig(
 	client: Client,
 	opts: DefaultConfigOptions,
 ): Promise<string> {
-	const slug =
-		opts.projectName
-			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, "-")
-			.replace(/^-|-$/g, "") || "repo";
+	const slug = slugifyName(opts.projectName);
 
 	const config = {
 		name: opts.projectName,

@@ -10,7 +10,7 @@ export interface ExecResult {
  * Shell-quote a string for use inside single quotes.
  * Handles strings containing single quotes by breaking out and escaping.
  */
-function shellQuote(s: string): string {
+export function shellQuote(s: string): string {
 	return `'${s.replace(/'/g, "'\\''")}'`;
 }
 

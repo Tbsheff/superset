@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import type { SandboxState } from "@superset/local-db";
 import { projects, type SelectWorktree, workspaces } from "@superset/local-db";
 import { and, eq, ne } from "drizzle-orm";
 import { track } from "main/lib/analytics";
@@ -298,7 +299,7 @@ export const createDeleteProcedures = () => {
 
 					if (remoteProject?.remoteHostId && remoteProject.sandboxState) {
 						try {
-							const state = JSON.parse(remoteProject.sandboxState);
+							const state = JSON.parse(remoteProject.sandboxState) as SandboxState;
 							if (state.status === "ready" && state.containerId) {
 								const manager = getSshConnectionManager();
 								const client = manager.getConnection(

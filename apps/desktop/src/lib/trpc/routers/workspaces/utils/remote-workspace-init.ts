@@ -13,7 +13,7 @@ import {
 import { checkPrerequisites } from "main/lib/devcontainer/prerequisites";
 import { sshExec } from "main/lib/devcontainer/ssh-exec";
 import { getStateMachine } from "main/lib/devcontainer/state-machine";
-import { getProjectPaths } from "main/lib/devcontainer/types";
+import { getProjectPaths, slugifyName } from "main/lib/devcontainer/types";
 import { localDb } from "main/lib/local-db";
 import { workspaceInitManager } from "main/lib/workspace-init-manager";
 import { getSshConnectionManager } from "main/lib/workspace-runtime/ssh-connection-manager";
@@ -58,13 +58,7 @@ export async function initRemoteWorkspace(
 		persistState = noopPersist,
 	} = params;
 
-	const slug =
-		projectSlug ||
-		projectName
-			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, "-")
-			.replace(/^-|-$/g, "") ||
-		projectId;
+	const slug = projectSlug || slugifyName(projectName) || projectId;
 
 	let paths = getProjectPaths(slug);
 
@@ -84,24 +78,8 @@ export async function initRemoteWorkspace(
 		workspaceInitManager.updateProgress(workspaceId, step, message);
 	};
 
-	console.log(
-		"[remote-init] Starting for workspace",
-		workspaceId,
-		"project",
-		projectId,
-		"remoteHostId",
-		remoteHostId,
-	);
-	console.log(
-		"[remote-init] repoUrl:",
-		repoUrl,
-		"remoteRepoPath:",
-		remoteRepoPath,
-	);
-
 	try {
 		// 1. Connect SSH
-		console.log("[remote-init] Step: connecting SSH...");
 		emitProgress("connecting_ssh", "Connecting to remote host...");
 		await stateMachine.startProvisioning(
 			"checking_prerequisites",
@@ -137,7 +115,6 @@ export async function initRemoteWorkspace(
 		}
 
 		// 2. Check prerequisites
-		console.log("[remote-init] Step: checking prerequisites...");
 		emitProgress("checking_docker", "Checking Docker availability...");
 		await stateMachine.updateStep(
 			"checking_prerequisites",
@@ -164,11 +141,6 @@ export async function initRemoteWorkspace(
 		}
 
 		// 3. Clone repo or use existing path
-		console.log(
-			"[remote-init] Step: clone/skip (remoteRepoPath:",
-			remoteRepoPath,
-			")",
-		);
 		let effectiveRepoDir: string;
 		if (remoteRepoPath) {
 			// User already has repo cloned — use their path directly
@@ -213,7 +185,6 @@ export async function initRemoteWorkspace(
 		}
 
 		// 5. devcontainer up
-		console.log("[remote-init] Step: devcontainer up...");
 		emitProgress("starting_container", "Starting container...");
 		await stateMachine.updateStep(
 			"building_container",
@@ -232,12 +203,6 @@ export async function initRemoteWorkspace(
 		// 6. Create worktree (if not on default branch)
 		const resolvedDefault = defaultBranch ?? "main";
 		const isDefaultBranch = branch === resolvedDefault || branch === "master";
-		console.log(
-			"[remote-init] Step: worktree check, branch:",
-			branch,
-			"isDefault:",
-			isDefaultBranch,
-		);
 		if (!isDefaultBranch) {
 			emitProgress("creating_worktree", "Creating worktree...");
 			await stateMachine.updateStep(
@@ -253,7 +218,6 @@ export async function initRemoteWorkspace(
 		}
 
 		// 7. Mark ready
-		console.log("[remote-init] SUCCESS! Container:", containerId);
 		emitProgress("finalizing", "Finalizing...");
 		await stateMachine.markReady(containerId);
 
@@ -283,7 +247,6 @@ export async function initRemoteWorkspace(
 		workspaceInitManager.finalizeJob(workspaceId);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
-		console.log("[remote-init] FAILED:", message);
 		await stateMachine.markError(message, undefined, true).catch(() => {});
 		workspaceInitManager.updateProgress(
 			workspaceId,

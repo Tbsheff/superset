@@ -41,6 +41,7 @@ import {
 	sanitizeAuthorPrefix,
 } from "../workspaces/utils/git";
 import { getSimpleGitWithShellPath } from "../workspaces/utils/git-client";
+import { slugifyName } from "main/lib/devcontainer/types";
 import { initRemoteWorkspace } from "../workspaces/utils/remote-workspace-init";
 import { getDefaultProjectColor } from "./utils/colors";
 import { discoverAndSaveProjectIcon } from "./utils/favicon-discovery";
@@ -1428,10 +1429,7 @@ export const createProjectsRouter = (getWindow: () => BrowserWindow | null) => {
 						repoUrl: input.repoUrl,
 						remoteRepoPath: input.remoteRepoPath,
 						projectName: name,
-						projectSlug: name
-							.toLowerCase()
-							.replace(/[^a-z0-9]+/g, "-")
-							.replace(/^-|-$/g, ""),
+						projectSlug: slugifyName(name),
 						defaultBranch: "main",
 						persistState: async (state) => {
 							localDb

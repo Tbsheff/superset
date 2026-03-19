@@ -20,6 +20,7 @@ import { projects, remoteHosts, workspaces } from "@superset/local-db";
 import { eq } from "drizzle-orm";
 import { localDb } from "main/lib/local-db";
 import { DevcontainerTerminalRuntime } from "../devcontainer/devcontainer-terminal-runtime";
+import { slugifyName } from "../devcontainer/types";
 import { LocalWorkspaceRuntime } from "./local";
 import {
 	getSshConnectionManager,
@@ -54,7 +55,6 @@ class DefaultWorkspaceRuntimeRegistry implements WorkspaceRuntimeRegistry {
 	 * the local runtime.
 	 */
 	getForWorkspaceId(workspaceId: string): WorkspaceRuntime {
-		console.log("[registry] getForWorkspaceId:", workspaceId);
 		// Look up workspace to check for remote host assignment
 		const workspace = localDb
 			.select({
@@ -77,11 +77,6 @@ class DefaultWorkspaceRuntimeRegistry implements WorkspaceRuntimeRegistry {
 					.where(eq(projects.id, workspace.projectId))
 					.get();
 
-				console.log(
-					"[registry] Checking devcontainer: sandboxState=",
-					project?.sandboxState?.substring(0, 50),
-				);
-
 				if (project?.remoteHostId && project.sandboxState) {
 					// Project has a remote host — use it as the effective host for SSH fallthrough too
 					effectiveRemoteHostId = project.remoteHostId;
@@ -90,28 +85,27 @@ class DefaultWorkspaceRuntimeRegistry implements WorkspaceRuntimeRegistry {
 					if (state.status === "ready" && state.containerId) {
 						const cached = this.devcontainerRuntimes.get(project.id);
 						if (cached) {
-							console.log(
-								"[registry] Returning cached DevcontainerTerminalRuntime for project:",
-								project.id,
-							);
 							// Update SSH client if connection was re-established (e.g. after app restart)
 							const currentClient = getSshConnectionManager().getConnection(project.remoteHostId);
 							if (currentClient && cached.terminal instanceof DevcontainerTerminalRuntime) {
 								cached.terminal.updateClient(currentClient);
 							}
-							return cached;
+							// Invalidate cache if the container changed (e.g. after restart)
+							if (
+								cached.terminal instanceof DevcontainerTerminalRuntime &&
+								cached.terminal.sessionConfig.containerId !== state.containerId
+							) {
+								this.devcontainerRuntimes.delete(project.id);
+								// Fall through to create new instance
+							} else {
+								return cached;
+							}
 						}
 
 						const manager = getSshConnectionManager();
 						const client = manager.getConnection(project.remoteHostId);
-						console.log("[registry] SSH client available:", !!client);
-
 						if (client) {
-							const projectSlug =
-								project.name
-									?.toLowerCase()
-									.replace(/[^a-z0-9]+/g, "-")
-									.replace(/^-|-$/g, "") || "repo";
+							const projectSlug = slugifyName(project.name ?? "");
 							const terminalRuntime = new DevcontainerTerminalRuntime(client, {
 								containerId: state.containerId,
 								workDir: `/workspaces/${projectSlug}`,
@@ -123,10 +117,6 @@ class DefaultWorkspaceRuntimeRegistry implements WorkspaceRuntimeRegistry {
 								capabilities: { terminal: terminalRuntime.capabilities },
 							};
 							this.devcontainerRuntimes.set(project.id, runtime);
-							console.log(
-								"[registry] Returning DevcontainerTerminalRuntime for project:",
-								project.id,
-							);
 							return runtime;
 						}
 
@@ -134,9 +124,6 @@ class DefaultWorkspaceRuntimeRegistry implements WorkspaceRuntimeRegistry {
 						// Fall through to SshWorkspaceRuntime below (which also connects via the
 						// shared SshConnectionManager, so by the time createOrAttach runs the
 						// connection will be established and subsequent calls will hit devcontainer routing).
-						console.log(
-							"[registry] No SSH client for devcontainer — triggering background connect and falling through to SSH runtime",
-						);
 						const hostRecord = localDb
 							.select()
 							.from(remoteHosts)
@@ -154,35 +141,20 @@ class DefaultWorkspaceRuntimeRegistry implements WorkspaceRuntimeRegistry {
 								privateKeyPath: hostRecord.privateKeyPath ?? undefined,
 								defaultCwd: hostRecord.defaultCwd ?? undefined,
 							};
-							manager.connect(hostConfig).catch((err) => {
-								console.log(
-									"[registry] Background SSH connect failed:",
-									err.message,
-								);
-							});
+							manager.connect(hostConfig).catch(() => {});
 						}
 						// effectiveRemoteHostId is already set to project.remoteHostId above —
 						// fall through to SSH runtime routing below
 					}
 				}
-			} catch (err) {
-				console.log(
-					"[registry] Error in devcontainer routing, falling through:",
-					err,
-				);
+			} catch {
 				// Fall through to existing remoteHostId / local logic
 			}
 		}
 
 		if (!effectiveRemoteHostId) {
-			console.log("[registry] No remoteHostId — falling back to local runtime");
 			return this.getDefault();
 		}
-
-		console.log(
-			"[registry] Found effectiveRemoteHostId:",
-			effectiveRemoteHostId,
-		);
 
 		// Check cache first
 		const cached = this.sshRuntimes.get(effectiveRemoteHostId);
@@ -197,12 +169,7 @@ class DefaultWorkspaceRuntimeRegistry implements WorkspaceRuntimeRegistry {
 			.where(eq(remoteHosts.id, effectiveRemoteHostId))
 			.get();
 
-		console.log("[registry] Host config:", JSON.stringify(host));
-
 		if (!host || !host.hostname || !host.username) {
-			console.log(
-				"[registry] Incomplete host config — falling back to local runtime",
-			);
 			return this.getDefault();
 		}
 
@@ -217,7 +184,6 @@ class DefaultWorkspaceRuntimeRegistry implements WorkspaceRuntimeRegistry {
 		});
 
 		this.sshRuntimes.set(host.id, runtime);
-		console.log("[registry] Returning SSH runtime for host:", host.id);
 		return runtime;
 	}
 

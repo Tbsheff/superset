@@ -35,6 +35,15 @@ export interface SessionOptions {
 	envVars: Record<string, string>;
 }
 
+export function slugifyName(name: string): string {
+	return (
+		name
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, "-")
+			.replace(/^-|-$/g, "") || "project"
+	);
+}
+
 export function getProjectPaths(slug: string): ProjectPaths {
 	const baseDir = `~/superset-projects/${slug}`;
 	return {

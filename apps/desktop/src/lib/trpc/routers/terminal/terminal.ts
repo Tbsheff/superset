@@ -1,6 +1,7 @@
 import { EventEmitter } from "node:events";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import type { SandboxState } from "@superset/local-db";
 import { projects, remoteHosts, workspaces, worktrees } from "@superset/local-db";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
@@ -28,6 +29,9 @@ import { resolveCwd } from "./utils";
 const DEBUG_TERMINAL = process.env.SUPERSET_TERMINAL_DEBUG === "1";
 const logger = console;
 let createOrAttachCallCounter = 0;
+
+const containerHealthCache = new Map<string, number>(); // containerId → lastVerifiedAt
+const HEALTH_CHECK_TTL = 30_000; // 30 seconds
 
 async function writeTaskFile(
 	workspacePath: string,
@@ -167,12 +171,6 @@ export const createTerminalRouter = () => {
 					themeType,
 				} = input;
 
-				console.log(
-					"[terminal] createOrAttach for workspace:",
-					workspaceId,
-					"pane:",
-					paneId,
-				);
 				paneWorkspaceMap.set(paneId, workspaceId);
 
 				const workspace = localDb
@@ -254,24 +252,23 @@ export const createTerminalRouter = () => {
 					const client = sshManager.getConnection(workspace.remoteHostId);
 					if (client && project?.sandboxState) {
 						try {
-							const state = JSON.parse(project.sandboxState);
+							const state = JSON.parse(project.sandboxState) as SandboxState;
 							if (state.status === "ready" && state.containerId) {
 								const { inspectContainer, devcontainerUp } = await import(
 									"main/lib/devcontainer/container-manager"
 								);
-								const info = await inspectContainer(client, state.containerId);
-								if (info.status === "not_found" || info.status === "exited") {
-									console.log(
-										"[terminal] Container gone/stopped, restarting via devcontainer up...",
-									);
-									const { getProjectPaths } = await import(
+								const lastChecked = containerHealthCache.get(state.containerId);
+								if (lastChecked && Date.now() - lastChecked < HEALTH_CHECK_TTL) {
+									// Container was verified healthy recently, skip check
+								} else {
+									const info = await inspectContainer(client, state.containerId);
+									if (info.status === "running") {
+										containerHealthCache.set(state.containerId, Date.now());
+									} else if (info.status === "not_found" || info.status === "exited") {
+									const { getProjectPaths, slugifyName } = await import(
 										"main/lib/devcontainer/types"
 									);
-									const slug =
-										project.name
-											?.toLowerCase()
-											.replace(/[^a-z0-9]+/g, "-")
-											.replace(/^-|-$/g, "") || "repo";
+									const slug = slugifyName(project.name ?? "");
 									const paths = getProjectPaths(slug);
 									// Ensure devcontainer.json exists (may have been cleaned up)
 									const { detectExistingConfig, generateDefaultConfig } = await import("main/lib/devcontainer/default-config");
@@ -284,7 +281,7 @@ export const createTerminalRouter = () => {
 										client,
 										{ ...paths, repoDir: effectiveRepoDir },
 										project.id,
-										{ hasExistingConfig: false },
+										{ hasExistingConfig: existingConfig !== null },
 									);
 									localDb
 										.update(projects)
@@ -297,35 +294,22 @@ export const createTerminalRouter = () => {
 										})
 										.where(eq(projects.id, project.id))
 										.run();
-									console.log(
-										"[terminal] Container restarted:",
-										result.containerId,
-									);
-								}
+									} // end if not_found/exited
+								} // end TTL cache else
 							}
 						} catch (err) {
-							console.log("[terminal] Container reconciliation failed:", err);
+							console.error("[terminal] Container reconciliation failed:", err);
 						}
 					}
 				}
 
 				const terminalRuntime = getTerminalForWorkspace(workspaceId);
-				console.log(
-					"[terminal] Using runtime:",
-					terminalRuntime.constructor.name || "unknown",
-				);
 
 				// Wire runtime events to the stream bridge BEFORE creating the session,
 				// so any early data from SSH channels is forwarded to waiting subscribers.
 				wireRuntimeToBridge(paneId, terminalRuntime);
 
 				try {
-					console.log(
-						"[terminal-router] createOrAttach: runtime type =",
-						terminalRuntime.constructor?.name ?? typeof terminalRuntime,
-						"for workspace:",
-						workspaceId,
-					);
 					const result = await terminalRuntime.createOrAttach({
 						paneId,
 						tabId,

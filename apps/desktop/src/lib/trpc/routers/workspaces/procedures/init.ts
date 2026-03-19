@@ -10,6 +10,7 @@ import { publicProcedure, router } from "../../..";
 import { getPresetsForTrigger } from "../../settings";
 import { getProject, getWorkspaceWithRelations } from "../utils/db-helpers";
 import { listBranches } from "../utils/git";
+import { slugifyName } from "main/lib/devcontainer/types";
 import { initRemoteWorkspace } from "../utils/remote-workspace-init";
 import { resolveWorktreePath } from "../utils/resolve-worktree-path";
 import { loadSetupConfig } from "../utils/setup";
@@ -180,10 +181,7 @@ export const createInitProcedures = () => {
 						remoteHostId: effectiveRemoteHostId,
 						branch,
 						projectName: project.name,
-						projectSlug: project.name
-							.toLowerCase()
-							.replace(/[^a-z0-9]+/g, "-")
-							.replace(/^-|-$/g, ""),
+						projectSlug: slugifyName(project.name),
 						defaultBranch: project.defaultBranch ?? undefined,
 						remoteRepoPath: project.mainRepoPath,
 						persistState: async (state) => {

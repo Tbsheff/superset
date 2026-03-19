@@ -2,7 +2,7 @@ import { Button } from "@superset/ui/button";
 import { cn } from "@superset/ui/utils";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { LuFolderOpen, LuPlus, LuX } from "react-icons/lu";
+import { FolderOpen, Plus, X } from "lucide-react";
 import { useOpenProject } from "renderer/react-query/projects";
 
 export function StartView() {
@@ -154,7 +154,7 @@ export function StartView() {
 							>
 								{isDragOver ? (
 									<div className="flex flex-col items-center gap-3">
-										<LuFolderOpen className="w-10 h-10 text-primary" />
+										<FolderOpen className="w-10 h-10 text-primary" />
 										<span className="text-lg font-medium text-foreground">
 											Drop git project
 										</span>
@@ -162,7 +162,7 @@ export function StartView() {
 								) : (
 									<div className="flex flex-col items-center group">
 										<div className="flex items-center gap-3">
-											<LuFolderOpen className="w-7 h-7 text-muted-foreground group-hover:text-primary transition-colors" />
+											<FolderOpen className="w-7 h-7 text-muted-foreground group-hover:text-primary transition-colors" />
 											<span className="text-lg font-medium text-foreground">
 												Open Project
 											</span>
@@ -191,7 +191,7 @@ export function StartView() {
 								disabled={isPending}
 								className="text-sm"
 							>
-								<LuPlus className="size-3.5" />
+								<Plus className="size-3.5" />
 								New Project
 							</Button>
 						</div>
@@ -206,7 +206,7 @@ export function StartView() {
 								className="shrink-0 rounded p-0.5 text-destructive/70 hover:text-destructive transition-colors"
 								aria-label="Dismiss error"
 							>
-								<LuX className="h-3.5 w-3.5" />
+								<X className="h-3.5 w-3.5" />
 							</button>
 						</div>
 					)}

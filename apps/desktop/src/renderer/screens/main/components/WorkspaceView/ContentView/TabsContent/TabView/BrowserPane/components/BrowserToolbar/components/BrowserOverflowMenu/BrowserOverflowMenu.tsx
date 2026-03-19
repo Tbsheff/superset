@@ -5,10 +5,10 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@superset/ui/dropdown-menu";
+import { Copy } from "lucide-react";
 import {
 	TbCamera,
 	TbClock,
-	TbCopy,
 	TbDots,
 	TbReload,
 	TbTrash,
@@ -91,7 +91,7 @@ export function BrowserOverflowMenu({
 					disabled={!hasPage}
 					className="gap-2"
 				>
-					<TbCopy className="size-4" />
+					<Copy className="size-4" />
 					Copy URL
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />

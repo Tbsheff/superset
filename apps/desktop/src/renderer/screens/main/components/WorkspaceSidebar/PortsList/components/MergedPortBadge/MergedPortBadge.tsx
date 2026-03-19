@@ -1,6 +1,6 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { useNavigate } from "@tanstack/react-router";
-import { LuExternalLink, LuX } from "react-icons/lu";
+import { ExternalLink, X } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { navigateToWorkspace } from "renderer/routes/_authenticated/_dashboard/utils/workspace-navigation";
 import { useTabsStore } from "renderer/stores/tabs/store";
@@ -80,7 +80,7 @@ export function MergedPortBadge({ port }: MergedPortBadgeProps) {
 						aria-label={`Open ${port.label || `port ${port.port}`} in browser`}
 						className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary focus-visible:opacity-100 focus-visible:outline-none"
 					>
-						<LuExternalLink className="size-3.5" strokeWidth={STROKE_WIDTH} />
+						<ExternalLink className="size-3.5" strokeWidth={STROKE_WIDTH} />
 					</button>
 					<button
 						type="button"
@@ -88,7 +88,7 @@ export function MergedPortBadge({ port }: MergedPortBadgeProps) {
 						aria-label={`Close ${port.label || `port ${port.port}`}`}
 						className="opacity-0 group-hover:opacity-100 pr-1 transition-opacity text-muted-foreground hover:text-primary focus-visible:opacity-100 focus-visible:outline-none"
 					>
-						<LuX className="size-3.5" strokeWidth={STROKE_WIDTH} />
+						<X className="size-3.5" strokeWidth={STROKE_WIDTH} />
 					</button>
 				</div>
 			</TooltipTrigger>

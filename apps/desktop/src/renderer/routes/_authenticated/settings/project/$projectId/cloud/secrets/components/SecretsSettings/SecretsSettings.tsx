@@ -1,7 +1,7 @@
 import { Button } from "@superset/ui/button";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { HiOutlineCloud } from "react-icons/hi2";
+import { Cloud } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { vanillaElectronTrpc } from "renderer/lib/vanilla-electron-trpc";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";

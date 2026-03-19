@@ -13,7 +13,7 @@ import {
 } from "@superset/ui/context-menu";
 import { useParams } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LuFile, LuFolder } from "react-icons/lu";
+import { File, Folder } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useWorkspaceFileEvents } from "renderer/screens/main/components/WorkspaceView/hooks/useWorkspaceFileEvents";
 import { useTabsStore } from "renderer/stores/tabs/store";
@@ -656,11 +656,11 @@ export function FilesView() {
 					</ContextMenuTrigger>
 					<ContextMenuContent className="w-48">
 						<ContextMenuItem onClick={() => handleNewFile(worktreePath)}>
-							<LuFile className="mr-2 size-4" />
+							<File className="mr-2 size-4" />
 							New File
 						</ContextMenuItem>
 						<ContextMenuItem onClick={() => handleNewFolder(worktreePath)}>
-							<LuFolder className="mr-2 size-4" />
+							<Folder className="mr-2 size-4" />
 							New Folder
 						</ContextMenuItem>
 					</ContextMenuContent>

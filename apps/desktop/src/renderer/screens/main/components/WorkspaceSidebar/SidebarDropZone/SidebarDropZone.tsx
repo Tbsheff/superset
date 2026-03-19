@@ -2,7 +2,7 @@ import { cn } from "@superset/ui/utils";
 import { useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
-import { LuFolderPlus, LuLoader, LuX } from "react-icons/lu";
+import { FolderPlus, Loader, X } from "lucide-react";
 import { useOpenProject } from "renderer/react-query/projects";
 
 interface SidebarDropZoneProps {
@@ -136,7 +136,7 @@ export function SidebarDropZone({ children, className }: SidebarDropZoneProps) {
 							className="flex flex-col items-center gap-3"
 						>
 							<div className="rounded-full bg-primary/10 p-3">
-								<LuFolderPlus className="h-6 w-6 text-primary" />
+								<FolderPlus className="h-6 w-6 text-primary" />
 							</div>
 							<div className="text-center">
 								<p className="text-sm font-medium text-primary">
@@ -159,7 +159,7 @@ export function SidebarDropZone({ children, className }: SidebarDropZoneProps) {
 						className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm"
 					>
 						<div className="flex flex-col items-center gap-3">
-							<LuLoader className="h-5 w-5 text-muted-foreground animate-spin" />
+							<Loader className="h-5 w-5 text-muted-foreground animate-spin" />
 							<span className="text-sm text-muted-foreground">
 								Adding project...
 							</span>
@@ -182,7 +182,7 @@ export function SidebarDropZone({ children, className }: SidebarDropZoneProps) {
 							className="shrink-0 rounded p-0.5 hover:bg-destructive/20 transition-colors"
 							aria-label="Dismiss error"
 						>
-							<LuX className="h-3.5 w-3.5" />
+							<X className="h-3.5 w-3.5" />
 						</button>
 					</motion.div>
 				)}

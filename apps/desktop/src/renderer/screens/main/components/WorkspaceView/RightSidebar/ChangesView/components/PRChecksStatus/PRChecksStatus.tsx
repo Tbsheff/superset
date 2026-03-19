@@ -1,13 +1,13 @@
 import type { CheckItem, GitHubStatus } from "@superset/local-db";
 import { useState } from "react";
 import {
-	LuCheck,
-	LuChevronDown,
-	LuChevronRight,
-	LuLoaderCircle,
-	LuMinus,
-	LuX,
-} from "react-icons/lu";
+	Check,
+	ChevronDown,
+	ChevronRight,
+	LoaderCircle,
+	Minus,
+	X,
+} from "lucide-react";
 
 interface PRChecksStatusProps {
 	pr: NonNullable<GitHubStatus["pr"]>;
@@ -15,16 +15,16 @@ interface PRChecksStatusProps {
 
 const checkIconConfig = {
 	success: {
-		icon: LuCheck,
+		icon: Check,
 		className: "text-emerald-600 dark:text-emerald-400",
 	},
-	failure: { icon: LuX, className: "text-red-600 dark:text-red-400" },
+	failure: { icon: X, className: "text-red-600 dark:text-red-400" },
 	pending: {
-		icon: LuLoaderCircle,
+		icon: LoaderCircle,
 		className: "text-amber-600 dark:text-amber-400",
 	},
-	skipped: { icon: LuMinus, className: "text-muted-foreground" },
-	cancelled: { icon: LuMinus, className: "text-muted-foreground" },
+	skipped: { icon: Minus, className: "text-muted-foreground" },
+	cancelled: { icon: Minus, className: "text-muted-foreground" },
 } as const;
 
 function CheckRow({ check }: { check: CheckItem }) {
@@ -79,9 +79,9 @@ export function PRChecksStatus({ pr }: PRChecksStatusProps) {
 				className="flex items-center gap-1.5 text-xs text-foreground/75 hover:text-foreground transition-colors"
 			>
 				{checksExpanded ? (
-					<LuChevronDown className="size-3 shrink-0" />
+					<ChevronDown className="size-3 shrink-0" />
 				) : (
-					<LuChevronRight className="size-3 shrink-0" />
+					<ChevronRight className="size-3 shrink-0" />
 				)}
 				<checksIcon.icon
 					className={`size-3 shrink-0 ${checksIcon.className} ${pr.checksStatus === "pending" ? "animate-spin" : ""}`}

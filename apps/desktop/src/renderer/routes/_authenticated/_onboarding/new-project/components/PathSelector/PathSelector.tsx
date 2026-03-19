@@ -1,6 +1,6 @@
 import { Button } from "@superset/ui/button";
 import { Input } from "@superset/ui/input";
-import { LuFolderOpen } from "react-icons/lu";
+import { FolderOpen } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 
 interface PathSelectorProps {
@@ -50,7 +50,7 @@ export function PathSelector({ value, onChange, disabled }: PathSelectorProps) {
 					className="shrink-0"
 					aria-label="Browse for directory"
 				>
-					<LuFolderOpen className="size-4" />
+					<FolderOpen className="size-4" />
 				</Button>
 			</div>
 		</div>

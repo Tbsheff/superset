@@ -15,8 +15,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { HiMiniCog6Tooth, HiMiniCommandLine } from "react-icons/hi2";
-import { LuCirclePlus, LuPin } from "react-icons/lu";
+import { CirclePlus, Pin, Settings, Terminal } from "lucide-react";
 import {
 	getPresetIcon,
 	useIsDarkTheme,
@@ -401,7 +400,7 @@ export function PresetsBar() {
 								<div className="ml-auto flex items-center gap-2">
 									{hotkeyId ? <HotkeyMenuShortcut hotkeyId={hotkeyId} /> : null}
 									{hasPreset ? (
-										<LuPin
+										<Pin
 											className={`size-3.5 ${
 												isPinned
 													? "text-foreground"
@@ -409,7 +408,7 @@ export function PresetsBar() {
 											}`}
 										/>
 									) : (
-										<LuCirclePlus className="size-3.5 text-muted-foreground" />
+										<CirclePlus className="size-3.5 text-muted-foreground" />
 									)}
 								</div>
 							</DropdownMenuItem>

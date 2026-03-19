@@ -10,8 +10,7 @@ import {
 } from "@superset/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@superset/ui/popover";
 import { useState } from "react";
-import { HiCheck, HiChevronUpDown } from "react-icons/hi2";
-import { LuFolderGit, LuFolderOpen } from "react-icons/lu";
+import { Check, ChevronsUpDown, FolderGit, FolderOpen } from "lucide-react";
 import { ProjectThumbnail } from "renderer/screens/main/components/WorkspaceSidebar/ProjectSection/ProjectThumbnail";
 
 interface ProjectOption {
@@ -105,7 +104,7 @@ export function ProjectSelector({
 									onImportRepo();
 								}}
 							>
-								<LuFolderOpen className="size-4" />
+								<FolderOpen className="size-4" />
 								Open project
 							</CommandItem>
 							<CommandItem
@@ -115,7 +114,7 @@ export function ProjectSelector({
 									onNewProject();
 								}}
 							>
-								<LuFolderGit className="size-4" />
+								<FolderGit className="size-4" />
 								New project
 							</CommandItem>
 						</CommandGroup>

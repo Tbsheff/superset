@@ -15,16 +15,16 @@ import {
 } from "@superset/ui/hover-card";
 import { useRef, useState } from "react";
 import {
-	LuArrowRightLeft,
-	LuBellOff,
-	LuCopy,
-	LuEye,
-	LuEyeOff,
-	LuFolderOpen,
-	LuFolderPlus,
-	LuMinus,
-	LuPencil,
-} from "react-icons/lu";
+	ArrowRightLeft,
+	BellOff,
+	Copy,
+	Eye,
+	EyeOff,
+	FolderOpen,
+	FolderPlus,
+	Minus,
+	Pencil,
+} from "lucide-react";
 import {
 	useCreateSectionFromWorkspaces,
 	useMoveWorkspacesToSection,
@@ -113,12 +113,12 @@ export function WorkspaceContextMenu({
 		<ContextMenuItem onSelect={() => onSetUnread(!isUnread)}>
 			{isUnread ? (
 				<>
-					<LuEye className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
+					<Eye className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
 					Mark as Read
 				</>
 			) : (
 				<>
-					<LuEyeOff className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
+					<EyeOff className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
 					Mark as Unread
 				</>
 			)}
@@ -128,17 +128,17 @@ export function WorkspaceContextMenu({
 	const commonContextMenuItems = (
 		<>
 			<ContextMenuItem onSelect={onOpenInFinder}>
-				<LuFolderOpen className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
+				<FolderOpen className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
 				Open in Finder
 			</ContextMenuItem>
 			<ContextMenuItem onSelect={onCopyPath}>
-				<LuCopy className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
+				<Copy className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
 				Copy Path
 			</ContextMenuItem>
 			<ContextMenuSeparator />
 			<ContextMenuSub>
 				<ContextMenuSubTrigger>
-					<LuArrowRightLeft
+					<ArrowRightLeft
 						className="size-4 mr-2"
 						strokeWidth={STROKE_WIDTH}
 					/>
@@ -146,12 +146,12 @@ export function WorkspaceContextMenu({
 				</ContextMenuSubTrigger>
 				<ContextMenuSubContent>
 					<ContextMenuItem onSelect={handleCreateSectionFromSelection}>
-						<LuFolderPlus className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
+						<FolderPlus className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
 						New Section
 					</ContextMenuItem>
 					<ContextMenuSeparator />
 					<ContextMenuItem onSelect={() => handleMoveToSection(null)}>
-						<LuMinus className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
+						<Minus className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
 						Ungrouped
 					</ContextMenuItem>
 					{sections.length > 0 && <ContextMenuSeparator />}
@@ -169,7 +169,7 @@ export function WorkspaceContextMenu({
 			{unreadMenuItem}
 			{workspaceStatus && (
 				<ContextMenuItem onSelect={onResetStatus}>
-					<LuBellOff className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
+					<BellOff className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
 					Clear Status
 				</ContextMenuItem>
 			)}
@@ -197,7 +197,7 @@ export function WorkspaceContextMenu({
 				</HoverCardTrigger>
 				<ContextMenuContent>
 					<ContextMenuItem onSelect={onRename}>
-						<LuPencil className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
+						<Pencil className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
 						Rename
 					</ContextMenuItem>
 					<ContextMenuSeparator />

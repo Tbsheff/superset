@@ -1,7 +1,7 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import type { ISearchOptions, SearchAddon } from "@xterm/addon-search";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { HiChevronDown, HiChevronUp, HiMiniXMark } from "react-icons/hi2";
+import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { PiTextAa } from "react-icons/pi";
 
 interface TerminalSearchProps {

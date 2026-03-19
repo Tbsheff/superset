@@ -1,5 +1,5 @@
 import { cn } from "@superset/ui/lib/utils";
-import { HiOutlineChevronDown, HiOutlineChevronRight } from "react-icons/hi2";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import type { WorkspaceMetrics } from "../../types";
 import { formatCpu, formatMemory } from "../../utils/formatters";
 import {

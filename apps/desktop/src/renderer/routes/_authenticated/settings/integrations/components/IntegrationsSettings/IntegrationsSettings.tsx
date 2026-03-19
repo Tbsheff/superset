@@ -19,7 +19,7 @@ import { toast } from "@superset/ui/sonner";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useCallback, useEffect, useState } from "react";
 import { FaGithub, FaSlack } from "react-icons/fa";
-import { HiCheckCircle, HiOutlineArrowTopRightOnSquare } from "react-icons/hi2";
+import { CheckCircle2, ExternalLink } from "lucide-react";
 import { SiLinear } from "react-icons/si";
 import { vanillaElectronTrpc } from "renderer/lib/vanilla-electron-trpc";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";

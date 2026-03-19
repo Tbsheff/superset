@@ -1,5 +1,5 @@
 import { type RefObject, useState } from "react";
-import { LuChevronDown, LuChevronRight } from "react-icons/lu";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import type { CommitInfo } from "shared/changes-types";
 import { VirtualizedFileList } from "../../../VirtualizedFileList";
@@ -39,9 +39,9 @@ export function CommitSection({
 				className="flex items-center gap-2 px-4 py-2 w-full text-left hover:bg-accent/50 transition-colors"
 			>
 				{isCommitExpanded ? (
-					<LuChevronDown className="size-4 text-muted-foreground" />
+					<ChevronDown className="size-4 text-muted-foreground" />
 				) : (
-					<LuChevronRight className="size-4 text-muted-foreground" />
+					<ChevronRight className="size-4 text-muted-foreground" />
 				)}
 				<span className="text-xs font-mono text-muted-foreground">
 					{commit.shortHash}

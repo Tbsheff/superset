@@ -5,7 +5,7 @@ import { cn } from "@superset/ui/utils";
 import { useNavigate } from "@tanstack/react-router";
 import Fuse from "fuse.js";
 import { useCallback, useMemo, useState } from "react";
-import { GoArrowUpRight, GoGitBranch, GoGlobe } from "react-icons/go";
+import { ArrowUpRight, GitBranch, Globe } from "lucide-react";
 import { useDebouncedValue } from "renderer/hooks/useDebouncedValue";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import {
@@ -403,11 +403,11 @@ export function BranchesGroup({ projectId }: BranchesGroupProps) {
 							className="group h-12"
 						>
 							{existingWorkspaceId ? (
-								<GoArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
+								<ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
 							) : branch.isLocal ? (
-								<GoGitBranch className="size-4 shrink-0 text-muted-foreground" />
+								<GitBranch className="size-4 shrink-0 text-muted-foreground" />
 							) : (
-								<GoGlobe className="size-4 shrink-0 text-muted-foreground" />
+								<Globe className="size-4 shrink-0 text-muted-foreground" />
 							)}
 							<span className="truncate flex-1">{branch.name}</span>
 							{existingWorkspaceId ? (

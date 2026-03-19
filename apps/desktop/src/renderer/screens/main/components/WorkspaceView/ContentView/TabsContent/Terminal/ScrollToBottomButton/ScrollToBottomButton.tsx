@@ -2,7 +2,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { cn } from "@superset/ui/utils";
 import type { Terminal } from "@xterm/xterm";
 import { useCallback, useEffect, useState } from "react";
-import { HiArrowDown } from "react-icons/hi2";
+import { ArrowDown } from "lucide-react";
 import { useHotkeyText } from "renderer/stores/hotkeys";
 import { scrollToBottom } from "../utils";
 

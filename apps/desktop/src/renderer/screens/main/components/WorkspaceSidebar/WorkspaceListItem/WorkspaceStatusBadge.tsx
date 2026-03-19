@@ -1,5 +1,5 @@
 import { cn } from "@superset/ui/utils";
-import { LuCircleDot, LuGitMerge, LuGitPullRequest } from "react-icons/lu";
+import { CircleDot, GitMerge, GitPullRequest } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { STROKE_WIDTH } from "../constants";
 
@@ -24,7 +24,7 @@ export function WorkspaceStatusBadge({
 	const config = {
 		open: {
 			icon: (
-				<LuGitPullRequest
+				<GitPullRequest
 					className={cn(iconClass, "text-emerald-500")}
 					strokeWidth={STROKE_WIDTH}
 				/>
@@ -34,7 +34,7 @@ export function WorkspaceStatusBadge({
 		},
 		merged: {
 			icon: (
-				<LuGitMerge
+				<GitMerge
 					className={cn(iconClass, "text-purple-500")}
 					strokeWidth={STROKE_WIDTH}
 				/>
@@ -44,7 +44,7 @@ export function WorkspaceStatusBadge({
 		},
 		closed: {
 			icon: (
-				<LuCircleDot
+				<CircleDot
 					className={cn(iconClass, "text-destructive")}
 					strokeWidth={STROKE_WIDTH}
 				/>
@@ -54,7 +54,7 @@ export function WorkspaceStatusBadge({
 		},
 		draft: {
 			icon: (
-				<LuGitPullRequest
+				<GitPullRequest
 					className={cn(iconClass, "text-muted-foreground")}
 					strokeWidth={STROKE_WIDTH}
 				/>

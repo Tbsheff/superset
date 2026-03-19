@@ -9,8 +9,7 @@ import {
 import { Button } from "@superset/ui/button";
 import { cn } from "@superset/ui/utils";
 import { useEffect, useState } from "react";
-import { HiExclamationTriangle } from "react-icons/hi2";
-import { LuCheck, LuCircle, LuGitBranch, LuLoader } from "react-icons/lu";
+import { Check, Circle, GitBranch, Loader, TriangleAlert } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useDeleteWorkspace } from "renderer/react-query/workspaces";
 import { deleteWithToast } from "renderer/routes/_authenticated/components/TeardownLogsDialog";
@@ -125,7 +124,7 @@ export function WorkspaceInitializingView({
 					<div className="flex flex-col items-center max-w-sm text-center space-y-6">
 						{/* Icon */}
 						<div className="flex items-center justify-center size-16 rounded-full bg-muted">
-							<LuGitBranch className="size-8 text-muted-foreground" />
+							<GitBranch className="size-8 text-muted-foreground" />
 						</div>
 
 						{/* Title and description */}
@@ -156,7 +155,7 @@ export function WorkspaceInitializingView({
 							>
 								{retryMutation.isPending ? (
 									<>
-										<LuLoader className="mr-2 size-4 animate-spin" />
+										<Loader className="mr-2 size-4 animate-spin" />
 										Retrying...
 									</>
 								) : (
@@ -249,7 +248,7 @@ export function WorkspaceInitializingView({
 							>
 								{retryMutation.isPending ? (
 									<>
-										<LuLoader className="mr-2 size-4 animate-spin" />
+										<Loader className="mr-2 size-4 animate-spin" />
 										Retrying...
 									</>
 								) : (
@@ -320,7 +319,7 @@ export function WorkspaceInitializingView({
 				<div className="relative">
 					<div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
 					<div className="relative flex items-center justify-center size-16 rounded-full bg-primary/10">
-						<LuGitBranch className="size-8 text-primary" />
+						<GitBranch className="size-8 text-primary" />
 					</div>
 				</div>
 
@@ -354,11 +353,11 @@ export function WorkspaceInitializingView({
 							>
 								{/* Step icon */}
 								{isComplete ? (
-									<LuCheck className="size-4 text-green-500 shrink-0" />
+									<Check className="size-4 text-green-500 shrink-0" />
 								) : isCurrent ? (
-									<LuLoader className="size-4 text-primary animate-spin shrink-0" />
+									<Loader className="size-4 text-primary animate-spin shrink-0" />
 								) : (
-									<LuCircle className="size-4 text-muted-foreground/40 shrink-0" />
+									<Circle className="size-4 text-muted-foreground/40 shrink-0" />
 								)}
 
 								{/* Step label */}

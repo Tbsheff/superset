@@ -25,7 +25,7 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { HiMiniAtSymbol } from "react-icons/hi2";
+import { AtSign } from "lucide-react";
 import { useDebouncedValue } from "renderer/hooks/useDebouncedValue";
 import { FileIcon } from "renderer/screens/main/components/WorkspaceView/RightSidebar/FilesView/utils";
 

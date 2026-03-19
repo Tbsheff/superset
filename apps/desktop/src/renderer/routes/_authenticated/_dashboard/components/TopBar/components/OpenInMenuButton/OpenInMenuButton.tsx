@@ -9,8 +9,7 @@ import { toast } from "@superset/ui/sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { cn } from "@superset/ui/utils";
 import { memo, useCallback, useMemo } from "react";
-import { HiChevronDown } from "react-icons/hi2";
-import { LuExternalLink } from "react-icons/lu";
+import { ChevronDown, ExternalLink } from "lucide-react";
 import {
 	getAppOption,
 	OpenInExternalDropdownItems,
@@ -116,7 +115,7 @@ export const OpenInMenuButton = memo(function OpenInMenuButton({
 								className="size-3.5 object-contain shrink-0"
 							/>
 						) : (
-							<LuExternalLink className="size-3.5 shrink-0" />
+							<ExternalLink className="size-3.5 shrink-0" />
 						)}
 						{branch && (
 							<span className="hidden lg:inline text-muted-foreground truncate max-w-[140px] tabular-nums">

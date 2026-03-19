@@ -8,10 +8,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@superset/ui/dropdown-menu";
-import { BsTerminalPlus } from "react-icons/bs";
-import { HiMiniChevronDown } from "react-icons/hi2";
-import { LuPlus } from "react-icons/lu";
-import { TbMessageCirclePlus, TbWorld } from "react-icons/tb";
+import { ChevronDown, Globe, MessageCirclePlus, Plus, SquareTerminal } from "lucide-react";
 import { HotkeyMenuShortcut } from "renderer/components/HotkeyMenuShortcut";
 import { NewTabDropZone } from "../../NewTabDropZone";
 import { PresetsSubmenu } from "./components/PresetsSubmenu";
@@ -59,7 +56,7 @@ export function AddTabButton({
 								className="h-7 rounded-r-none pl-2 pr-1.5 gap-1 text-xs border border-border/60 bg-muted/30 text-muted-foreground hover:bg-accent/60 hover:text-foreground"
 								onClick={onAddTerminal}
 							>
-								<BsTerminalPlus className="size-3.5" />
+								<SquareTerminal className="size-3.5" />
 								Terminal
 							</Button>
 							<Button
@@ -67,7 +64,7 @@ export function AddTabButton({
 								className="h-7 rounded-none border border-l-0 border-border/60 bg-muted/30 px-1.5 gap-1 text-xs text-muted-foreground hover:bg-accent/60 hover:text-foreground"
 								onClick={onAddChat}
 							>
-								<TbMessageCirclePlus className="size-3.5" />
+								<MessageCirclePlus className="size-3.5" />
 								Chat
 							</Button>
 							<Button
@@ -75,7 +72,7 @@ export function AddTabButton({
 								className="h-7 rounded-none border border-l-0 border-border/60 bg-muted/30 px-1.5 gap-1 text-xs text-muted-foreground hover:bg-accent/60 hover:text-foreground"
 								onClick={onAddBrowser}
 							>
-								<TbWorld className="size-3.5" />
+								<Globe className="size-3.5" />
 								Browser
 							</Button>
 							<DropdownMenuTrigger asChild>
@@ -95,7 +92,7 @@ export function AddTabButton({
 								size="icon"
 								className="size-7 px-1 rounded-md border border-border/60 bg-muted/30 text-muted-foreground hover:bg-accent/60 hover:text-foreground"
 							>
-								<LuPlus className="size-3.5" strokeWidth={1.8} />
+								<Plus className="size-3.5" strokeWidth={1.8} />
 							</Button>
 						</DropdownMenuTrigger>
 					)}
@@ -104,17 +101,17 @@ export function AddTabButton({
 					{!showBigAddButton && (
 						<>
 							<DropdownMenuItem onClick={onAddTerminal} className="gap-2">
-								<BsTerminalPlus className="size-4" />
+								<SquareTerminal className="size-4" />
 								<span>Terminal</span>
 								<HotkeyMenuShortcut hotkeyId="NEW_GROUP" />
 							</DropdownMenuItem>
 							<DropdownMenuItem onClick={onAddChat} className="gap-2">
-								<TbMessageCirclePlus className="size-4" />
+								<MessageCirclePlus className="size-4" />
 								<span>Chat</span>
 								<HotkeyMenuShortcut hotkeyId="NEW_CHAT" />
 							</DropdownMenuItem>
 							<DropdownMenuItem onClick={onAddBrowser} className="gap-2">
-								<TbWorld className="size-4" />
+								<Globe className="size-4" />
 								<span>Browser</span>
 								<HotkeyMenuShortcut hotkeyId="NEW_BROWSER" />
 							</DropdownMenuItem>

@@ -1,7 +1,7 @@
 import type { SelectUser } from "@superset/db/schema";
 import { Avatar } from "@superset/ui/atoms/Avatar";
 import type { ReactNode } from "react";
-import { HiOutlineUserCircle } from "react-icons/hi2";
+import { CircleUser } from "lucide-react";
 
 interface MenuItemProps {
 	children: ReactNode;

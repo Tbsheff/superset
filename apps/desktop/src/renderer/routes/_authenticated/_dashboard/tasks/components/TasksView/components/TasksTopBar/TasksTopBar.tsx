@@ -2,7 +2,7 @@ import { Button } from "@superset/ui/button";
 import { Input } from "@superset/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@superset/ui/tabs";
 import { useRef } from "react";
-import { HiOutlineMagnifyingGlass, HiXMark } from "react-icons/hi2";
+import { Search, X } from "lucide-react";
 import { useAppHotkey } from "renderer/stores/hotkeys";
 import type { TaskWithStatus } from "../../hooks/useTasksTable";
 import { ActiveIcon } from "../shared/icons/ActiveIcon";

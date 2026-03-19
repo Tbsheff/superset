@@ -9,7 +9,7 @@ import {
 	AlertDialogTitle,
 } from "@superset/ui/alert-dialog";
 import { Button } from "@superset/ui/button";
-import { LuLoader } from "react-icons/lu";
+import { Loader } from "lucide-react";
 
 interface UnsavedChangesDialogProps {
 	open: boolean;
@@ -60,7 +60,7 @@ export function UnsavedChangesDialog({
 					<AlertDialogAction onClick={handleSaveAndSwitch} disabled={isSaving}>
 						{isSaving ? (
 							<>
-								<LuLoader className="mr-2 h-4 w-4 animate-spin" />
+								<Loader className="mr-2 h-4 w-4 animate-spin" />
 								Saving...
 							</>
 						) : (

@@ -1,6 +1,6 @@
 import { Button } from "@superset/ui/button";
 import { Label } from "@superset/ui/label";
-import { LuExternalLink } from "react-icons/lu";
+import { ExternalLink } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import {
 	isItemVisible,
@@ -36,7 +36,7 @@ function PermissionRow({
 					</span>
 				)}
 				<Button variant="outline" size="sm" onClick={onRequest}>
-					<LuExternalLink className="h-3.5 w-3.5 mr-1.5" />
+					<ExternalLink className="h-3.5 w-3.5 mr-1.5" />
 					Edit in System Settings
 				</Button>
 			</div>

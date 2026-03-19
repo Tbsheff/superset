@@ -8,7 +8,7 @@ import {
 } from "@superset/ui/dropdown-menu";
 import { cn } from "@superset/ui/utils";
 import type { ReactNode } from "react";
-import { LuCopy } from "react-icons/lu";
+import { Copy } from "lucide-react";
 import {
 	FINDER_OPTIONS,
 	IDE_OPTIONS,
@@ -211,7 +211,7 @@ export function OpenInExternalDropdownItems({
 				<div
 					className={cn("flex items-center gap-2", copyPathContentClassName)}
 				>
-					<LuCopy className={cn("size-4", copyPathIconClassName)} />
+					<Copy className={cn("size-4", copyPathIconClassName)} />
 					<span className={copyPathLabelClassName}>Copy path</span>
 				</div>
 				{copyPathTrailing}

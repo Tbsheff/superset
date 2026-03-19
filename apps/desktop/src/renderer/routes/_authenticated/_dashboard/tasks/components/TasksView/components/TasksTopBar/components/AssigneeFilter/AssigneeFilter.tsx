@@ -13,7 +13,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@superset/ui/popover";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { HiCheck, HiChevronDown, HiOutlineUserCircle } from "react-icons/hi2";
+import { Check, ChevronDown, CircleUser } from "lucide-react";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 
 type Tab = "all" | "internal" | "external";

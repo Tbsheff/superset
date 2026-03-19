@@ -1,4 +1,4 @@
-import { HiMiniMinus, HiMiniStop, HiMiniXMark } from "react-icons/hi2";
+import { Minus, Square, X } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 
 export function WindowControls() {

@@ -21,7 +21,7 @@ import {
 } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { HiChevronRight } from "react-icons/hi2";
+import { ChevronRight } from "lucide-react";
 import { getSlugColumnWidth } from "renderer/lib/slug-width";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 import { create } from "zustand";

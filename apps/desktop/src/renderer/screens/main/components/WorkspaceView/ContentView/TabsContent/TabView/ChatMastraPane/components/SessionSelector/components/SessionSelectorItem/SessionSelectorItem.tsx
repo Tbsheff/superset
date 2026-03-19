@@ -1,7 +1,7 @@
 import { alert } from "@superset/ui/atoms/Alert";
 import { DropdownMenuItem } from "@superset/ui/dropdown-menu";
 import { toast } from "@superset/ui/sonner";
-import { HiMiniTrash } from "react-icons/hi2";
+import { Trash2 } from "lucide-react";
 
 interface SessionSelectorItemProps {
 	sessionId: string;

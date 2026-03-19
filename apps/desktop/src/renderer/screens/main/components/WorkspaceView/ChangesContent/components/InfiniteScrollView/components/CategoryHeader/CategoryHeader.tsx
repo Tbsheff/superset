@@ -1,5 +1,5 @@
 import { cn } from "@superset/ui/utils";
-import { LuChevronDown, LuChevronRight } from "react-icons/lu";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useChangesSectionDnd } from "renderer/screens/main/components/WorkspaceView/hooks/useChangesSectionDnd";
 import type { ChangeCategory } from "shared/changes-types";
 
@@ -38,9 +38,9 @@ export function CategoryHeader({
 			)}
 		>
 			{isExpanded ? (
-				<LuChevronDown className="size-4 text-muted-foreground" />
+				<ChevronDown className="size-4 text-muted-foreground" />
 			) : (
-				<LuChevronRight className="size-4 text-muted-foreground" />
+				<ChevronRight className="size-4 text-muted-foreground" />
 			)}
 			<span className="text-sm font-semibold">{title}</span>
 			<span className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5">

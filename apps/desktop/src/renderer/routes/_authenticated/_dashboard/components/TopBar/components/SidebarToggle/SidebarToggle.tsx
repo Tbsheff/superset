@@ -1,5 +1,5 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
-import { LuPanelLeft, LuPanelLeftClose, LuPanelLeftOpen } from "react-icons/lu";
+import { PanelLeft, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { HotkeyTooltipContent } from "renderer/components/HotkeyTooltipContent";
 import { useWorkspaceSidebarStore } from "renderer/stores";
 
@@ -11,15 +11,15 @@ export function SidebarToggle() {
 	const getToggleIcon = (isHovering: boolean) => {
 		if (collapsed) {
 			return isHovering ? (
-				<LuPanelLeftOpen className="size-4" strokeWidth={1.5} />
+				<PanelLeftOpen className="size-4" strokeWidth={1.5} />
 			) : (
-				<LuPanelLeft className="size-4" strokeWidth={1.5} />
+				<PanelLeft className="size-4" strokeWidth={1.5} />
 			);
 		}
 		return isHovering ? (
-			<LuPanelLeftClose className="size-4" strokeWidth={1.5} />
+			<PanelLeftClose className="size-4" strokeWidth={1.5} />
 		) : (
-			<LuPanelLeft className="size-4" strokeWidth={1.5} />
+			<PanelLeft className="size-4" strokeWidth={1.5} />
 		);
 	};
 

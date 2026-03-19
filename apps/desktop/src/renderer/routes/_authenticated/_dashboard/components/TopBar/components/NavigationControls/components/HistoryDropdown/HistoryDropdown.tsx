@@ -11,7 +11,7 @@ import { cn } from "@superset/ui/utils";
 import { eq } from "@tanstack/db";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import { LuHistory } from "react-icons/lu";
+import { History } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import {
 	StatusIcon,
@@ -185,7 +185,7 @@ export function HistoryDropdown() {
 						disabled
 						className="no-drag flex items-center justify-center size-7 rounded-md text-muted-foreground opacity-30"
 					>
-						<LuHistory className="size-3.5" strokeWidth={1.5} />
+						<History className="size-3.5" strokeWidth={1.5} />
 					</button>
 				</TooltipTrigger>
 				<TooltipContent side="bottom">Recently viewed</TooltipContent>
@@ -202,7 +202,7 @@ export function HistoryDropdown() {
 							type="button"
 							className="no-drag flex items-center justify-center size-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
 						>
-							<LuHistory className="size-3.5" strokeWidth={1.5} />
+							<History className="size-3.5" strokeWidth={1.5} />
 						</button>
 					</DropdownMenuTrigger>
 				</TooltipTrigger>

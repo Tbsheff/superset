@@ -10,11 +10,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import {
-	LuFolderGit,
-	LuFolderOpen,
-	LuFolderPlus,
-	LuServer,
-} from "react-icons/lu";
+	FolderGit,
+	FolderOpen,
+	FolderPlus,
+	Server,
+} from "lucide-react";
 import { useOpenProject } from "renderer/react-query/projects";
 import { useOpenMainRepoWorkspace } from "renderer/react-query/workspaces";
 import { STROKE_WIDTH } from "./constants";
@@ -74,7 +74,7 @@ export function WorkspaceSidebarFooter({
 										className="size-8 text-muted-foreground hover:text-foreground"
 										disabled={isLoading}
 									>
-										<LuFolderPlus
+										<FolderPlus
 											className="size-4"
 											strokeWidth={STROKE_WIDTH}
 										/>
@@ -88,17 +88,17 @@ export function WorkspaceSidebarFooter({
 								onClick={handleOpenProject}
 								disabled={isLoading}
 							>
-								<LuFolderOpen className="size-4" strokeWidth={STROKE_WIDTH} />
+								<FolderOpen className="size-4" strokeWidth={STROKE_WIDTH} />
 								Open project
 							</DropdownMenuItem>
 							<DropdownMenuItem
 								onClick={() => navigate({ to: "/new-project" })}
 							>
-								<LuFolderGit className="size-4" strokeWidth={STROKE_WIDTH} />
+								<FolderGit className="size-4" strokeWidth={STROKE_WIDTH} />
 								New project
 							</DropdownMenuItem>
 							<DropdownMenuItem onSelect={() => setRemoteDialogOpen(true)}>
-								<LuServer className="mr-2 size-4" />
+								<Server className="mr-2 size-4" />
 								Remote project
 							</DropdownMenuItem>
 						</DropdownMenuContent>
@@ -124,21 +124,21 @@ export function WorkspaceSidebarFooter({
 							className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
 							disabled={isLoading}
 						>
-							<LuFolderPlus className="w-4 h-4" strokeWidth={STROKE_WIDTH} />
+							<FolderPlus className="w-4 h-4" strokeWidth={STROKE_WIDTH} />
 							<span>Add repository</span>
 						</Button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent side="top" align="start">
 						<DropdownMenuItem onClick={handleOpenProject} disabled={isLoading}>
-							<LuFolderOpen className="size-4" strokeWidth={STROKE_WIDTH} />
+							<FolderOpen className="size-4" strokeWidth={STROKE_WIDTH} />
 							Open project
 						</DropdownMenuItem>
 						<DropdownMenuItem onClick={() => navigate({ to: "/new-project" })}>
-							<LuFolderGit className="size-4" strokeWidth={STROKE_WIDTH} />
+							<FolderGit className="size-4" strokeWidth={STROKE_WIDTH} />
 							New project
 						</DropdownMenuItem>
 						<DropdownMenuItem onSelect={() => setRemoteDialogOpen(true)}>
-							<LuServer className="mr-2 size-4" />
+							<Server className="mr-2 size-4" />
 							Remote project
 						</DropdownMenuItem>
 					</DropdownMenuContent>

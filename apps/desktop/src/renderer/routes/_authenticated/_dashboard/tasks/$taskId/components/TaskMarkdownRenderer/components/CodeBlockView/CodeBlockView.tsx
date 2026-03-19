@@ -7,7 +7,7 @@ import {
 import type { NodeViewProps } from "@tiptap/react";
 import { NodeViewContent, NodeViewWrapper } from "@tiptap/react";
 import { useEffect, useRef, useState } from "react";
-import { HiCheck, HiChevronDown, HiOutlineClipboard } from "react-icons/hi2";
+import { Check, ChevronDown, Clipboard } from "lucide-react";
 
 const LANGUAGES = [
 	{ value: "plaintext", label: "Plaintext" },

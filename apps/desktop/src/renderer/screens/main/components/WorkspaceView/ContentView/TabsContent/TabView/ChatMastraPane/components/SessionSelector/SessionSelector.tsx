@@ -7,11 +7,7 @@ import {
 	DropdownMenuTrigger,
 } from "@superset/ui/dropdown-menu";
 import { useEffect, useMemo, useState } from "react";
-import {
-	HiMiniArrowPath,
-	HiMiniChevronDown,
-	HiMiniPlus,
-} from "react-icons/hi2";
+import { ChevronDown, Plus, RefreshCw } from "lucide-react";
 import { getRelativeTime } from "../../../../../../../WorkspacesListView/utils";
 import { SessionSelectorItem } from "./components/SessionSelectorItem";
 

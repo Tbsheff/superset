@@ -1,4 +1,4 @@
-import { HiOutlineUserCircle } from "react-icons/hi2";
+import { CircleUser } from "lucide-react";
 
 interface AssigneeMenuIconProps {
 	color?: string;

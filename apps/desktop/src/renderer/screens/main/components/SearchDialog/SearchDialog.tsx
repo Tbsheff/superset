@@ -9,7 +9,7 @@ import {
 import { Input } from "@superset/ui/input";
 import { Spinner } from "@superset/ui/spinner";
 import type { ReactNode } from "react";
-import { LuChevronDown, LuChevronRight } from "react-icons/lu";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 export interface SearchDialogItem {
 	id: string;
@@ -91,9 +91,9 @@ export function SearchDialog<TItem extends SearchDialogItem>({
 						onClick={() => onFiltersOpenChange(!filtersOpen)}
 					>
 						{filtersOpen ? (
-							<LuChevronDown className="size-4" />
+							<ChevronDown className="size-4" />
 						) : (
-							<LuChevronRight className="size-4" />
+							<ChevronRight className="size-4" />
 						)}
 					</Button>
 				</div>

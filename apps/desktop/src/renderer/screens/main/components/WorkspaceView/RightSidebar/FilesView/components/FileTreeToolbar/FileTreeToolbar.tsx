@@ -3,12 +3,12 @@ import { Input } from "@superset/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-	LuChevronsDownUp,
-	LuFilePlus,
-	LuFolderPlus,
-	LuRefreshCw,
-	LuX,
-} from "react-icons/lu";
+	ChevronsDownUp,
+	FilePlus,
+	FolderPlus,
+	RefreshCw,
+	X,
+} from "lucide-react";
 import { SEARCH_DEBOUNCE_MS } from "../../constants";
 
 interface FileTreeToolbarProps {
@@ -91,7 +91,7 @@ export function FileTreeToolbar({
 						onClick={handleClearSearch}
 						className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted-foreground/20 transition-colors"
 					>
-						<LuX className="size-3.5" />
+						<X className="size-3.5" />
 					</button>
 				)}
 			</div>
@@ -105,7 +105,7 @@ export function FileTreeToolbar({
 							className="size-6"
 							onClick={onNewFile}
 						>
-							<LuFilePlus className="size-3.5" />
+							<FilePlus className="size-3.5" />
 						</Button>
 					</TooltipTrigger>
 					<TooltipContent side="bottom">New File</TooltipContent>
@@ -119,7 +119,7 @@ export function FileTreeToolbar({
 							className="size-6"
 							onClick={onNewFolder}
 						>
-							<LuFolderPlus className="size-3.5" />
+							<FolderPlus className="size-3.5" />
 						</Button>
 					</TooltipTrigger>
 					<TooltipContent side="bottom">New Folder</TooltipContent>
@@ -135,7 +135,7 @@ export function FileTreeToolbar({
 							className="size-6"
 							onClick={onCollapseAll}
 						>
-							<LuChevronsDownUp className="size-3.5" />
+							<ChevronsDownUp className="size-3.5" />
 						</Button>
 					</TooltipTrigger>
 					<TooltipContent side="bottom">Collapse All</TooltipContent>
@@ -150,7 +150,7 @@ export function FileTreeToolbar({
 							onClick={onRefresh}
 							disabled={isRefreshing}
 						>
-							<LuRefreshCw
+							<RefreshCw
 								className={`size-3.5 ${isRefreshing ? "animate-spin" : ""}`}
 							/>
 						</Button>

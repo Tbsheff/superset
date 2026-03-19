@@ -12,7 +12,7 @@ import {
 import { Button } from "@superset/ui/button";
 import { toast } from "@superset/ui/sonner";
 import { motion } from "framer-motion";
-import { GoGitBranch } from "react-icons/go";
+import { GitBranch } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useImportAllWorktrees } from "renderer/react-query/workspaces/useImportAllWorktrees";
 
@@ -64,7 +64,7 @@ export function ExternalWorktreesBanner({ projectId }: { projectId: string }) {
 								key={wt.path}
 								className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs font-mono text-muted-foreground"
 							>
-								<GoGitBranch className="size-3 shrink-0" />
+								<GitBranch className="size-3 shrink-0" />
 								<span className="truncate max-w-[180px]">{wt.branch}</span>
 							</span>
 						))}

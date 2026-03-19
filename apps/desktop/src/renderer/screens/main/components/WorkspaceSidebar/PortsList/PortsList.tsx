@@ -1,6 +1,6 @@
 import { COMPANY } from "@superset/shared/constants";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
-import { LuChevronRight, LuCircleHelp, LuRadioTower } from "react-icons/lu";
+import { ChevronRight, CircleHelp, RadioTower } from "lucide-react";
 import { usePortsStore } from "renderer/stores";
 import { STROKE_WIDTH } from "../constants";
 import { WorkspacePortGroup } from "./components/WorkspacePortGroup";
@@ -32,11 +32,11 @@ export function PortsList() {
 					onClick={toggleCollapsed}
 					className="flex items-center gap-1.5 focus-visible:text-muted-foreground focus-visible:outline-none"
 				>
-					<LuChevronRight
+					<ChevronRight
 						className={`size-3 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
 						strokeWidth={STROKE_WIDTH}
 					/>
-					<LuRadioTower className="size-3" strokeWidth={STROKE_WIDTH} />
+					<RadioTower className="size-3" strokeWidth={STROKE_WIDTH} />
 					Ports
 				</button>
 
@@ -47,7 +47,7 @@ export function PortsList() {
 							onClick={handleOpenPortsDocs}
 							className="ml-auto p-0.5 rounded hover:bg-muted/50 opacity-0 group-hover:opacity-100 transition-opacity"
 						>
-							<LuCircleHelp className="size-3" strokeWidth={STROKE_WIDTH} />
+							<CircleHelp className="size-3" strokeWidth={STROKE_WIDTH} />
 						</button>
 					</TooltipTrigger>
 					<TooltipContent side="top" sideOffset={4}>

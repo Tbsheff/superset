@@ -6,7 +6,7 @@ import {
 import { cn } from "@superset/ui/utils";
 import { Link, useMatchRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { HiChevronDown, HiChevronRight } from "react-icons/hi2";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { getMatchCountBySection } from "../../utils/settings-search";
 

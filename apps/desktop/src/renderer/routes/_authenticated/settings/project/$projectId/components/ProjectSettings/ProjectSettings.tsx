@@ -30,7 +30,7 @@ import {
 	HiOutlineFolderOpen,
 	HiOutlinePaintBrush,
 } from "react-icons/hi2";
-import { LuImagePlus, LuTrash2 } from "react-icons/lu";
+import { ImagePlus, Trash2 } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import {
 	useImportAllWorktrees,
@@ -611,7 +611,7 @@ export function ProjectSettings({
 									"hover:bg-muted transition-colors",
 								)}
 							>
-								<LuImagePlus className="size-4" />
+								<ImagePlus className="size-4" />
 								{project.iconUrl ? "Replace" : "Upload"}
 							</button>
 							{project.iconUrl && (
@@ -624,7 +624,7 @@ export function ProjectSettings({
 										"hover:bg-destructive/10 text-destructive transition-colors",
 									)}
 								>
-									<LuTrash2 className="size-4" />
+									<Trash2 className="size-4" />
 									Remove
 								</button>
 							)}

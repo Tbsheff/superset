@@ -1,5 +1,5 @@
 import type { CheckItem } from "@superset/local-db";
-import { LuCheck, LuLoaderCircle, LuX } from "react-icons/lu";
+import { Check, LoaderCircle, X } from "lucide-react";
 import { STROKE_WIDTH } from "../../../../../constants";
 
 interface ChecksSummaryProps {
@@ -17,15 +17,15 @@ export function ChecksSummary({ checks, status }: ChecksSummaryProps) {
 
 	const config = {
 		success: {
-			icon: LuCheck,
+			icon: Check,
 			className: "text-emerald-500",
 		},
 		failure: {
-			icon: LuX,
+			icon: X,
 			className: "text-destructive-foreground",
 		},
 		pending: {
-			icon: LuLoaderCircle,
+			icon: LoaderCircle,
 			className: "text-amber-500",
 		},
 	};

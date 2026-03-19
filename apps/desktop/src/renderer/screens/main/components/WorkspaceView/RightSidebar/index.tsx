@@ -4,12 +4,12 @@ import { cn } from "@superset/ui/utils";
 import { useParams } from "@tanstack/react-router";
 import { useCallback } from "react";
 import {
-	LuExpand,
-	LuFile,
-	LuGitCompareArrows,
-	LuShrink,
-	LuX,
-} from "react-icons/lu";
+	Expand,
+	File,
+	GitCompareArrows,
+	Shrink,
+	X,
+} from "lucide-react";
 import { HotkeyTooltipContent } from "renderer/components/HotkeyTooltipContent";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import {
@@ -167,7 +167,7 @@ export function RightSidebar() {
 						<TabButton
 							isActive={isSidebarOpen && rightSidebarTab === RightSidebarTab.Changes}
 							onClick={() => setRightSidebarTab(RightSidebarTab.Changes)}
-							icon={<LuGitCompareArrows className="size-3.5" />}
+							icon={<GitCompareArrows className="size-3.5" />}
 							label="Changes"
 							compact={compactTabs}
 						/>
@@ -175,7 +175,7 @@ export function RightSidebar() {
 					<TabButton
 						isActive={rightSidebarTab === RightSidebarTab.Files}
 						onClick={() => setRightSidebarTab(RightSidebarTab.Files)}
-						icon={<LuFile className="size-3.5" />}
+						icon={<File className="size-3.5" />}
 						label="Files"
 						compact={compactTabs}
 					/>
@@ -192,9 +192,9 @@ export function RightSidebar() {
 								title={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
 							>
 								{isExpanded ? (
-									<LuShrink className="size-3.5" />
+									<Shrink className="size-3.5" />
 								) : (
-									<LuExpand className="size-3.5" />
+									<Expand className="size-3.5" />
 								)}
 							</Button>
 						</TooltipTrigger>
@@ -214,7 +214,7 @@ export function RightSidebar() {
 								className="size-6 p-0"
 								title="Close sidebar"
 							>
-								<LuX className="size-3.5" />
+								<X className="size-3.5" />
 							</Button>
 						</TooltipTrigger>
 						<TooltipContent side="bottom" showArrow={false}>

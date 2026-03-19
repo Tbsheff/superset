@@ -5,7 +5,7 @@ import { Input } from "@superset/ui/input";
 import { toast } from "@superset/ui/sonner";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useEffect, useState } from "react";
-import { HiOutlinePencil } from "react-icons/hi2";
+import { Pencil } from "lucide-react";
 import { authClient } from "renderer/lib/auth-client";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { vanillaElectronTrpc } from "renderer/lib/vanilla-electron-trpc";

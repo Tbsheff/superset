@@ -1,7 +1,7 @@
 import { Badge } from "@superset/ui/badge";
 import { useEffect, useRef } from "react";
 import { useDrag, useDrop } from "react-dnd";
-import { LuGripVertical } from "react-icons/lu";
+import { GripVertical } from "lucide-react";
 import type { TerminalPreset } from "renderer/routes/_authenticated/settings/presets/types";
 
 const PRESET_TYPE = "TERMINAL_PRESET";
@@ -97,7 +97,7 @@ export function PresetRow({
 				ref={dragHandleRef}
 				className="w-6 flex justify-center shrink-0 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
 			>
-				<LuGripVertical className="h-4 w-4" />
+				<GripVertical className="h-4 w-4" />
 			</div>
 
 			<div className="flex-1 min-w-0">

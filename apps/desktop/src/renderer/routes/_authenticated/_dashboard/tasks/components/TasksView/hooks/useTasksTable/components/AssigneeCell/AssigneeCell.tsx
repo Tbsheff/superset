@@ -8,7 +8,7 @@ import {
 import { useLiveQuery } from "@tanstack/react-db";
 import type { CellContext } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
-import { HiOutlineUserCircle } from "react-icons/hi2";
+import { CircleUser } from "lucide-react";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 import type { TaskWithStatus } from "../../useTasksTable";
 

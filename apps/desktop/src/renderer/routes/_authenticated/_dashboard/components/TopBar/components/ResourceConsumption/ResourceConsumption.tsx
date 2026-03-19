@@ -2,7 +2,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@superset/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { HiOutlineArrowPath, HiOutlineCpuChip } from "react-icons/hi2";
+import { Cpu, RefreshCw } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useTabsStore } from "renderer/stores/tabs/store";
 import { AppResourceSection } from "./components/AppResourceSection";

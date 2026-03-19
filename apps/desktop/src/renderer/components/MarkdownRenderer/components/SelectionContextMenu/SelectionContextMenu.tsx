@@ -12,7 +12,7 @@ import type {
 	RefObject,
 } from "react";
 import { useState } from "react";
-import { LuCopy } from "react-icons/lu";
+import { Copy } from "lucide-react";
 
 function getModifierKeyLabel() {
 	const isMac = navigator.platform.toLowerCase().includes("mac");
@@ -136,7 +136,7 @@ export function SelectionContextMenu<T extends HTMLElement>({
 			</ContextMenuTrigger>
 			<ContextMenuContent>
 				<ContextMenuItem disabled={!canCopy} onSelect={handleCopy}>
-					<LuCopy className="size-4" />
+					<Copy className="size-4" />
 					Copy
 					<ContextMenuShortcut>{`${modifierKeyLabel}C`}</ContextMenuShortcut>
 				</ContextMenuItem>

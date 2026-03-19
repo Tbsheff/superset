@@ -4,7 +4,7 @@ import {
 	useEffect,
 	useRef,
 } from "react";
-import { LuLoader } from "react-icons/lu";
+import { Loader } from "lucide-react";
 import { MarkdownRenderer } from "renderer/components/MarkdownRenderer";
 import { LightDiffViewer } from "renderer/screens/main/components/WorkspaceView/ChangesContent/components/LightDiffViewer";
 import type { CodeEditorAdapter } from "renderer/screens/main/components/WorkspaceView/ContentView/components";
@@ -373,7 +373,7 @@ export function FileViewerContent({
 		if (isLoadingImage) {
 			return (
 				<div className="flex h-full items-center justify-center text-muted-foreground">
-					<LuLoader className="mr-2 h-4 w-4 animate-spin" />
+					<Loader className="mr-2 h-4 w-4 animate-spin" />
 					<span>Loading image...</span>
 				</div>
 			);

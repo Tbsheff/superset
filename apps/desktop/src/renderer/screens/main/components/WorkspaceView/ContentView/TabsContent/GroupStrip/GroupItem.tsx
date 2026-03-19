@@ -11,8 +11,7 @@ import { cn } from "@superset/ui/utils";
 import { useEffect, useRef, useState } from "react";
 import { useDrag, useDrop } from "react-dnd";
 import { getEmptyImage } from "react-dnd-html5-backend";
-import { HiMiniXMark } from "react-icons/hi2";
-import { LuEyeOff, LuPencil } from "react-icons/lu";
+import { EyeOff, Pencil, X } from "lucide-react";
 import { MosaicDragType } from "react-mosaic-component";
 import { StatusIndicator } from "renderer/screens/main/components/StatusIndicator";
 import { useDragPaneStore } from "renderer/stores/drag-pane-store";
@@ -250,12 +249,12 @@ export function GroupItem({
 			</ContextMenuTrigger>
 			<ContextMenuContent>
 				<ContextMenuItem onSelect={startEditing}>
-					<LuPencil className="size-4 mr-2" />
+					<Pencil className="size-4 mr-2" />
 					Rename
 				</ContextMenuItem>
 				<ContextMenuSeparator />
 				<ContextMenuItem onSelect={onMarkAsUnread}>
-					<LuEyeOff className="size-4 mr-2" />
+					<EyeOff className="size-4 mr-2" />
 					Mark as Unread
 				</ContextMenuItem>
 				<ContextMenuSeparator />

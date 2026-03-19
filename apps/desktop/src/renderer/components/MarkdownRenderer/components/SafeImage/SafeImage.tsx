@@ -1,4 +1,4 @@
-import { LuImageOff } from "react-icons/lu";
+import { ImageOff } from "lucide-react";
 
 /**
  * Check if an image source is safe to load.
@@ -54,7 +54,7 @@ export function SafeImage({ src, alt, className }: SafeImageProps) {
 				className={`inline-flex items-center gap-2 px-3 py-2 rounded-md bg-muted text-muted-foreground text-sm ${className ?? ""}`}
 				title={`Image blocked: ${src ?? "(empty)"}`}
 			>
-				<LuImageOff className="w-4 h-4 flex-shrink-0" />
+				<ImageOff className="w-4 h-4 flex-shrink-0" />
 				<span className="truncate max-w-[300px]">Image blocked</span>
 			</div>
 		);

@@ -1,15 +1,15 @@
 import { cn } from "@superset/ui/utils";
 import { useState } from "react";
 import {
-	LuBraces,
-	LuGlobe,
-	LuLayoutDashboard,
-	LuLoader,
-	LuMessageSquare,
-	LuServer,
-	LuSmartphone,
-	LuTerminal,
-} from "react-icons/lu";
+	Braces,
+	Globe,
+	LayoutDashboard,
+	Loader,
+	MessageSquare,
+	Server,
+	Smartphone,
+	Terminal,
+} from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useProjectCreationHandler } from "../../hooks/useProjectCreationHandler";
 
@@ -17,44 +17,44 @@ const TEMPLATES = [
 	{
 		name: "Next.js Chatbot",
 		description: "AI chatbot built with Next.js and the AI SDK",
-		icon: LuMessageSquare,
+		icon: MessageSquare,
 		color: "text-white bg-black",
 		repo: "https://github.com/vercel/chatbot",
 	},
 	{
 		name: "Next.js",
 		description: "Full-stack React framework with SSR and API routes",
-		icon: LuGlobe,
+		icon: Globe,
 		color: "text-white bg-black",
 	},
 	{
 		name: "Vite + React",
 		description: "Fast build tool with React and TypeScript",
-		icon: LuBraces,
+		icon: Braces,
 		color: "text-white bg-violet-500",
 	},
 	{
 		name: "Express API",
 		description: "Minimal Node.js REST API server",
-		icon: LuServer,
+		icon: Server,
 		color: "text-white bg-green-600",
 	},
 	{
 		name: "Astro",
 		description: "Content-focused static site generator",
-		icon: LuLayoutDashboard,
+		icon: LayoutDashboard,
 		color: "text-white bg-orange-500",
 	},
 	{
 		name: "React Native",
 		description: "Cross-platform mobile app with Expo",
-		icon: LuSmartphone,
+		icon: Smartphone,
 		color: "text-white bg-blue-500",
 	},
 	{
 		name: "CLI Tool",
 		description: "Command-line application with TypeScript",
-		icon: LuTerminal,
+		icon: Terminal,
 		color: "text-white bg-zinc-700",
 	},
 ];
@@ -117,7 +117,7 @@ export function TemplateTab({ onError, parentDir }: TemplateTabProps) {
 							)}
 						>
 							{isCloning ? (
-								<LuLoader className="size-4.5 animate-spin" />
+								<Loader className="size-4.5 animate-spin" />
 							) : (
 								<template.icon className="size-4.5" />
 							)}

@@ -9,12 +9,12 @@ import {
 import type { ReactNode } from "react";
 import { useState } from "react";
 import {
-	LuArrowDownToLine,
-	LuClipboard,
-	LuClipboardCopy,
-	LuEraser,
-	LuEyeOff,
-} from "react-icons/lu";
+	ArrowDownToLine,
+	Clipboard,
+	ClipboardCopy,
+	Eraser,
+	EyeOff,
+} from "lucide-react";
 import { useHotkeyText } from "renderer/stores/hotkeys";
 import {
 	type PaneContextMenuActions,
@@ -106,14 +106,14 @@ export function TabContentContextMenu({
 			<ContextMenuContent>
 				{getSelection && (
 					<ContextMenuItem disabled={!hasSelection} onSelect={handleCopy}>
-						<LuClipboardCopy className="size-4" />
+						<ClipboardCopy className="size-4" />
 						Copy
 						<ContextMenuShortcut>{modKey}C</ContextMenuShortcut>
 					</ContextMenuItem>
 				)}
 				{onPaste && (
 					<ContextMenuItem disabled={!hasClipboard} onSelect={handlePaste}>
-						<LuClipboard className="size-4" />
+						<Clipboard className="size-4" />
 						Paste
 						<ContextMenuShortcut>{modKey}V</ContextMenuShortcut>
 					</ContextMenuItem>
@@ -121,7 +121,7 @@ export function TabContentContextMenu({
 				{(getSelection || onPaste) && <ContextMenuSeparator />}
 				{onClearTerminal && (
 					<ContextMenuItem onSelect={onClearTerminal}>
-						<LuEraser className="size-4" />
+						<Eraser className="size-4" />
 						Clear Terminal
 						{showClearShortcut && (
 							<ContextMenuShortcut>{clearShortcut}</ContextMenuShortcut>
@@ -130,7 +130,7 @@ export function TabContentContextMenu({
 				)}
 				{onScrollToBottom && (
 					<ContextMenuItem onSelect={onScrollToBottom}>
-						<LuArrowDownToLine className="size-4" />
+						<ArrowDownToLine className="size-4" />
 						Scroll to Bottom
 						{showScrollToBottomShortcut && (
 							<ContextMenuShortcut>
@@ -143,7 +143,7 @@ export function TabContentContextMenu({
 				{onMarkAsUnread && (
 					<>
 						<ContextMenuItem onSelect={onMarkAsUnread}>
-							<LuEyeOff className="size-4" />
+							<EyeOff className="size-4" />
 							Mark as Unread
 						</ContextMenuItem>
 						<ContextMenuSeparator />

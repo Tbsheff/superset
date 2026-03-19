@@ -1,6 +1,6 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { useNavigate } from "@tanstack/react-router";
-import { LuX } from "react-icons/lu";
+import { X } from "lucide-react";
 import { navigateToWorkspace } from "renderer/routes/_authenticated/_dashboard/utils/workspace-navigation";
 import { STROKE_WIDTH } from "../../../constants";
 import { useKillPort } from "../../hooks/useKillPort";
@@ -40,7 +40,7 @@ export function WorkspacePortGroup({ group }: WorkspacePortGroupProps) {
 							onClick={handleCloseAll}
 							className="ml-auto p-0.5 rounded hover:bg-muted/50 text-muted-foreground hover:text-primary"
 						>
-							<LuX className="size-3" strokeWidth={STROKE_WIDTH} />
+							<X className="size-3" strokeWidth={STROKE_WIDTH} />
 						</button>
 					</TooltipTrigger>
 					<TooltipContent side="top" sideOffset={4}>

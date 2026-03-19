@@ -11,7 +11,8 @@ import {
 	DropdownMenuTrigger,
 } from "@superset/ui/dropdown-menu";
 import { useNavigate } from "@tanstack/react-router";
-import { FaDiscord, FaGithub, FaXTwitter } from "react-icons/fa6";
+import { Bug, Github, Keyboard } from "lucide-react";
+import { FaDiscord, FaXTwitter } from "react-icons/fa6";
 import {
 	HiChevronUpDown,
 	HiOutlineBookOpen,
@@ -19,8 +20,6 @@ import {
 	HiOutlineCog6Tooth,
 	HiOutlineEnvelope,
 } from "react-icons/hi2";
-import { IoBugOutline } from "react-icons/io5";
-import { LuKeyboard } from "react-icons/lu";
 import { useHotkeyText } from "renderer/stores/hotkeys";
 
 export function OrganizationDropdown() {
@@ -67,7 +66,7 @@ export function OrganizationDropdown() {
 				<DropdownMenuItem
 					onClick={() => navigate({ to: "/settings/keyboard" })}
 				>
-					<LuKeyboard className="h-4 w-4" />
+					<Keyboard className="h-4 w-4" />
 					Keyboard Shortcuts
 					{shortcutsHotkey !== "Unassigned" && (
 						<DropdownMenuShortcut>{shortcutsHotkey}</DropdownMenuShortcut>
@@ -76,7 +75,7 @@ export function OrganizationDropdown() {
 				<DropdownMenuItem
 					onClick={() => openExternal(COMPANY.REPORT_ISSUE_URL)}
 				>
-					<IoBugOutline className="h-4 w-4" />
+					<Bug className="h-4 w-4" />
 					Report Issue
 				</DropdownMenuItem>
 				<DropdownMenuSub>
@@ -86,7 +85,7 @@ export function OrganizationDropdown() {
 					</DropdownMenuSubTrigger>
 					<DropdownMenuSubContent sideOffset={8} className="w-56">
 						<DropdownMenuItem onClick={() => openExternal(COMPANY.GITHUB_URL)}>
-							<FaGithub className="h-4 w-4" />
+							<Github className="h-4 w-4" />
 							GitHub
 						</DropdownMenuItem>
 						<DropdownMenuItem onClick={() => openExternal(COMPANY.DISCORD_URL)}>

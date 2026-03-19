@@ -6,12 +6,11 @@ import { useLiveQuery } from "@tanstack/react-db";
 import { useNavigate } from "@tanstack/react-router";
 import Fuse from "fuse.js";
 import { useMemo } from "react";
+import { ArrowUpRight, Github } from "lucide-react";
 import {
-	GoArrowUpRight,
 	GoGitPullRequest,
 	GoGitPullRequestDraft,
 } from "react-icons/go";
-import { SiGithub } from "react-icons/si";
 import { useDebouncedValue } from "renderer/hooks/useDebouncedValue";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useCreateFromPr } from "renderer/react-query/workspaces/useCreateFromPr";
@@ -185,7 +184,7 @@ export function PullRequestsGroup({
 			<>
 				{urlItem && <CommandGroup>{urlItem}</CommandGroup>}
 				<div className="flex flex-col items-center gap-3 py-8 px-4 text-center">
-					<SiGithub className="size-6 text-muted-foreground" />
+					<Github className="size-6 text-muted-foreground" />
 					<div className="space-y-1">
 						{isResolvingOwner ? (
 							<>
@@ -257,7 +256,7 @@ export function PullRequestsGroup({
 					className="group h-12"
 				>
 					{workspaceByBranch.has(pr.headBranch) ? (
-						<GoArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
+						<ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
 					) : pr.isDraft ? (
 						<GoGitPullRequestDraft className="size-4 shrink-0 text-muted-foreground" />
 					) : (

@@ -1,6 +1,6 @@
 import { Kbd, KbdGroup } from "@superset/ui/kbd";
 import { useCallback } from "react";
-import { LuSearch } from "react-icons/lu";
+import { Search } from "lucide-react";
 import { getHotkeyKeys, useHotkeyDisplay } from "renderer/stores/hotkeys";
 
 interface SearchBarTriggerProps {
@@ -56,7 +56,7 @@ export function SearchBarTrigger({ workspaceName }: SearchBarTriggerProps) {
 			onClick={handleClick}
 			className="no-drag flex items-center gap-2 h-7 px-3 rounded-md border border-border bg-muted/50 hover:bg-muted text-muted-foreground text-sm transition-colors cursor-pointer min-w-[100px] md:min-w-[200px] max-w-[280px]"
 		>
-			<LuSearch className="size-3.5 shrink-0" />
+			<Search className="size-3.5 shrink-0" />
 			<span className="truncate text-xs hidden md:inline">
 				{fullPlaceholder}
 			</span>

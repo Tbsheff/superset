@@ -1,7 +1,7 @@
 import { Button } from "@superset/ui/button";
 import { cn } from "@superset/ui/utils";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { HiArrowTopRightOnSquare, HiDocumentArrowUp } from "react-icons/hi2";
+import { ExternalLink, FileUp } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { EXTERNAL_LINKS } from "shared/constants";
 

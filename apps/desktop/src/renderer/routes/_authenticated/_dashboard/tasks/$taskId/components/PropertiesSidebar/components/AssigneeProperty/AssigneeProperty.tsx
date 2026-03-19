@@ -7,7 +7,7 @@ import {
 } from "@superset/ui/dropdown-menu";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useMemo, useState } from "react";
-import { HiOutlineUserCircle } from "react-icons/hi2";
+import { CircleUser } from "lucide-react";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 import type { TaskWithStatus } from "../../../../../components/TasksView/hooks/useTasksTable";
 

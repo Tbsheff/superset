@@ -9,7 +9,7 @@ import { ShimmerLabel } from "@superset/ui/ai-elements/shimmer-label";
 import type { ChatStatus, UIMessage } from "ai";
 import { FileIcon, FileTextIcon, ImageIcon } from "lucide-react";
 import { useCallback } from "react";
-import { HiMiniChatBubbleLeftRight } from "react-icons/hi2";
+import { MessagesSquare } from "lucide-react";
 import { useTabsStore } from "renderer/stores/tabs/store";
 import type { InterruptedMessagePreview } from "../../types";
 import { MessagePartsRenderer } from "../MessagePartsRenderer";

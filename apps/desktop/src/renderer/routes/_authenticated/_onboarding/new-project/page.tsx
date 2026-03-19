@@ -2,13 +2,13 @@ import { Button } from "@superset/ui/button";
 import { cn } from "@superset/ui/utils";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { HiArrowLeft } from "react-icons/hi2";
 import {
-	LuFolderPlus,
-	LuGitBranch,
-	LuLayoutTemplate,
-	LuX,
-} from "react-icons/lu";
+	ArrowLeft,
+	FolderPlus,
+	GitBranch,
+	LayoutTemplate,
+	X,
+} from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { CloneRepoTab } from "./components/CloneRepoTab";
 import { EmptyRepoTab } from "./components/EmptyRepoTab";
@@ -26,25 +26,25 @@ const OPTIONS: {
 	mode: NewProjectMode;
 	label: string;
 	description: string;
-	icon: typeof LuFolderPlus;
+	icon: typeof FolderPlus;
 }[] = [
 	{
 		mode: "empty",
 		label: "Empty",
 		description: "New git repository from scratch",
-		icon: LuFolderPlus,
+		icon: FolderPlus,
 	},
 	{
 		mode: "clone",
 		label: "Clone",
 		description: "Clone from a remote URL",
-		icon: LuGitBranch,
+		icon: GitBranch,
 	},
 	{
 		mode: "template",
 		label: "Template",
 		description: "Start from a project template",
-		icon: LuLayoutTemplate,
+		icon: LayoutTemplate,
 	},
 ];
 
@@ -65,7 +65,7 @@ function NewProjectPage() {
 			<div className="absolute top-4 left-4 z-10">
 				<Button variant="ghost" size="sm" asChild>
 					<Link to="/">
-						<HiArrowLeft className="size-4" />
+						<ArrowLeft className="size-4" />
 						Back
 					</Link>
 				</Button>
@@ -134,7 +134,7 @@ function NewProjectPage() {
 									className="shrink-0 rounded p-0.5 text-destructive/70 hover:text-destructive transition-colors"
 									aria-label="Dismiss error"
 								>
-									<LuX className="h-3.5 w-3.5" />
+									<X className="h-3.5 w-3.5" />
 								</button>
 							</div>
 						)}

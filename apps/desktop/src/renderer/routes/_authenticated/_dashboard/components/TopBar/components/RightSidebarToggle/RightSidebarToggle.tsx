@@ -1,5 +1,5 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
-import { LuPanelRight } from "react-icons/lu";
+import { PanelRight } from "lucide-react";
 import { useSidebarStore } from "renderer/stores";
 
 export function RightSidebarToggle() {
@@ -14,7 +14,7 @@ export function RightSidebarToggle() {
 					className="no-drag flex items-center justify-center size-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
 					aria-label="Toggle sidebar"
 				>
-					<LuPanelRight className="size-4" strokeWidth={1.5} />
+					<PanelRight className="size-4" strokeWidth={1.5} />
 				</button>
 			</TooltipTrigger>
 			<TooltipContent side="bottom">Toggle sidebar</TooltipContent>

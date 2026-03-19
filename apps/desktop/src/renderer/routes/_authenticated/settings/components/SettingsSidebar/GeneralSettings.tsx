@@ -11,7 +11,7 @@ import {
 	HiOutlineSparkles,
 	HiOutlineUser,
 } from "react-icons/hi2";
-import { LuBrain, LuGitBranch, LuKeyboard } from "react-icons/lu";
+import { Brain, GitBranch, Keyboard } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import type { SettingsSection } from "renderer/stores/settings-state";
 
@@ -72,7 +72,7 @@ const SECTION_GROUPS: SectionGroup[] = [
 				id: "/settings/keyboard",
 				section: "keyboard",
 				label: "Keyboard",
-				icon: <LuKeyboard className="h-4 w-4" />,
+				icon: <Keyboard className="h-4 w-4" />,
 			},
 		],
 	},
@@ -89,7 +89,7 @@ const SECTION_GROUPS: SectionGroup[] = [
 				id: "/settings/git",
 				section: "git",
 				label: "Git & Worktrees",
-				icon: <LuGitBranch className="h-4 w-4" />,
+				icon: <GitBranch className="h-4 w-4" />,
 			},
 			{
 				id: "/settings/terminal",
@@ -101,7 +101,7 @@ const SECTION_GROUPS: SectionGroup[] = [
 				id: "/settings/models",
 				section: "models",
 				label: "Models",
-				icon: <LuBrain className="h-4 w-4" />,
+				icon: <Brain className="h-4 w-4" />,
 			},
 		],
 	},

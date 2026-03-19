@@ -6,7 +6,7 @@ import {
 	ConversationScrollButton,
 } from "@superset/ui/ai-elements/conversation";
 import { useMemo, useRef } from "react";
-import { HiMiniChatBubbleLeftRight } from "react-icons/hi2";
+import { MessagesSquare } from "lucide-react";
 import type {
 	ChatMastraMessageListProps,
 	MastraMessage,

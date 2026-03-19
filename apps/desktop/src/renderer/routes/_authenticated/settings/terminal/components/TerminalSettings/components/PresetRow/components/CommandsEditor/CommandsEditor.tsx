@@ -1,7 +1,7 @@
 import { Button } from "@superset/ui/button";
 import { Input } from "@superset/ui/input";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { HiMiniPlus, HiMiniXMark } from "react-icons/hi2";
+import { Plus, X } from "lucide-react";
 
 interface CommandsEditorProps {
 	commands: string[];

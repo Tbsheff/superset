@@ -1,7 +1,6 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
-import { GlobeIcon } from "lucide-react";
+import { GlobeIcon, Monitor } from "lucide-react";
 import { useCallback } from "react";
-import { TbDeviceDesktop } from "react-icons/tb";
 import type { MosaicBranch } from "react-mosaic-component";
 import { useTabsStore } from "renderer/stores/tabs/store";
 import { BasePaneWindow, PaneToolbarActions } from "../components";
@@ -97,7 +96,7 @@ export function BrowserPane({
 												onClick={handleOpenDevTools}
 												className="rounded p-0.5 text-muted-foreground/60 transition-colors hover:text-muted-foreground"
 											>
-												<TbDeviceDesktop className="size-3.5" />
+												<Monitor className="size-3.5" />
 											</button>
 										</TooltipTrigger>
 										<TooltipContent side="bottom" showArrow={false}>

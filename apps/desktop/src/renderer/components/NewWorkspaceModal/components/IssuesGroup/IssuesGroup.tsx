@@ -6,8 +6,7 @@ import { eq, isNull } from "@tanstack/db";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { GoArrowUpRight } from "react-icons/go";
-import { HiOutlineUserCircle } from "react-icons/hi2";
+import { ArrowUpRight, CircleUser } from "lucide-react";
 import { SiLinear } from "react-icons/si";
 import { useDebouncedValue } from "renderer/hooks/useDebouncedValue";
 import { electronTrpc } from "renderer/lib/electron-trpc";
@@ -162,7 +161,7 @@ export function IssuesGroup({ projectId }: IssuesGroupProps) {
 					className="group h-12"
 				>
 					{workspaceByBranch.has(task.slug.toLowerCase()) ? (
-						<GoArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
+						<ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
 					) : (
 						<StatusIcon
 							type={task.status.type as StatusType}

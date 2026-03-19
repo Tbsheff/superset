@@ -27,10 +27,8 @@ import {
 import { toast } from "@superset/ui/sonner";
 import { Spinner } from "@superset/ui/spinner";
 import { Switch } from "@superset/ui/switch";
-import { ChevronDownIcon } from "lucide-react";
+import { Check, ChevronDown, Circle, Play, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { HiCheck, HiMiniPlay, HiXMark } from "react-icons/hi2";
-import { LuCircle } from "react-icons/lu";
 import {
 	getPresetIcon,
 	useIsDarkTheme,
@@ -47,7 +45,7 @@ type TaskStatus = "pending" | "creating" | "done" | "failed";
 function BatchStatusIcon({ status }: { status: TaskStatus }) {
 	switch (status) {
 		case "pending":
-			return <LuCircle className="size-3 text-muted-foreground" />;
+			return <Circle className="size-3 text-muted-foreground" />;
 		case "creating":
 			return <Spinner className="size-3" />;
 		case "done":
@@ -320,7 +318,7 @@ export function RunInWorkspacePopover({
 										</span>
 									)}
 								</span>
-								<ChevronDownIcon className="size-4 opacity-50 shrink-0" />
+								<ChevronDown className="size-4 opacity-50 shrink-0" />
 							</Button>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent

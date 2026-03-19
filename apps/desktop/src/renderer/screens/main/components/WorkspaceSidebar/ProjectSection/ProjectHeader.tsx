@@ -13,17 +13,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { cn } from "@superset/ui/utils";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useState } from "react";
-import { HiChevronRight, HiMiniPlus } from "react-icons/hi2";
-import {
-	LuFolderOpen,
-	LuImage,
-	LuImageOff,
-	LuListPlus,
-	LuPalette,
-	LuPencil,
-	LuSettings,
-	LuX,
-} from "react-icons/lu";
+import { ChevronRight, FolderOpen, Image, ImageOff, ListPlus, Palette, Pencil, Plus, Settings, X } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useUpdateProject } from "renderer/react-query/projects/useUpdateProject";
 import { navigateToWorkspace } from "renderer/routes/_authenticated/_dashboard/utils/workspace-navigation";
@@ -165,7 +155,7 @@ export function ProjectHeader({
 	const colorPickerSubmenu = (
 		<ContextMenuSub>
 			<ContextMenuSubTrigger>
-				<LuPalette className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
+				<Palette className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
 				Set Color
 			</ContextMenuSubTrigger>
 			<ContextMenuSubContent className="w-36">
@@ -230,24 +220,24 @@ export function ProjectHeader({
 					</Tooltip>
 					<ContextMenuContent>
 						<ContextMenuItem onSelect={rename.startRename}>
-							<LuPencil className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
+							<Pencil className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
 							Rename
 						</ContextMenuItem>
 						<ContextMenuSeparator />
 						<ContextMenuItem onSelect={handleOpenInFinder}>
-							<LuFolderOpen
+							<FolderOpen
 								className="size-4 mr-2"
 								strokeWidth={STROKE_WIDTH}
 							/>
 							Open in Finder
 						</ContextMenuItem>
 						<ContextMenuItem onSelect={handleOpenSettings}>
-							<LuSettings className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
+							<Settings className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
 							Project Settings
 						</ContextMenuItem>
 						{colorPickerSubmenu}
 						<ContextMenuItem onSelect={handleNewSection}>
-							<LuListPlus className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
+							<ListPlus className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
 							New Section
 						</ContextMenuItem>
 						<ContextMenuSeparator />
@@ -256,7 +246,7 @@ export function ProjectHeader({
 							disabled={closeProject.isPending}
 							className="text-destructive focus:text-destructive"
 						>
-							<LuX
+							<X
 								className="size-4 mr-2 text-destructive"
 								strokeWidth={STROKE_WIDTH}
 							/>
@@ -363,29 +353,29 @@ export function ProjectHeader({
 				</ContextMenuTrigger>
 				<ContextMenuContent>
 					<ContextMenuItem onSelect={rename.startRename}>
-						<LuPencil className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
+						<Pencil className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
 						Rename
 					</ContextMenuItem>
 					<ContextMenuSeparator />
 					<ContextMenuItem onSelect={handleOpenInFinder}>
-						<LuFolderOpen className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
+						<FolderOpen className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
 						Open in Finder
 					</ContextMenuItem>
 					<ContextMenuItem onSelect={handleOpenSettings}>
-						<LuSettings className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
+						<Settings className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
 						Project Settings
 					</ContextMenuItem>
 					{colorPickerSubmenu}
 					<ContextMenuItem onSelect={handleToggleImage}>
 						{hideImage ? (
-							<LuImage className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
+							<Image className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
 						) : (
-							<LuImageOff className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
+							<ImageOff className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
 						)}
 						{hideImage ? "Show Image" : "Hide Image"}
 					</ContextMenuItem>
 					<ContextMenuItem onSelect={handleNewSection}>
-						<LuListPlus className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
+						<ListPlus className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
 						New Section
 					</ContextMenuItem>
 					<ContextMenuSeparator />
@@ -394,7 +384,7 @@ export function ProjectHeader({
 						disabled={closeProject.isPending}
 						className="text-destructive focus:text-destructive"
 					>
-						<LuX
+						<X
 							className="size-4 mr-2 text-destructive"
 							strokeWidth={STROKE_WIDTH}
 						/>

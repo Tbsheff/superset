@@ -1,11 +1,6 @@
 import { COMPANY } from "@superset/shared/constants";
 import { useNavigate } from "@tanstack/react-router";
-import {
-	HiArrowLeft,
-	HiArrowTopRightOnSquare,
-	HiMagnifyingGlass,
-	HiXMark,
-} from "react-icons/hi2";
+import { ArrowLeft, ExternalLink, Search, X } from "lucide-react";
 import {
 	useSetSettingsSearchQuery,
 	useSettingsSearchQuery,

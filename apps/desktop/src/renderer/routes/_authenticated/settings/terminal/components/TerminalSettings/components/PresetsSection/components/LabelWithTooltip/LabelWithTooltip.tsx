@@ -1,6 +1,6 @@
 import { Label } from "@superset/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
-import { HiOutlineQuestionMarkCircle } from "react-icons/hi2";
+import { CircleHelp } from "lucide-react";
 
 interface LabelWithTooltipProps {
 	label: string;

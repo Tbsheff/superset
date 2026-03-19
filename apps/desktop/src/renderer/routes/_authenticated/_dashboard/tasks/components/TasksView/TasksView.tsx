@@ -2,7 +2,7 @@ import { Spinner } from "@superset/ui/spinner";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { HiCheckCircle } from "react-icons/hi2";
+import { CheckCircle2 } from "lucide-react";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 import { useTasksFilterStore } from "../../stores/tasks-filter-state";
 import { LinearCTA } from "./components/LinearCTA";

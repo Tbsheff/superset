@@ -2,7 +2,7 @@ import { Alert, AlertDescription, AlertTitle } from "@superset/ui/alert";
 import { Button } from "@superset/ui/button";
 import { Collapsible, CollapsibleContent } from "@superset/ui/collapsible";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { LuFileCode, LuLoader } from "react-icons/lu";
+import { FileCode, Loader } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { CodeEditor } from "renderer/screens/main/components/WorkspaceView/components/CodeEditor";
 import { FileSaveConflictDialog } from "renderer/screens/main/components/WorkspaceView/components/FileSaveConflictDialog";
@@ -371,7 +371,7 @@ export function FileDiffSection({
 				<CollapsibleContent>
 					{isHiddenByDefault && !loadHiddenDiff ? (
 						<div className="flex flex-col items-center justify-center gap-3 py-8 text-muted-foreground bg-muted/30">
-							<LuFileCode className="w-8 h-8" />
+							<FileCode className="w-8 h-8" />
 							<p className="text-sm">
 								{isGenerated
 									? "Generated file hidden"
@@ -390,7 +390,7 @@ export function FileDiffSection({
 							className="flex items-center justify-center text-muted-foreground bg-background"
 							style={{ minHeight: FILE_DIFF_SECTION_PLACEHOLDER_HEIGHT }}
 						>
-							<LuLoader className="w-4 h-4 animate-spin mr-2" />
+							<Loader className="w-4 h-4 animate-spin mr-2" />
 							<span>Loading diff...</span>
 						</div>
 					) : hasRenderedDiff ? (
@@ -458,7 +458,7 @@ export function FileDiffSection({
 						>
 							{diffData ? (
 								<>
-									<LuLoader className="w-4 h-4 animate-spin mr-2" />
+									<Loader className="w-4 h-4 animate-spin mr-2" />
 									<span>Loading editor...</span>
 								</>
 							) : (

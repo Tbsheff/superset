@@ -8,17 +8,17 @@ import {
 } from "@superset/ui/context-menu";
 import { cn } from "@superset/ui/utils";
 import {
-	LuChevronDown,
-	LuChevronRight,
-	LuClipboard,
-	LuCopy,
-	LuExternalLink,
-	LuFile,
-	LuFolder,
-	LuFolderOpen,
-	LuPencil,
-	LuTrash2,
-} from "react-icons/lu";
+	ChevronDown,
+	ChevronRight,
+	Clipboard,
+	Copy,
+	ExternalLink,
+	File,
+	Folder,
+	FolderOpen,
+	Pencil,
+	Trash2,
+} from "lucide-react";
 import type { DirectoryEntry } from "shared/file-tree-types";
 import { useFileDrag, usePathActions } from "../../../ChangesView/hooks";
 import { FileIcon } from "../../utils";
@@ -127,9 +127,9 @@ export function FileTreeItem({
 			<span className="flex items-center justify-center w-4 h-4 shrink-0">
 				{isFolder ? (
 					isExpanded ? (
-						<LuChevronDown className="size-3.5 text-muted-foreground" />
+						<ChevronDown className="size-3.5 text-muted-foreground" />
 					) : (
-						<LuChevronRight className="size-3.5 text-muted-foreground" />
+						<ChevronRight className="size-3.5 text-muted-foreground" />
 					)
 				) : null}
 			</span>
@@ -152,47 +152,47 @@ export function FileTreeItem({
 			<ContextMenuTrigger asChild>{itemContent}</ContextMenuTrigger>
 			<ContextMenuContent className="w-48">
 				<ContextMenuItem onClick={() => onNewFile(parentPath)}>
-					<LuFile className="mr-2 size-4" />
+					<File className="mr-2 size-4" />
 					New File
 				</ContextMenuItem>
 				<ContextMenuItem onClick={() => onNewFolder(parentPath)}>
-					<LuFolder className="mr-2 size-4" />
+					<Folder className="mr-2 size-4" />
 					New Folder
 				</ContextMenuItem>
 
 				<ContextMenuSeparator />
 
 				<ContextMenuItem onClick={copyPath}>
-					<LuClipboard className="mr-2 size-4" />
+					<Clipboard className="mr-2 size-4" />
 					Copy Path
 				</ContextMenuItem>
 				<ContextMenuItem onClick={copyRelativePath}>
-					<LuCopy className="mr-2 size-4" />
+					<Copy className="mr-2 size-4" />
 					Copy Relative Path
 				</ContextMenuItem>
 
 				<ContextMenuSeparator />
 
 				<ContextMenuItem onClick={revealInFinder}>
-					<LuFolderOpen className="mr-2 size-4" />
+					<FolderOpen className="mr-2 size-4" />
 					Reveal in Finder
 				</ContextMenuItem>
 				<ContextMenuItem onClick={openInEditor}>
-					<LuExternalLink className="mr-2 size-4" />
+					<ExternalLink className="mr-2 size-4" />
 					Open in Editor
 				</ContextMenuItem>
 
 				<ContextMenuSeparator />
 
 				<ContextMenuItem onClick={() => onRename(entry)}>
-					<LuPencil className="mr-2 size-4" />
+					<Pencil className="mr-2 size-4" />
 					Rename
 				</ContextMenuItem>
 				<ContextMenuItem
 					onClick={() => onDelete(entry)}
 					className="text-destructive focus:text-destructive"
 				>
-					<LuTrash2 className="mr-2 size-4" />
+					<Trash2 className="mr-2 size-4" />
 					Delete
 				</ContextMenuItem>
 			</ContextMenuContent>

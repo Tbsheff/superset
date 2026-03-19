@@ -1,6 +1,6 @@
 import { cn } from "@superset/ui/utils";
 import { useEffect, useRef, useState } from "react";
-import { LuCheck, LuX } from "react-icons/lu";
+import { Check, X } from "lucide-react";
 import type { DirectoryEntry } from "shared/file-tree-types";
 import { FileIcon } from "../../utils";
 
@@ -84,7 +84,7 @@ export function RenameInput({
 				onClick={handleSubmit}
 				className="p-0.5 hover:bg-background/50 rounded"
 			>
-				<LuCheck className="size-3 text-muted-foreground" />
+				<Check className="size-3 text-muted-foreground" />
 			</button>
 			<button
 				type="button"
@@ -94,7 +94,7 @@ export function RenameInput({
 				}}
 				className="p-0.5 hover:bg-background/50 rounded"
 			>
-				<LuX className="size-3 text-muted-foreground" />
+				<X className="size-3 text-muted-foreground" />
 			</button>
 		</div>
 	);

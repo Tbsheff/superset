@@ -9,7 +9,7 @@ import { Input } from "@superset/ui/input";
 import { toast } from "@superset/ui/sonner";
 import { Textarea } from "@superset/ui/textarea";
 import { useEffect, useMemo, useState } from "react";
-import { HiChevronDown } from "react-icons/hi2";
+import { ChevronDown } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { AnthropicOAuthDialog } from "renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/TabView/ChatPane/ChatInterface/components/ModelPicker/components/AnthropicOAuthDialog";
 import { OpenAIOAuthDialog } from "renderer/screens/main/components/WorkspaceView/ContentView/TabsContent/TabView/ChatPane/ChatInterface/components/ModelPicker/components/OpenAIOAuthDialog";

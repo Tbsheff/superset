@@ -2,16 +2,17 @@ import { Button } from "@superset/ui/button";
 import { Checkbox } from "@superset/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { cn } from "@superset/ui/utils";
-import { HiMiniMinus, HiMiniPlus } from "react-icons/hi2";
 import {
-	LuCheck,
-	LuChevronDown,
-	LuChevronRight,
-	LuCopy,
-	LuExternalLink,
-	LuPencil,
-	LuUndo2,
-} from "react-icons/lu";
+	Check,
+	ChevronDown,
+	ChevronRight,
+	Copy,
+	ExternalLink,
+	Minus,
+	Pencil,
+	Plus,
+	Undo2,
+} from "lucide-react";
 import type { ChangedFile } from "shared/changes-types";
 
 interface FileDiffHeaderProps {
@@ -70,9 +71,9 @@ export function FileDiffHeader({
 				className="shrink-0 p-0.5 -ml-1 rounded hover:bg-accent transition-colors"
 			>
 				{isExpanded ? (
-					<LuChevronDown className="size-4 text-muted-foreground" />
+					<ChevronDown className="size-4 text-muted-foreground" />
 				) : (
-					<LuChevronRight className="size-4 text-muted-foreground" />
+					<ChevronRight className="size-4 text-muted-foreground" />
 				)}
 			</button>
 
@@ -89,7 +90,7 @@ export function FileDiffHeader({
 						aria-label={`Open ${file.path} in editor`}
 					>
 						<span className="truncate">{file.path}</span>
-						<LuExternalLink className="size-3 shrink-0 opacity-0 group-hover/filename:opacity-100 transition-opacity" />
+						<ExternalLink className="size-3 shrink-0 opacity-0 group-hover/filename:opacity-100 transition-opacity" />
 					</button>
 				</TooltipTrigger>
 				<TooltipContent side="bottom" showArrow={false}>
@@ -105,9 +106,9 @@ export function FileDiffHeader({
 						className="shrink-0 rounded p-1 text-muted-foreground/60 transition-colors hover:text-muted-foreground hover:bg-accent"
 					>
 						{isCopied ? (
-							<LuCheck className="size-3.5 text-green-500" />
+							<Check className="size-3.5 text-green-500" />
 						) : (
-							<LuCopy className="size-3.5" />
+							<Copy className="size-3.5" />
 						)}
 					</button>
 				</TooltipTrigger>
@@ -132,7 +133,7 @@ export function FileDiffHeader({
 									: "text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent",
 							)}
 						>
-							<LuPencil className="size-3.5" />
+							<Pencil className="size-3.5" />
 						</button>
 					</TooltipTrigger>
 					<TooltipContent side="bottom" showArrow={false}>
@@ -194,7 +195,7 @@ export function FileDiffHeader({
 								onClick={onDiscard}
 								disabled={isActioning}
 							>
-								<LuUndo2 className="size-3.5" />
+								<Undo2 className="size-3.5" />
 							</Button>
 						</TooltipTrigger>
 						<TooltipContent side="bottom" showArrow={false}>

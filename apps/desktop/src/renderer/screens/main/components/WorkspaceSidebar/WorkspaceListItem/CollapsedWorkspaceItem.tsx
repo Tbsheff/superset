@@ -13,7 +13,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { cn } from "@superset/ui/utils";
 import { type RefObject, useMemo, useState } from "react";
-import { LuCopy, LuX } from "react-icons/lu";
+import { Copy, X } from "lucide-react";
 import { createContextMenuDeleteDialogCoordinator } from "renderer/react-query/workspaces/useWorkspaceDeleteHandler";
 import type { ActivePaneStatus } from "shared/tabs-types";
 import { STROKE_WIDTH } from "../constants";
@@ -131,7 +131,7 @@ export function CollapsedWorkspaceItem({
 						}}
 					>
 						<ContextMenuItem onSelect={onCopyPath}>
-							<LuCopy className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
+							<Copy className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
 							Copy Path
 						</ContextMenuItem>
 						<ContextMenuSeparator />
@@ -140,7 +140,7 @@ export function CollapsedWorkspaceItem({
 								deleteDialogCoordinator.requestOpenDeleteDialog();
 							}}
 						>
-							<LuX className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
+							<X className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
 							Close Worktree
 						</ContextMenuItem>
 					</ContextMenuContent>

@@ -9,8 +9,7 @@ import {
 	DropdownMenuShortcut,
 	DropdownMenuTrigger,
 } from "@superset/ui/dropdown-menu";
-import { HiMiniPaperClip } from "react-icons/hi2";
-import { LuLink, LuPlus } from "react-icons/lu";
+import { Link, Paperclip, Plus } from "lucide-react";
 import { PILL_BUTTON_CLASS } from "../../styles";
 
 interface PlusMenuProps {
@@ -24,7 +23,7 @@ export function PlusMenu({ onLinkIssue }: PlusMenuProps) {
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
 				<PromptInputButton className={`${PILL_BUTTON_CLASS} w-[23px]`}>
-					<LuPlus className="size-3.5" />
+					<Plus className="size-3.5" />
 				</PromptInputButton>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent side="top" align="end" className="w-52">
@@ -34,7 +33,7 @@ export function PlusMenu({ onLinkIssue }: PlusMenuProps) {
 					<DropdownMenuShortcut>⌘U</DropdownMenuShortcut>
 				</DropdownMenuItem>
 				<DropdownMenuItem onSelect={onLinkIssue}>
-					<LuLink className="size-4" />
+					<Link className="size-4" />
 					Link issue
 					<DropdownMenuShortcut>⌘I</DropdownMenuShortcut>
 				</DropdownMenuItem>

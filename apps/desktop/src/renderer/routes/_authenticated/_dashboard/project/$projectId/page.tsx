@@ -20,14 +20,7 @@ import { Textarea } from "@superset/ui/textarea";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { GoGitBranch } from "react-icons/go";
-import {
-	HiCheck,
-	HiChevronDown,
-	HiChevronLeft,
-	HiChevronRight,
-	HiChevronUpDown,
-} from "react-icons/hi2";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, GitBranch } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { formatRelativeTime } from "renderer/lib/formatRelativeTime";
 import { electronTrpcClient as trpcClient } from "renderer/lib/trpc-client";
@@ -369,7 +362,7 @@ function ProjectPage() {
 
 									<div className="rounded-md border border-border/60 bg-card/40 px-3 py-2 text-sm">
 										<div className="flex items-center gap-2 text-muted-foreground">
-											<GoGitBranch className="size-3.5" />
+											<GitBranch className="size-3.5" />
 											<span className="font-mono">
 												{generatedBranchName || "branch-name"}
 											</span>
@@ -418,7 +411,7 @@ function ProjectPage() {
 																		disabled={isBranchesLoading}
 																	>
 																		<span className="flex items-center gap-2 truncate">
-																			<GoGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
+																			<GitBranch className="size-3.5 shrink-0 text-muted-foreground" />
 																			<span className="truncate font-mono text-sm">
 																				{effectiveBaseBranch ||
 																					"Select branch..."}
@@ -460,7 +453,7 @@ function ProjectPage() {
 																					className="flex items-center justify-between"
 																				>
 																					<span className="flex items-center gap-2 truncate">
-																						<GoGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
+																						<GitBranch className="size-3.5 shrink-0 text-muted-foreground" />
 																						<span className="truncate">
 																							{branch.name}
 																						</span>

@@ -1,7 +1,7 @@
 import { Button } from "@superset/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { cn } from "@superset/ui/utils";
-import { LuDiff } from "react-icons/lu";
+import { Diff } from "lucide-react";
 import { HotkeyTooltipContent } from "renderer/components/HotkeyTooltipContent";
 import { useSidebarStore } from "renderer/stores";
 
@@ -25,7 +25,7 @@ export function SidebarControl() {
 							: "text-muted-foreground hover:text-foreground",
 					)}
 				>
-					<LuDiff className="size-3" />
+					<Diff className="size-3" />
 					<span className="text-xs">Code</span>
 				</Button>
 			</TooltipTrigger>

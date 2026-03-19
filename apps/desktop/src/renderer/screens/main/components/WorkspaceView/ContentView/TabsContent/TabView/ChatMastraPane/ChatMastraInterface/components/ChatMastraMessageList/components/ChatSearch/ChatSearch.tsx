@@ -1,6 +1,6 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { useEffect, useRef } from "react";
-import { HiChevronDown, HiChevronUp, HiMiniXMark } from "react-icons/hi2";
+import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { PiTextAa } from "react-icons/pi";
 
 interface ChatSearchProps {

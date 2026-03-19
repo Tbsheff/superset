@@ -1,5 +1,5 @@
 import { cn } from "@superset/ui/utils";
-import { LuFolderGit2, LuLaptop } from "react-icons/lu";
+import { FolderGit2, Laptop } from "lucide-react";
 import { AsciiSpinner } from "renderer/screens/main/components/AsciiSpinner";
 import { StatusIndicator } from "renderer/screens/main/components/StatusIndicator";
 import type { ActivePaneStatus } from "shared/tabs-types";
@@ -33,7 +33,7 @@ export function WorkspaceIcon({
 			{workspaceStatus === "working" ? (
 				<AsciiSpinner className="text-base" />
 			) : isBranchWorkspace ? (
-				<LuLaptop
+				<Laptop
 					className={cn(
 						"size-4",
 						variant === "expanded" && "transition-colors",
@@ -42,7 +42,7 @@ export function WorkspaceIcon({
 					strokeWidth={STROKE_WIDTH}
 				/>
 			) : (
-				<LuFolderGit2
+				<FolderGit2
 					className={cn(
 						"size-4",
 						variant === "expanded" && "transition-colors",

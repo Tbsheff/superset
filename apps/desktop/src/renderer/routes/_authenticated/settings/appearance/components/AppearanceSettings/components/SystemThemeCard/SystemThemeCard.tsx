@@ -1,5 +1,5 @@
 import { cn } from "@superset/ui/utils";
-import { HiCheck } from "react-icons/hi2";
+import { Check } from "lucide-react";
 import { darkTheme, lightTheme } from "shared/themes";
 
 interface SystemThemeCardProps {

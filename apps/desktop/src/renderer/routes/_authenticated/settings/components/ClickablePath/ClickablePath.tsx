@@ -7,7 +7,7 @@ import {
 import { toast } from "@superset/ui/sonner";
 import { cn } from "@superset/ui/utils";
 import { useState } from "react";
-import { LuExternalLink } from "react-icons/lu";
+import { ExternalLink } from "lucide-react";
 import { OpenInExternalDropdownItems } from "renderer/components/OpenInExternalDropdown";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useThemeStore } from "renderer/stores/theme";
@@ -63,7 +63,7 @@ export function ClickablePath({ path, className }: ClickablePathProps) {
 					)}
 				>
 					<span>{path}</span>
-					<LuExternalLink className="size-3.5 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity" />
+					<ExternalLink className="size-3.5 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity" />
 				</button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="start" className="w-48">

@@ -12,7 +12,7 @@ import { Kbd, KbdGroup } from "@superset/ui/kbd";
 import { toast } from "@superset/ui/sonner";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { HiMagnifyingGlass } from "react-icons/hi2";
+import { Search } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import {
 	captureHotkeyFromEvent,

@@ -1,11 +1,11 @@
 import { Button } from "@superset/ui/button";
 import { Kbd, KbdGroup } from "@superset/ui/kbd";
-import type { IconType } from "react-icons";
+import type { LucideIcon } from "lucide-react";
 
 interface EmptyTabActionButtonProps {
 	label: string;
 	display: string[];
-	icon: IconType;
+	icon: LucideIcon;
 	onClick: () => void;
 }
 

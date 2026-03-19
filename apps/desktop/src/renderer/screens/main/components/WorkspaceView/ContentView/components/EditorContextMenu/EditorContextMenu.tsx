@@ -8,14 +8,14 @@ import {
 } from "@superset/ui/context-menu";
 import type { ReactNode } from "react";
 import {
-	LuClipboard,
-	LuClipboardCopy,
-	LuFile,
-	LuLink,
-	LuMousePointerClick,
-	LuScissors,
-	LuSearch,
-} from "react-icons/lu";
+	Clipboard,
+	ClipboardCopy,
+	File,
+	Link,
+	MousePointerClick,
+	Scissors,
+	Search,
+} from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import {
 	type PaneContextMenuActions,
@@ -76,32 +76,32 @@ export function EditorContextMenu({
 				{/* Clipboard Actions */}
 				{showCutPaste && (
 					<ContextMenuItem onSelect={onCut}>
-						<LuScissors className="size-4" />
+						<Scissors className="size-4" />
 						Cut
 						<ContextMenuShortcut>{cmdKey}+X</ContextMenuShortcut>
 					</ContextMenuItem>
 				)}
 				<ContextMenuItem onSelect={onCopy}>
-					<LuClipboardCopy className="size-4" />
+					<ClipboardCopy className="size-4" />
 					Copy
 					<ContextMenuShortcut>{cmdKey}+C</ContextMenuShortcut>
 				</ContextMenuItem>
 				{onCopyPath && (
 					<ContextMenuItem onSelect={onCopyPath}>
-						<LuFile className="size-4" />
+						<File className="size-4" />
 						Copy Path
 					</ContextMenuItem>
 				)}
 				{onCopyPathWithLine && (
 					<ContextMenuItem onSelect={onCopyPathWithLine}>
-						<LuLink className="size-4" />
+						<Link className="size-4" />
 						Copy Path:Line
 						<ContextMenuShortcut>{cmdKey}+Shift+C</ContextMenuShortcut>
 					</ContextMenuItem>
 				)}
 				{showCutPaste && (
 					<ContextMenuItem onSelect={onPaste}>
-						<LuClipboard className="size-4" />
+						<Clipboard className="size-4" />
 						Paste
 						<ContextMenuShortcut>{cmdKey}+V</ContextMenuShortcut>
 					</ContextMenuItem>
@@ -110,14 +110,14 @@ export function EditorContextMenu({
 				<ContextMenuSeparator />
 
 				<ContextMenuItem onSelect={onSelectAll}>
-					<LuMousePointerClick className="size-4" />
+					<MousePointerClick className="size-4" />
 					Select All
 					<ContextMenuShortcut>{cmdKey}+A</ContextMenuShortcut>
 				</ContextMenuItem>
 
 				{onFind && (
 					<ContextMenuItem onSelect={onFind}>
-						<LuSearch className="size-4" />
+						<Search className="size-4" />
 						Find
 						<ContextMenuShortcut>{cmdKey}+F</ContextMenuShortcut>
 					</ContextMenuItem>

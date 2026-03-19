@@ -8,8 +8,7 @@ import {
 } from "@superset/ui/dialog";
 import { Input } from "@superset/ui/input";
 import { useCallback, useState } from "react";
-import { HiOutlinePlus, HiOutlineTrash } from "react-icons/hi2";
-import { LuFileTerminal, LuPlug, LuPlugZap, LuUnplug } from "react-icons/lu";
+import { FileTerminal, Plug, PlugZap, Plus, Trash2, Unplug } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import type { SettingItemId } from "renderer/routes/_authenticated/settings/utils/settings-search";
 import {
@@ -171,7 +170,7 @@ export function RemoteHostsSettings({
 						<Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
 							<DialogTrigger asChild>
 								<Button variant="outline" size="sm">
-									<LuFileTerminal className="h-4 w-4 mr-1.5" />
+									<FileTerminal className="h-4 w-4 mr-1.5" />
 									Discover SSH Hosts
 								</Button>
 							</DialogTrigger>
@@ -295,7 +294,7 @@ export function RemoteHostsSettings({
 							<div className="flex items-center justify-between">
 								<div className="flex items-center gap-3">
 									<div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
-										<LuPlug className="h-4 w-4" />
+										<Plug className="h-4 w-4" />
 									</div>
 									<div>
 										<p className="text-sm font-medium">{host.name}</p>
@@ -321,9 +320,9 @@ export function RemoteHostsSettings({
 										disabled={testMutation.isPending}
 									>
 										{testMutation.isPending ? (
-											<LuPlugZap className="h-4 w-4 animate-pulse" />
+											<PlugZap className="h-4 w-4 animate-pulse" />
 										) : (
-											<LuUnplug className="h-4 w-4" />
+											<Unplug className="h-4 w-4" />
 										)}
 										<span className="ml-1.5">Test</span>
 									</Button>

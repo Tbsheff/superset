@@ -1,7 +1,7 @@
 import { COMPANY } from "@superset/shared/constants";
 import { Button } from "@superset/ui/button";
 import { useState } from "react";
-import { HiArrowPath, HiExclamationTriangle } from "react-icons/hi2";
+import { RefreshCw, TriangleAlert } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { AppFrame } from "renderer/screens/main/components/AppFrame";
 import { Background } from "renderer/screens/main/components/Background";

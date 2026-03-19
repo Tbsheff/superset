@@ -5,8 +5,7 @@ import { eq, or } from "@tanstack/db";
 import { useLiveQuery } from "@tanstack/react-db";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { HiArrowLeft } from "react-icons/hi2";
-import { LuExternalLink } from "react-icons/lu";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 import type { TaskWithStatus } from "../components/TasksView/hooks/useTasksTable";
 import { Route as TasksLayoutRoute } from "../layout";
@@ -110,7 +109,7 @@ function TaskDetailPage() {
 							className="text-muted-foreground hover:text-foreground transition-colors"
 							title="Open in Linear"
 						>
-							<LuExternalLink className="w-4 h-4" />
+							<ExternalLink className="w-4 h-4" />
 						</a>
 					)}
 				</div>

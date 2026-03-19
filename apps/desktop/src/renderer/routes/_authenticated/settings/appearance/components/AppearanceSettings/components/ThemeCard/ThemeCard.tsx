@@ -1,5 +1,5 @@
 import { cn } from "@superset/ui/utils";
-import { HiCheck } from "react-icons/hi2";
+import { Check } from "lucide-react";
 import { getTerminalColors, type Theme } from "shared/themes";
 
 interface ThemeCardProps {

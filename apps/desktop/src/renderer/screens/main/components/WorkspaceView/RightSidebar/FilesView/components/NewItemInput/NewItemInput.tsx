@@ -1,6 +1,6 @@
 import { cn } from "@superset/ui/utils";
 import { useState } from "react";
-import { LuCheck, LuFile, LuFolder, LuX } from "react-icons/lu";
+import { Check, File, Folder, X } from "lucide-react";
 import { TREE_INDENT } from "../../constants";
 import type { NewItemMode } from "../../types";
 
@@ -43,7 +43,7 @@ export function NewItemInput({
 	};
 
 	const isFolder = mode === "folder";
-	const Icon = isFolder ? LuFolder : LuFile;
+	const Icon = isFolder ? Folder : File;
 
 	return (
 		<div
@@ -68,7 +68,7 @@ export function NewItemInput({
 				onClick={handleSubmit}
 				className="p-0.5 hover:bg-background/50 rounded"
 			>
-				<LuCheck className="size-3 text-muted-foreground" />
+				<Check className="size-3 text-muted-foreground" />
 			</button>
 			<button
 				type="button"
@@ -78,7 +78,7 @@ export function NewItemInput({
 				}}
 				className="p-0.5 hover:bg-background/50 rounded"
 			>
-				<LuX className="size-3 text-muted-foreground" />
+				<X className="size-3 text-muted-foreground" />
 			</button>
 		</div>
 	);

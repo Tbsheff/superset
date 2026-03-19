@@ -1,5 +1,5 @@
+import { Globe } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { TbGlobe } from "react-icons/tb";
 import type { HistorySuggestion } from "../../hooks/useUrlAutocomplete";
 
 interface UrlSuggestionsProps {
@@ -56,9 +56,9 @@ export function UrlSuggestions({
 						/>
 					) : null}
 					{!item.faviconUrl ? (
-						<TbGlobe className="size-4 shrink-0 text-muted-foreground/50" />
+						<Globe className="size-4 shrink-0 text-muted-foreground/50" />
 					) : (
-						<TbGlobe className="hidden size-4 shrink-0 text-muted-foreground/50" />
+						<Globe className="hidden size-4 shrink-0 text-muted-foreground/50" />
 					)}
 					<div className="min-w-0 flex-1">
 						<div className="truncate text-foreground">

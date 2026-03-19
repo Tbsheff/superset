@@ -1,5 +1,5 @@
 import { useParams } from "@tanstack/react-router";
-import { HiOutlineWifi } from "react-icons/hi2";
+import { Wifi } from "lucide-react";
 import { useOnlineStatus } from "renderer/hooks/useOnlineStatus";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { getWorkspaceDisplayName } from "renderer/lib/getWorkspaceDisplayName";

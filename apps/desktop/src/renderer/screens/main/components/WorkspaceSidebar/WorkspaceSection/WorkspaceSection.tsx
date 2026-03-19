@@ -13,8 +13,7 @@ import { cn } from "@superset/ui/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDrag, useDrop } from "react-dnd";
-import { HiChevronRight } from "react-icons/hi2";
-import { LuPalette, LuPencil, LuTrash2 } from "react-icons/lu";
+import { ChevronRight, Palette, Pencil, Trash2 } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useReorderProjectChildren } from "renderer/react-query/workspaces";
 import {
@@ -260,12 +259,12 @@ export function WorkspaceSection({
 				</ContextMenuTrigger>
 				<ContextMenuContent>
 					<ContextMenuItem onSelect={handleStartRename}>
-						<LuPencil className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
+						<Pencil className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
 						Rename Section
 					</ContextMenuItem>
 					<ContextMenuSub>
 						<ContextMenuSubTrigger>
-							<LuPalette className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
+							<Palette className="size-4 mr-2" strokeWidth={STROKE_WIDTH} />
 							Set Color
 						</ContextMenuSubTrigger>
 						<ContextMenuSubContent className="w-36">
@@ -305,7 +304,7 @@ export function WorkspaceSection({
 						disabled={mutations.isDeleting}
 						className="text-destructive focus:text-destructive"
 					>
-						<LuTrash2
+						<Trash2
 							className="size-4 mr-2 text-destructive"
 							strokeWidth={STROKE_WIDTH}
 						/>

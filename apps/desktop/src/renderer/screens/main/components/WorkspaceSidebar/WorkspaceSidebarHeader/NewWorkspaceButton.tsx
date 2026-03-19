@@ -1,6 +1,6 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { useMatchRoute } from "@tanstack/react-router";
-import { LuPlus } from "react-icons/lu";
+import { Plus } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import {
 	useEffectiveHotkeysMap,
@@ -52,7 +52,7 @@ export function NewWorkspaceButton({
 						className="group flex items-center justify-center size-8 rounded-md bg-accent/40 hover:bg-accent/60 transition-colors"
 					>
 						<div className="flex items-center justify-center size-5 rounded bg-accent">
-							<LuPlus className="size-3" strokeWidth={STROKE_WIDTH_THICK} />
+							<Plus className="size-3" strokeWidth={STROKE_WIDTH_THICK} />
 						</div>
 					</button>
 				</TooltipTrigger>
@@ -70,7 +70,7 @@ export function NewWorkspaceButton({
 			className="group flex items-center gap-2 px-2 py-1.5 w-full text-sm font-medium text-muted-foreground hover:text-foreground bg-accent/40 hover:bg-accent/60 rounded-md transition-colors"
 		>
 			<div className="flex items-center justify-center size-5 rounded bg-accent">
-				<LuPlus className="size-3" strokeWidth={STROKE_WIDTH_THICK} />
+				<Plus className="size-3" strokeWidth={STROKE_WIDTH_THICK} />
 			</div>
 			<span className="flex-1 text-left">New Workspace</span>
 			<span className="text-xs text-muted-foreground/40 group-hover:text-muted-foreground/80 transition-colors font-mono tabular-nums shrink-0">

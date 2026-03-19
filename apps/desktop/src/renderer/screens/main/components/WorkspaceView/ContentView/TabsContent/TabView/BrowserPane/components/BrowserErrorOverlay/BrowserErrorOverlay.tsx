@@ -1,7 +1,6 @@
 import { Button } from "@superset/ui/button";
-import { GlobeIcon } from "lucide-react";
+import { Copy, GlobeIcon } from "lucide-react";
 import { useCallback, useState } from "react";
-import { TbCopy } from "react-icons/tb";
 import type { BrowserLoadError } from "shared/tabs-types";
 
 const ERROR_LABELS: Record<number, string> = {
@@ -94,7 +93,7 @@ export function BrowserErrorOverlay({
 							onClick={copyDetails}
 							className="shrink-0 text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors"
 						>
-							<TbCopy className="size-4" />
+							<Copy className="size-4" />
 						</button>
 					</div>
 				)}

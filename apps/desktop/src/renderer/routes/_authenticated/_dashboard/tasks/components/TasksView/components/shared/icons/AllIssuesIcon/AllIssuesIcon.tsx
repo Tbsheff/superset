@@ -1,4 +1,4 @@
-import { HiOutlineRectangleStack } from "react-icons/hi2";
+import { Layers } from "lucide-react";
 
 interface AllIssuesIconProps {
 	color?: string;

@@ -15,13 +15,7 @@ import { Input } from "@superset/ui/input";
 import { Label } from "@superset/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@superset/ui/popover";
 import { Switch } from "@superset/ui/switch";
-import { GoGitBranch } from "react-icons/go";
-import {
-	HiCheck,
-	HiChevronDown,
-	HiChevronUpDown,
-	HiOutlinePencil,
-} from "react-icons/hi2";
+import { Check, ChevronDown, ChevronsUpDown, GitBranch, Pencil } from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { formatRelativeTime } from "renderer/lib/formatRelativeTime";
 
@@ -135,7 +129,7 @@ export function PromptGroupAdvancedOptions({
 									disabled={isBranchesLoading}
 								>
 									<span className="flex items-center gap-2 truncate">
-										<GoGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
+										<GitBranch className="size-3.5 shrink-0 text-muted-foreground" />
 										<span className="truncate font-mono text-sm">
 											{effectiveBaseBranch || "Select branch..."}
 										</span>
@@ -169,7 +163,7 @@ export function PromptGroupAdvancedOptions({
 												className="flex items-center justify-between"
 											>
 												<span className="flex items-center gap-2 truncate">
-													<GoGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
+													<GitBranch className="size-3.5 shrink-0 text-muted-foreground" />
 													<span className="truncate">{branch.name}</span>
 													{branch.name === defaultBranch && (
 														<span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">

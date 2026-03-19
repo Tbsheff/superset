@@ -3,11 +3,11 @@ import { Kbd, KbdGroup } from "@superset/ui/kbd";
 import { formatDistanceToNow } from "date-fns";
 import { FaGithub } from "react-icons/fa";
 import {
-	LuExternalLink,
-	LuGlobe,
-	LuLoaderCircle,
-	LuTriangleAlert,
-} from "react-icons/lu";
+	ExternalLink,
+	Globe,
+	LoaderCircle,
+	TriangleAlert,
+} from "lucide-react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { usePRStatus } from "renderer/screens/main/hooks";
 import { useHotkeyDisplay } from "renderer/stores/hotkeys";
@@ -53,7 +53,7 @@ export function WorkspaceHoverCardContent({
 			asChild
 		>
 			<a href={previewUrl} target="_blank" rel="noopener noreferrer">
-				<LuGlobe className="size-3" strokeWidth={STROKE_WIDTH} />
+				<Globe className="size-3" strokeWidth={STROKE_WIDTH} />
 				Open Preview
 			</a>
 		</Button>
@@ -86,7 +86,7 @@ export function WorkspaceHoverCardContent({
 								className={`flex items-center gap-1 font-mono break-all hover:underline ${hasCustomAlias ? "text-xs" : "text-sm"}`}
 							>
 								{branchName}
-								<LuExternalLink
+								<ExternalLink
 									className="size-3 shrink-0"
 									strokeWidth={STROKE_WIDTH}
 								/>
@@ -109,7 +109,7 @@ export function WorkspaceHoverCardContent({
 
 			{needsRebase && (
 				<div className="flex items-center gap-2 text-amber-500 text-xs bg-amber-500/10 px-2 py-1.5 rounded-md">
-					<LuTriangleAlert
+					<TriangleAlert
 						className="size-3.5 shrink-0"
 						strokeWidth={STROKE_WIDTH}
 					/>
@@ -122,7 +122,7 @@ export function WorkspaceHoverCardContent({
 
 			{isLoadingGithub ? (
 				<div className="flex items-center gap-2 text-muted-foreground pt-2 border-t border-border">
-					<LuLoaderCircle
+					<LoaderCircle
 						className="size-3 animate-spin"
 						strokeWidth={STROKE_WIDTH}
 					/>

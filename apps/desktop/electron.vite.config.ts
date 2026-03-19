@@ -212,6 +212,10 @@ export default defineConfig({
 			format: "es",
 		},
 
+		optimizeDeps: {
+			exclude: ["restty"],
+		},
+
 		publicDir: resolve(resources, "public"),
 
 		build: {

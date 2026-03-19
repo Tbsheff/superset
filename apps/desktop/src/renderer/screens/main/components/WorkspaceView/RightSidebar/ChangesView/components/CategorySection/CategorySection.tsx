@@ -73,7 +73,7 @@ export function CategorySection({
 				{actions && <div className="pr-1.5 shrink-0">{actions}</div>}
 			</div>
 
-			<CollapsibleContent className="px-1 pb-1 min-w-0 overflow-hidden">
+			<CollapsibleContent className="px-0.5 pb-0.5 min-w-0 overflow-hidden">
 				{children}
 			</CollapsibleContent>
 		</Collapsible>

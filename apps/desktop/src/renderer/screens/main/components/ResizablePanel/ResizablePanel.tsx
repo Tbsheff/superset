@@ -121,7 +121,7 @@ export function ResizablePanel({
 		<div
 			ref={containerRef}
 			className={cn(
-				"relative h-full shrink-0 overflow-hidden border-border/40",
+				"relative h-full shrink-0 overflow-hidden border-border/60",
 				handleSide === "right" ? "border-r" : "border-l",
 				className,
 			)}

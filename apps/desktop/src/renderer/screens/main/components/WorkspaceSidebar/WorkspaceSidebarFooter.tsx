@@ -62,7 +62,7 @@ export function WorkspaceSidebarFooter({
 	if (isCollapsed) {
 		return (
 			<>
-				<div className="border-t border-border p-2 flex flex-col items-center gap-1">
+				<div className="border-t border-border/50 p-2 flex flex-col items-center gap-1">
 					<HostServiceStatus />
 					<DropdownMenu>
 						<Tooltip delayDuration={300}>
@@ -114,7 +114,7 @@ export function WorkspaceSidebarFooter({
 
 	return (
 		<>
-			<div className="border-t border-border p-2 flex items-center gap-2">
+			<div className="border-t border-border/50 p-2 flex items-center gap-2">
 				<HostServiceStatus />
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>

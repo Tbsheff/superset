@@ -15,7 +15,7 @@ export function ContentView({
 }: ContentViewProps) {
 	return (
 		<div className="h-full flex flex-col overflow-hidden">
-			<div className="flex items-stretch bg-tertiary shrink-0 border-b border-border/40">
+			<div className="flex items-stretch bg-tertiary shrink-0 border-b border-border/25">
 				<GroupStrip />
 			</div>
 			<TabsContent

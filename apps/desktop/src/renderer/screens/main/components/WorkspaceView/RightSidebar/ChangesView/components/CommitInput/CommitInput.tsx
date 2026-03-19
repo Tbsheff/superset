@@ -207,12 +207,12 @@ export function CommitInput({
 			: null;
 
 	return (
-		<div className="flex flex-col gap-1.5 px-2 py-2">
+		<div className="flex flex-col gap-2 px-2.5 py-3">
 			<Textarea
 				placeholder="Commit message"
 				value={commitMessage}
 				onChange={(e) => setCommitMessage(e.target.value)}
-				className="min-h-[52px] resize-none text-xs bg-background"
+				className="min-h-[40px] resize-none text-xs bg-background"
 				onKeyDown={(e) => {
 					if (
 						e.key === "Enter" &&

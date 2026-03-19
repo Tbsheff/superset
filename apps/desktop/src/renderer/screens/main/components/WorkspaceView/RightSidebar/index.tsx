@@ -45,7 +45,7 @@ function TabButton({
 						type="button"
 						onClick={onClick}
 						className={cn(
-							"flex items-center justify-center shrink-0 h-8 my-1 w-10 rounded-md transition-all",
+							"flex items-center justify-center shrink-0 h-7 my-1 w-10 rounded-md transition-all",
 							isActive
 								? "text-foreground bg-accent/60 border-b-2 border-primary"
 								: "text-muted-foreground/70 hover:text-muted-foreground hover:bg-accent/30",
@@ -160,7 +160,7 @@ export function RightSidebar() {
 
 	return (
 		<aside className="h-full flex flex-col overflow-hidden">
-			<div className="flex items-center bg-tertiary shrink-0 h-10 border-b border-border/40">
+			<div className="flex items-center bg-tertiary shrink-0 h-9 border-b border-border/25">
 				<div className="flex items-center gap-0.5 px-1 h-full">
 					{showChangesTab && (
 						<TabButton
@@ -180,7 +180,7 @@ export function RightSidebar() {
 					/>
 				</div>
 				<div className="flex-1" />
-				<div className="flex items-center h-10 pr-2 gap-0.5">
+				<div className="flex items-center h-9 pr-2 gap-0.5">
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<Button

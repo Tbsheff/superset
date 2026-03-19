@@ -293,7 +293,7 @@ export function ChangesHeader({
 	isStashPending,
 }: ChangesHeaderProps) {
 	return (
-		<div className="flex items-center gap-1 px-2 py-1.5">
+		<div className="flex items-center gap-1 px-2.5 py-1">
 			<BaseBranchSelector worktreePath={worktreePath} />
 			<StashDropdown
 				onStash={onStash}

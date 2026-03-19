@@ -61,7 +61,7 @@ export function FileDiffHeader({
 	return (
 		<div
 			className={cn(
-				"group flex items-center gap-2 px-3 py-1.5 w-full text-left sticky top-0 z-10 bg-muted",
+				"group flex items-center gap-2 px-3 py-1.5 w-full text-left sticky top-0 z-10 bg-muted/80 border-b border-border/50",
 			)}
 		>
 			<button
@@ -190,7 +190,7 @@ export function FileDiffHeader({
 							<Button
 								variant="ghost"
 								size="icon"
-								className="size-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+								className="size-6 opacity-40 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
 								onClick={onDiscard}
 								disabled={isActioning}
 							>
@@ -211,7 +211,7 @@ export function FileDiffHeader({
 									<Button
 										variant="ghost"
 										size="icon"
-										className="size-6 opacity-0 group-hover:opacity-100 transition-opacity"
+										className="size-6 opacity-40 group-hover:opacity-100 transition-opacity"
 										onClick={onStage}
 										disabled={isActioning}
 									>
@@ -229,7 +229,7 @@ export function FileDiffHeader({
 									<Button
 										variant="ghost"
 										size="icon"
-										className="size-6 opacity-0 group-hover:opacity-100 transition-opacity"
+										className="size-6 opacity-40 group-hover:opacity-100 transition-opacity"
 										onClick={onUnstage}
 										disabled={isActioning}
 									>

@@ -343,7 +343,7 @@ export function FileDiffSection({
 	return (
 		<div
 			ref={sectionRef}
-			className="mx-2 my-2 border border-border rounded-lg overflow-hidden"
+			className="mx-3 my-2 border border-border rounded-lg overflow-hidden"
 		>
 			<Collapsible open={isExpanded} onOpenChange={onToggleExpanded}>
 				<FileDiffHeader

@@ -86,6 +86,7 @@ export function RightSidebar() {
 	);
 	const worktreePath = workspace?.worktreePath;
 	const currentMode = useSidebarStore((s) => s.currentMode);
+	const isSidebarOpen = useSidebarStore((s) => s.isSidebarOpen);
 	const rightSidebarTab = useSidebarStore((s) => s.rightSidebarTab);
 	const setRightSidebarTab = useSidebarStore((s) => s.setRightSidebarTab);
 	const toggleSidebar = useSidebarStore((s) => s.toggleSidebar);
@@ -164,7 +165,7 @@ export function RightSidebar() {
 				<div className="flex items-center gap-0.5 px-1 h-full">
 					{showChangesTab && (
 						<TabButton
-							isActive={rightSidebarTab === RightSidebarTab.Changes}
+							isActive={isSidebarOpen && rightSidebarTab === RightSidebarTab.Changes}
 							onClick={() => setRightSidebarTab(RightSidebarTab.Changes)}
 							icon={<LuGitCompareArrows className="size-3.5" />}
 							label="Changes"
@@ -236,7 +237,7 @@ export function RightSidebar() {
 					<ChangesView
 						onFileOpen={handleFileOpen}
 						isExpandedView={isExpanded}
-						isActive={rightSidebarTab === RightSidebarTab.Changes}
+						isActive={isSidebarOpen && rightSidebarTab === RightSidebarTab.Changes}
 					/>
 				</div>
 			)}

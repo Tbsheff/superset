@@ -4,8 +4,8 @@ import {
 } from "@superset/ui/ai-elements/message";
 import { useEffect, useState } from "react";
 
-const STREAM_TEXT_TICK_MS = 16;
-const STREAM_TEXT_CHARS_PER_TICK = 2;
+const STREAM_TEXT_TICK_MS = 32;
+const STREAM_TEXT_CHARS_PER_TICK = 4;
 
 interface StreamingMessageTextProps {
 	text: string;

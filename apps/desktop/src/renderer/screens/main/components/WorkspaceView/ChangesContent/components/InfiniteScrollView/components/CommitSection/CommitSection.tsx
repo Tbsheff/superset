@@ -26,7 +26,7 @@ export function CommitSection({
 			worktreePath,
 			commitHash: commit.hash,
 		},
-		{ enabled: isCommitExpanded },
+		{ enabled: isCommitExpanded, gcTime: 30_000 },
 	);
 
 	const files = commitFiles ?? [];

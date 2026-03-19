@@ -37,6 +37,7 @@ export function usePRStatus({
 			enabled: enabled && !!workspaceId,
 			refetchInterval,
 			staleTime: GITHUB_STATUS_STALE_TIME_MS,
+			gcTime: GITHUB_STATUS_STALE_TIME_MS,
 			refetchOnWindowFocus: false,
 		},
 	);

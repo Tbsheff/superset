@@ -66,6 +66,7 @@ export function ProjectThumbnail({
 		{ id: projectId },
 		{
 			staleTime: 1000 * 60 * 5,
+			gcTime: 1000 * 60 * 5,
 			refetchOnWindowFocus: false,
 		},
 	);

@@ -55,6 +55,8 @@ export function useFileContent({
 					!isImage &&
 					!!filePath &&
 					!!worktreePath,
+				gcTime: 30_000,
+				refetchOnWindowFocus: false,
 			},
 		);
 
@@ -68,6 +70,8 @@ export function useFileContent({
 					isImage &&
 					!!filePath &&
 					!!worktreePath,
+				gcTime: 30_000,
+				refetchOnWindowFocus: false,
 			},
 		);
 

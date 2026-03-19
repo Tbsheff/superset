@@ -126,6 +126,7 @@ export function WorkspaceListItem({
 			{
 				enabled: hasHovered && type === "worktree",
 				staleTime: GITHUB_STATUS_STALE_TIME,
+				gcTime: GITHUB_STATUS_STALE_TIME,
 			},
 		);
 
@@ -141,6 +142,7 @@ export function WorkspaceListItem({
 			{
 				enabled: isBranchWorkspace,
 				staleTime: GITHUB_STATUS_STALE_TIME,
+				gcTime: GITHUB_STATUS_STALE_TIME,
 				refetchInterval: hasHovered ? GITHUB_STATUS_STALE_TIME : false,
 			},
 		);

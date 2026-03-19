@@ -385,10 +385,13 @@ export function ChangesView({
 
 	const commitFilesQueries = electronTrpc.useQueries((t) =>
 		expandedCommitHashes.map((hash) =>
-			t.changes.getCommitFiles({
-				worktreePath: worktreePath || "",
-				commitHash: hash,
-			}),
+			t.changes.getCommitFiles(
+				{
+					worktreePath: worktreePath || "",
+					commitHash: hash,
+				},
+				{ gcTime: 30_000 },
+			),
 		),
 	);
 

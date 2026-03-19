@@ -168,7 +168,7 @@ export function GroupItem({
 		"flex items-center gap-2 transition-all w-full shrink-0 pl-3 pr-8 h-full rounded-t-md",
 		isActive
 			? "text-foreground bg-accent/60"
-			: "text-muted-foreground/70 hover:text-muted-foreground hover:bg-tertiary/20",
+			: "text-muted-foreground/50 hover:text-muted-foreground hover:bg-accent/30",
 	);
 
 	return (
@@ -231,7 +231,7 @@ export function GroupItem({
 											e.stopPropagation();
 											onClose();
 										}}
-										className="cursor-pointer size-6 hover:bg-muted"
+										className="cursor-pointer size-6 hover:bg-accent/40"
 										aria-label="Close pane"
 									>
 										<HiMiniXMark className="size-4" />

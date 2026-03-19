@@ -276,7 +276,7 @@ export function WorkspaceListItem({
 				"hover:bg-accent/30 transition-colors text-left cursor-pointer",
 				"group relative",
 				showBranchSubtitle ? "py-1.5" : "py-2 items-center",
-				isActive && "bg-muted rounded-md",
+				isActive && "bg-primary/8 rounded-md",
 				isSelected &&
 					"bg-primary/10 ring-1 ring-inset ring-primary/30 rounded-md",
 				(isDragging || isMultiDragging) && "opacity-30",
@@ -284,7 +284,7 @@ export function WorkspaceListItem({
 			style={{ cursor: isDragging ? "grabbing" : "pointer" }}
 		>
 			{isActive && (
-				<div className="absolute left-0 top-0 bottom-0 w-[3px] bg-primary rounded-full" />
+				<div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-full" />
 			)}
 
 			<Tooltip delayDuration={500}>
@@ -402,7 +402,7 @@ export function WorkspaceListItem({
 						{(showBranchSubtitle || pr) && (
 							<div className="flex items-center gap-2 text-xs opacity-60 w-full">
 								{showBranchSubtitle && (
-									<span className="text-muted-foreground/60 truncate font-mono leading-tight">
+									<span className="text-muted-foreground/60 truncate font-mono leading-tight bg-muted/30 rounded px-1 py-0.5 inline-block">
 										{branch}
 									</span>
 								)}

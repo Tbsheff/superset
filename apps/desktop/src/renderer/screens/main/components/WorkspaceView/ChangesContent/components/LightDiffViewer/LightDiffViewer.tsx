@@ -61,12 +61,20 @@ export function LightDiffViewer({
 				themeType: "dark",
 				overflow: "wrap",
 				disableFileHeader: true,
+				diffIndicators: "bars",
+				hunkSeparators: "line-info",
+				lineDiffType: "word",
 				unsafeCSS: `
-					* {
-						user-select: text;
-						-webkit-user-select: text;
-					}
-				`,
+				* { user-select: text; -webkit-user-select: text; }
+				[data-diff-type="addition"] [data-role="indicator"],
+				[data-line-type="addition"] [data-role="indicator"] {
+					background-color: var(--diffs-addition-bar-color, #3fb950);
+				}
+				[data-diff-type="deletion"] [data-role="indicator"],
+				[data-line-type="deletion"] [data-role="indicator"] {
+					background-color: var(--diffs-deletion-bar-color, #f85149);
+				}
+			`,
 			}}
 		/>
 	);

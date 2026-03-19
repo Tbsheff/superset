@@ -22,13 +22,15 @@ const MIDNIGHT_DIFF_THEME = {
 const MIDNIGHT_DIFF_COLORS = {
 	background: MIDNIGHT_CODE_COLORS.background,
 	buffer: MIDNIGHT_CODE_COLORS.border,
-	hover: "#2f343f",
+	hover: "#1c2128",
 	separator: MIDNIGHT_CODE_COLORS.border,
 	lineNumber: MIDNIGHT_CODE_COLORS.muted,
 	addition: MIDNIGHT_CODE_COLORS.addition,
 	deletion: MIDNIGHT_CODE_COLORS.deletion,
 	modified: MIDNIGHT_CODE_COLORS.modified,
 	selection: MIDNIGHT_CODE_COLORS.selection,
+	additionBar: "#3fb950",
+	deletionBar: "#f85149",
 };
 
 export function getDiffsTheme() {
@@ -64,6 +66,8 @@ export function getDiffViewerStyle(
 		"--diffs-deletion-color-override": MIDNIGHT_DIFF_COLORS.deletion,
 		"--diffs-modified-color-override": MIDNIGHT_DIFF_COLORS.modified,
 		"--diffs-selection-color-override": MIDNIGHT_DIFF_COLORS.selection,
+		"--diffs-addition-bar-color": MIDNIGHT_DIFF_COLORS.additionBar,
+		"--diffs-deletion-bar-color": MIDNIGHT_DIFF_COLORS.deletionBar,
 		backgroundColor: MIDNIGHT_DIFF_COLORS.background,
 		color: MIDNIGHT_CODE_COLORS.foreground,
 	} as CSSProperties;

@@ -165,9 +165,9 @@ export function GroupItem({
 	};
 
 	const tabStyles = cn(
-		"flex items-center gap-2 transition-all w-full shrink-0 pl-3 pr-8 h-full rounded-t-md",
+		"flex items-center gap-2 transition-all w-full shrink-0 pl-3 pr-8 h-full",
 		isActive
-			? "text-foreground bg-accent/60"
+			? "text-foreground bg-accent/60 border-b-2 border-primary"
 			: "text-muted-foreground/50 hover:text-muted-foreground hover:bg-accent/30",
 	);
 

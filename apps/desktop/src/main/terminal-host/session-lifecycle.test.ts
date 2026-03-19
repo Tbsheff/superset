@@ -41,9 +41,6 @@ const PID_PATH = join(SUPERSET_HOME_DIR, "terminal-host.pid");
 
 // Path to the daemon source file
 const DAEMON_PATH = resolve(__dirname, "index.ts");
-// Polyfill for @xterm/headless in Bun (see xterm-env-polyfill.ts for details)
-const XTERM_POLYFILL_PATH = resolve(__dirname, "xterm-env-polyfill.ts");
-
 // Timeouts
 const DAEMON_TIMEOUT = 10000;
 const CONNECT_TIMEOUT = 5000;
@@ -114,7 +111,7 @@ if (!canRunSessionLifecycleIntegration) {
 
 				daemonProcess = spawn(
 					"bun",
-					["run", "--preload", XTERM_POLYFILL_PATH, DAEMON_PATH],
+					["run", DAEMON_PATH],
 					{
 						env: {
 							...process.env,

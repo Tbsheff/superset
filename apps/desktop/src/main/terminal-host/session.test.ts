@@ -7,8 +7,6 @@ import {
 	PtySubprocessFrameDecoder,
 	PtySubprocessIpcType,
 } from "./pty-subprocess-ipc";
-import "./xterm-env-polyfill";
-
 const { Session } = await import("./session");
 
 class FakeStdout extends EventEmitter {}

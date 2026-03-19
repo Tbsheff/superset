@@ -3,7 +3,7 @@
  *
  * A session owns:
  * - A PTY subprocess (isolates blocking writes from main daemon)
- * - A HeadlessEmulator instance for state tracking
+ * - A WasmHeadlessEmulator instance for state tracking
  * - A set of attached clients
  * - Output capture to disk
  */
@@ -13,7 +13,7 @@ import type { Socket } from "node:net";
 import * as path from "node:path";
 import { getShellArgs } from "../lib/agent-setup/shell-wrappers";
 import { buildSafeEnv } from "../lib/terminal/env";
-import { HeadlessEmulator } from "../lib/terminal-host/headless-emulator";
+import { WasmHeadlessEmulator as HeadlessEmulator } from "../lib/terminal-host/wasm-headless-emulator";
 import type {
 	CreateOrAttachRequest,
 	IpcEvent,

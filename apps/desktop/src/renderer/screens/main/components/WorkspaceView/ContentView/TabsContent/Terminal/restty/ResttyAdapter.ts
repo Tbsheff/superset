@@ -103,6 +103,11 @@ export class ResttyAdapter {
 
 		this._restty = new Restty(resttyOpts);
 
+		// Connect the PTY transport so restty calls transport.connect() and
+		// sets up the callbacks (onData, onConnect, etc.). Without this call,
+		// transport.callbacks is null and feedData() silently does nothing.
+		this._restty.connectPty();
+
 		// Apply theme after creation
 		if (opts.options?.theme) {
 			this._restty.applyTheme(opts.options.theme);

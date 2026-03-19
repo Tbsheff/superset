@@ -1,4 +1,4 @@
-import { workspaces, worktrees } from "@superset/local-db";
+import { projects, workspaces, worktrees } from "@superset/local-db";
 import { observable } from "@trpc/server/observable";
 import { eq } from "drizzle-orm";
 import { localDb } from "main/lib/local-db";
@@ -10,6 +10,7 @@ import { publicProcedure, router } from "../../..";
 import { getPresetsForTrigger } from "../../settings";
 import { getProject, getWorkspaceWithRelations } from "../utils/db-helpers";
 import { listBranches } from "../utils/git";
+import { initRemoteWorkspace } from "../utils/remote-workspace-init";
 import { resolveWorktreePath } from "../utils/resolve-worktree-path";
 import { loadSetupConfig } from "../utils/setup";
 import { initializeWorkspaceWorktree } from "../utils/workspace-init";
@@ -74,16 +75,19 @@ async function resolveRetryTarget({
 	worktree,
 	project,
 	deduplicateBranchName: shouldDeduplicateBranchName,
+	isRemote,
 }: {
 	workspace: WorkspaceRelations["workspace"];
 	worktree: NonNullable<WorkspaceRelations["worktree"]>;
 	project: NonNullable<WorkspaceRelations["project"]>;
 	deduplicateBranchName: boolean;
+	isRemote: boolean;
 }): Promise<{ branch: string; worktreePath: string }> {
 	const currentBranch = worktree.branch;
 	const currentPath = worktree.path;
 
-	if (!shouldDeduplicateBranchName) {
+	// Branch deduplication requires local git access — skip for remote workspaces
+	if (!shouldDeduplicateBranchName || isRemote) {
 		return { branch: currentBranch, worktreePath: currentPath };
 	}
 
@@ -153,24 +157,53 @@ export const createInitProcedures = () => {
 				const { workspace, worktree, project } = getRetryInitRelations(
 					input.workspaceId,
 				);
+
+				const effectiveRemoteHostId =
+					workspace.remoteHostId ?? project.remoteHostId;
+				const isRemote = !!effectiveRemoteHostId;
+
 				const { branch, worktreePath } = await resolveRetryTarget({
 					workspace,
 					worktree,
 					project,
 					deduplicateBranchName: input.deduplicateBranchName,
+					isRemote,
 				});
 
 				workspaceInitManager.clearJob(input.workspaceId);
 				workspaceInitManager.startJob(input.workspaceId, workspace.projectId);
 
-				initializeWorkspaceWorktree({
-					workspaceId: input.workspaceId,
-					projectId: workspace.projectId,
-					worktreeId: worktree.id,
-					worktreePath,
-					branch,
-					mainRepoPath: project.mainRepoPath,
-				});
+				if (isRemote) {
+					void initRemoteWorkspace({
+						workspaceId: input.workspaceId,
+						projectId: workspace.projectId,
+						remoteHostId: effectiveRemoteHostId,
+						branch,
+						projectName: project.name,
+						projectSlug: project.name
+							.toLowerCase()
+							.replace(/[^a-z0-9]+/g, "-")
+							.replace(/^-|-$/g, ""),
+						defaultBranch: project.defaultBranch ?? undefined,
+						remoteRepoPath: project.mainRepoPath,
+						persistState: async (state) => {
+							localDb
+								.update(projects)
+								.set({ sandboxState: JSON.stringify(state) })
+								.where(eq(projects.id, workspace.projectId))
+								.run();
+						},
+					});
+				} else {
+					initializeWorkspaceWorktree({
+						workspaceId: input.workspaceId,
+						projectId: workspace.projectId,
+						worktreeId: worktree.id,
+						worktreePath,
+						branch,
+						mainRepoPath: project.mainRepoPath,
+					});
+				}
 
 				return { success: true };
 			}),

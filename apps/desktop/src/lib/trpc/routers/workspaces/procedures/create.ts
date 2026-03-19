@@ -36,6 +36,8 @@ import {
 	sanitizeBranchNameWithMaxLength,
 	worktreeExists,
 } from "../utils/git";
+import { getGitRemoteUrl } from "../utils/github/github";
+import { initRemoteWorkspace } from "../utils/remote-workspace-init";
 import { resolveWorktreePath } from "../utils/resolve-worktree-path";
 import { copySupersetConfigToWorktree, loadSetupConfig } from "../utils/setup";
 import { initializeWorkspaceWorktree } from "../utils/workspace-init";
@@ -296,6 +298,7 @@ export const createCreateProcedures = () => {
 					useExistingBranch: z.boolean().optional(),
 					applyPrefix: z.boolean().optional().default(true),
 					remoteHostId: z.string().optional(),
+					remoteRepoPath: z.string().optional(),
 				}),
 			)
 			.mutation(async ({ input }) => {
@@ -308,6 +311,12 @@ export const createCreateProcedures = () => {
 					throw new Error(`Project ${input.projectId} not found`);
 				}
 
+				// Determine early whether this is a remote project so we can skip
+				// local git operations that require mainRepoPath to exist on disk.
+				const effectiveRemoteHostId =
+					input.remoteHostId ?? project.remoteHostId;
+				const isRemote = !!effectiveRemoteHostId;
+
 				let existingBranchName: string | undefined;
 				if (input.useExistingBranch) {
 					existingBranchName = input.branchName?.trim();
@@ -317,22 +326,31 @@ export const createCreateProcedures = () => {
 						);
 					}
 
-					const existingWorktreePath = await getBranchWorktreePath({
-						mainRepoPath: project.mainRepoPath,
-						branch: existingBranchName,
-					});
-					if (existingWorktreePath) {
-						throw new Error(
-							`Branch "${existingBranchName}" is already checked out in another worktree at: ${existingWorktreePath}`,
-						);
+					if (!isRemote) {
+						const existingWorktreePath = await getBranchWorktreePath({
+							mainRepoPath: project.mainRepoPath,
+							branch: existingBranchName,
+						});
+						if (existingWorktreePath) {
+							throw new Error(
+								`Branch "${existingBranchName}" is already checked out in another worktree at: ${existingWorktreePath}`,
+							);
+						}
 					}
 				}
 
-				const { local, remote } = await listBranches(project.mainRepoPath);
-				const existingBranches = [...local, ...remote];
+				// Skip local git operations for remote projects — mainRepoPath is a
+				// remote path and doesn't exist on this machine.
+				let existingBranches: string[];
+				if (isRemote) {
+					existingBranches = [];
+				} else {
+					const { local, remote } = await listBranches(project.mainRepoPath);
+					existingBranches = [...local, ...remote];
+				}
 
 				let branchPrefix: string | undefined;
-				if (input.applyPrefix) {
+				if (input.applyPrefix && !isRemote) {
 					const globalSettings = localDb.select().from(settings).get();
 					const projectOverrides = project.branchPrefixMode != null;
 					const prefixMode = projectOverrides
@@ -364,7 +382,9 @@ export const createCreateProcedures = () => {
 
 				let branch: string;
 				if (existingBranchName) {
-					if (!existingBranches.includes(existingBranchName)) {
+					// Skip local branch existence check for remote projects — we have
+					// no local clone to query and existingBranches will be empty.
+					if (!isRemote && !existingBranches.includes(existingBranchName)) {
 						throw new Error(
 							`Branch "${existingBranchName}" does not exist. Please select an existing branch.`,
 						);
@@ -376,6 +396,11 @@ export const createCreateProcedures = () => {
 						undefined,
 						{ preserveFirstSegmentCase: true },
 					);
+				} else if (isRemote) {
+					// For remote projects with no explicit branch name, use the default branch.
+					// Remote projects have no local clone so we can't generate a meaningful unique
+					// branch name — and the initial workspace should just use the default branch.
+					branch = project.defaultBranch ?? "main";
 				} else {
 					branch = generateBranchName({
 						existingBranches,
@@ -487,6 +512,15 @@ export const createCreateProcedures = () => {
 				setLastActiveWorkspace(workspace.id);
 				activateProject(project);
 
+				// If this is the first workspace with a remoteHostId for this project, set it on the project too
+				if (input.remoteHostId && !project.remoteHostId) {
+					localDb
+						.update(projects)
+						.set({ remoteHostId: input.remoteHostId })
+						.where(eq(projects.id, project.id))
+						.run();
+				}
+
 				track("workspace_created", {
 					workspace_id: workspace.id,
 					project_id: project.id,
@@ -495,24 +529,65 @@ export const createCreateProcedures = () => {
 					use_existing_branch: input.useExistingBranch ?? false,
 				});
 
-				await setBranchBaseConfig({
-					repoPath: project.mainRepoPath,
-					branch,
-					baseBranch: targetBranch,
-					isExplicit: Boolean(input.baseBranch?.trim()),
-				});
+				if (!isRemote) {
+					await setBranchBaseConfig({
+						repoPath: project.mainRepoPath,
+						branch,
+						baseBranch: targetBranch,
+						isExplicit: Boolean(input.baseBranch?.trim()),
+					});
+				}
 
-				workspaceInitManager.startJob(workspace.id, input.projectId);
-				initializeWorkspaceWorktree({
-					workspaceId: workspace.id,
-					projectId: input.projectId,
-					worktreeId: worktree.id,
-					worktreePath,
-					branch,
-					mainRepoPath: project.mainRepoPath,
-					namingPrompt: input.prompt,
-					useExistingBranch: input.useExistingBranch,
-				});
+				if (isRemote) {
+					// Remote workspace — use devcontainer flow.
+					// mainRepoPath is a remote path and cannot be used for local git
+					// commands. repoUrl is optional in initRemoteWorkspace — when
+					// remoteRepoPath is supplied the clone step is skipped entirely.
+					// Only attempt getGitRemoteUrl as a best-effort fallback when no
+					// remoteRepoPath is provided; initRemoteWorkspace will surface its
+					// own error if the URL is still missing when cloning is required.
+					let repoUrl: string | undefined;
+					if (!input.remoteRepoPath) {
+						repoUrl =
+							(await getGitRemoteUrl(project.mainRepoPath).catch(() => null)) ??
+							undefined;
+					}
+					workspaceInitManager.startJob(workspace.id, input.projectId);
+					void initRemoteWorkspace({
+						workspaceId: workspace.id,
+						projectId: input.projectId,
+						projectSlug: project.name
+							.toLowerCase()
+							.replace(/[^a-z0-9]+/g, "-")
+							.replace(/^-|-$/g, ""),
+						remoteHostId: effectiveRemoteHostId,
+						branch,
+						repoUrl,
+						projectName: project.name,
+						defaultBranch: project.defaultBranch ?? undefined,
+						remoteRepoPath: input.remoteRepoPath || project.mainRepoPath,
+						persistState: async (state) => {
+							localDb
+								.update(projects)
+								.set({ sandboxState: JSON.stringify(state) })
+								.where(eq(projects.id, input.projectId))
+								.run();
+						},
+					});
+				} else {
+					// Local workspace — existing init flow
+					workspaceInitManager.startJob(workspace.id, input.projectId);
+					initializeWorkspaceWorktree({
+						workspaceId: workspace.id,
+						projectId: input.projectId,
+						worktreeId: worktree.id,
+						worktreePath,
+						branch,
+						mainRepoPath: project.mainRepoPath,
+						namingPrompt: input.prompt,
+						useExistingBranch: input.useExistingBranch,
+					});
+				}
 
 				const setupConfig = loadSetupConfig({
 					mainRepoPath: project.mainRepoPath,

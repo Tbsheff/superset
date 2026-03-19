@@ -172,6 +172,20 @@ async function getOriginUrl(worktreePath: string): Promise<string | null> {
 	}
 }
 
+export async function getGitRemoteUrl(
+	repoPath: string,
+): Promise<string | null> {
+	try {
+		const { stdout } = await execGitWithShellPath(
+			["remote", "get-url", "origin"],
+			{ cwd: repoPath },
+		);
+		return stdout.trim() || null;
+	} catch {
+		return null;
+	}
+}
+
 function normalizeGitHubUrl(remoteUrl: string): string | null {
 	const trimmed = remoteUrl.trim();
 	const patterns = [

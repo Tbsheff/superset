@@ -222,6 +222,9 @@ export const createRemoteHostsRouter = () => {
 					authMethod: z.enum(["key", "agent", "password"]).optional(),
 					privateKeyPath: z.string().optional(),
 					defaultCwd: z.string().optional(),
+					dockerMemoryLimit: z.string().nullable().optional(),
+					dockerCpuLimit: z.number().nullable().optional(),
+					idleTimeoutMinutes: z.number().nullable().optional(),
 				}),
 			)
 			.mutation(({ input }) => {

@@ -1,7 +1,7 @@
 import { EventEmitter } from "node:events";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { projects, workspaces, worktrees } from "@superset/local-db";
+import { projects, remoteHosts, workspaces, worktrees } from "@superset/local-db";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { eq } from "drizzle-orm";
@@ -14,7 +14,10 @@ import {
 } from "main/lib/terminal/errors";
 import { getTerminalHostClient } from "main/lib/terminal-host/client";
 import type { TerminalRuntime } from "main/lib/workspace-runtime";
-import { getWorkspaceRuntimeRegistry } from "main/lib/workspace-runtime";
+import {
+	getWorkspaceRuntimeRegistry,
+	getSshConnectionManager,
+} from "main/lib/workspace-runtime";
 import { z } from "zod";
 import { publicProcedure, router } from "../..";
 import { assertWorkspaceUsable } from "../workspaces/utils/usability";
@@ -180,12 +183,17 @@ export const createTerminalRouter = () => {
 				const workspacePath = workspace
 					? (getWorkspacePath(workspace) ?? undefined)
 					: undefined;
-				if (workspace?.type === "worktree") {
+				const isRemote = !!workspace?.remoteHostId;
+
+				if (workspace?.type === "worktree" && !isRemote) {
 					assertWorkspaceUsable(workspaceId, workspacePath);
 				}
-				const cwd = resolveCwd(cwdOverride, workspacePath);
+				const cwd = isRemote
+					? undefined
+					: resolveCwd(cwdOverride, workspacePath);
 
 				if (
+					!isRemote &&
 					workspacePath &&
 					input.taskPromptContent &&
 					input.taskPromptFileName
@@ -221,6 +229,86 @@ export const createTerminalRouter = () => {
 					persistedThemeState: appState.data.themeState,
 				});
 
+					// Ensure SSH connection exists for remote workspaces before resolving runtime
+				if (isRemote && workspace?.remoteHostId) {
+					const sshManager = getSshConnectionManager();
+					if (!sshManager.getConnection(workspace.remoteHostId)) {
+						const hostConfig = localDb
+							.select()
+							.from(remoteHosts)
+							.where(eq(remoteHosts.id, workspace.remoteHostId))
+							.get();
+						if (hostConfig) {
+							await sshManager.connect({
+								id: hostConfig.id,
+								hostname: hostConfig.hostname,
+								port: hostConfig.port ?? 22,
+								username: hostConfig.username,
+								authMethod: hostConfig.authMethod as "key" | "agent" | "password",
+								privateKeyPath: hostConfig.privateKeyPath ?? undefined,
+							});
+						}
+					}
+
+					// Check if container still exists and restart if needed
+					const client = sshManager.getConnection(workspace.remoteHostId);
+					if (client && project?.sandboxState) {
+						try {
+							const state = JSON.parse(project.sandboxState);
+							if (state.status === "ready" && state.containerId) {
+								const { inspectContainer, devcontainerUp } = await import(
+									"main/lib/devcontainer/container-manager"
+								);
+								const info = await inspectContainer(client, state.containerId);
+								if (info.status === "not_found" || info.status === "exited") {
+									console.log(
+										"[terminal] Container gone/stopped, restarting via devcontainer up...",
+									);
+									const { getProjectPaths } = await import(
+										"main/lib/devcontainer/types"
+									);
+									const slug =
+										project.name
+											?.toLowerCase()
+											.replace(/[^a-z0-9]+/g, "-")
+											.replace(/^-|-$/g, "") || "repo";
+									const paths = getProjectPaths(slug);
+									// Ensure devcontainer.json exists (may have been cleaned up)
+									const { detectExistingConfig, generateDefaultConfig } = await import("main/lib/devcontainer/default-config");
+									const effectiveRepoDir = project.mainRepoPath ?? paths.repoDir;
+									const existingConfig = await detectExistingConfig(client, effectiveRepoDir);
+									if (!existingConfig) {
+										await generateDefaultConfig(client, { projectName: project.name ?? "project", repoDir: effectiveRepoDir });
+									}
+									const result = await devcontainerUp(
+										client,
+										{ ...paths, repoDir: effectiveRepoDir },
+										project.id,
+										{ hasExistingConfig: false },
+									);
+									localDb
+										.update(projects)
+										.set({
+											sandboxState: JSON.stringify({
+												status: "ready",
+												containerId: result.containerId,
+												readyAt: Date.now(),
+											}),
+										})
+										.where(eq(projects.id, project.id))
+										.run();
+									console.log(
+										"[terminal] Container restarted:",
+										result.containerId,
+									);
+								}
+							}
+						} catch (err) {
+							console.log("[terminal] Container reconciliation failed:", err);
+						}
+					}
+				}
+
 				const terminalRuntime = getTerminalForWorkspace(workspaceId);
 				console.log(
 					"[terminal] Using runtime:",
@@ -232,6 +320,12 @@ export const createTerminalRouter = () => {
 				wireRuntimeToBridge(paneId, terminalRuntime);
 
 				try {
+					console.log(
+						"[terminal-router] createOrAttach: runtime type =",
+						terminalRuntime.constructor?.name ?? typeof terminalRuntime,
+						"for workspace:",
+						workspaceId,
+					);
 					const result = await terminalRuntime.createOrAttach({
 						paneId,
 						tabId,

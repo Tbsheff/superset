@@ -1,8 +1,17 @@
 import { existsSync } from "node:fs";
-import type { SelectWorktree } from "@superset/local-db";
+import { projects, type SelectWorktree, workspaces } from "@superset/local-db";
+import { and, eq, ne } from "drizzle-orm";
 import { track } from "main/lib/analytics";
+import {
+	destroyContainer,
+	removeWorktree,
+} from "main/lib/devcontainer/container-manager";
+import { removeStateMachine } from "main/lib/devcontainer/state-machine";
+import { getProjectPaths } from "main/lib/devcontainer/types";
+import { localDb } from "main/lib/local-db";
 import { workspaceInitManager } from "main/lib/workspace-init-manager";
 import { getWorkspaceRuntimeRegistry } from "main/lib/workspace-runtime";
+import { getSshConnectionManager } from "main/lib/workspace-runtime/ssh-connection-manager";
 import { z } from "zod";
 import { publicProcedure, router } from "../../..";
 import {
@@ -275,6 +284,67 @@ export const createDeleteProcedures = () => {
 								`[workspace/delete] Branch cleanup failed (non-blocking):`,
 								error instanceof Error ? error.message : String(error),
 							);
+						}
+					}
+				}
+
+				// Clean up remote devcontainer resources
+				if (workspace.remoteHostId && workspace.projectId) {
+					const remoteProject = localDb
+						.select()
+						.from(projects)
+						.where(eq(projects.id, workspace.projectId))
+						.get();
+
+					if (remoteProject?.remoteHostId && remoteProject.sandboxState) {
+						try {
+							const state = JSON.parse(remoteProject.sandboxState);
+							if (state.status === "ready" && state.containerId) {
+								const manager = getSshConnectionManager();
+								const client = manager.getConnection(
+									remoteProject.remoteHostId,
+								);
+								if (client && workspace.branch) {
+									await removeWorktree(
+										client,
+										state.containerId,
+										workspace.branch,
+									);
+								}
+
+								// Check if this was the last workspace for the project
+								const remainingWorkspaces = localDb
+									.select()
+									.from(workspaces)
+									.where(
+										and(
+											eq(workspaces.projectId, workspace.projectId),
+											ne(workspaces.id, workspace.id),
+										),
+									)
+									.all();
+
+								if (remainingWorkspaces.length === 0 && client) {
+									// Last workspace — destroy the container
+									const paths = getProjectPaths(
+										remoteProject.name ?? remoteProject.id,
+									);
+									await destroyContainer(
+										client,
+										state.containerId,
+										paths,
+										remoteProject.id,
+									);
+									localDb
+										.update(projects)
+										.set({ sandboxState: null })
+										.where(eq(projects.id, remoteProject.id))
+										.run();
+									removeStateMachine(remoteProject.id);
+								}
+							}
+						} catch {
+							// Best-effort cleanup — don't block workspace deletion
 						}
 					}
 				}

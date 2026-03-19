@@ -19,6 +19,7 @@ import {
 	deleteProjectIcon,
 	saveProjectIconFromDataUrl,
 } from "main/lib/project-icons";
+import { workspaceInitManager } from "main/lib/workspace-init-manager";
 import { getWorkspaceRuntimeRegistry } from "main/lib/workspace-runtime";
 import { PROJECT_COLOR_VALUES } from "shared/constants/project-colors";
 import { z } from "zod";
@@ -40,6 +41,7 @@ import {
 	sanitizeAuthorPrefix,
 } from "../workspaces/utils/git";
 import { getSimpleGitWithShellPath } from "../workspaces/utils/git-client";
+import { initRemoteWorkspace } from "../workspaces/utils/remote-workspace-init";
 import { getDefaultProjectColor } from "./utils/colors";
 import { discoverAndSaveProjectIcon } from "./utils/favicon-discovery";
 import { fetchGitHubOwner, getGitHubAvatarUrl } from "./utils/github";
@@ -338,6 +340,14 @@ export const createProjectsRouter = (getWindow: () => BrowserWindow | null) => {
 						throw new Error(`Project ${input.projectId} not found`);
 					}
 
+					// Remote projects have no local git repo — return empty branch list
+					if (project.remoteHostId) {
+						return {
+							branches: [],
+							defaultBranch: project.defaultBranch ?? "main",
+						};
+					}
+
 					const git = await getSimpleGitWithShellPath(project.mainRepoPath);
 
 					// No fetch — use only locally available refs
@@ -490,6 +500,14 @@ export const createProjectsRouter = (getWindow: () => BrowserWindow | null) => {
 						.get();
 					if (!project) {
 						throw new Error(`Project ${input.projectId} not found`);
+					}
+
+					// Remote projects have no local git repo — return empty branch list
+					if (project.remoteHostId) {
+						return {
+							branches: [],
+							defaultBranch: project.defaultBranch ?? "main",
+						};
 					}
 
 					const git = await getSimpleGitWithShellPath(project.mainRepoPath);
@@ -1339,6 +1357,98 @@ export const createProjectsRouter = (getWindow: () => BrowserWindow | null) => {
 				}
 
 				return { iconUrl };
+			}),
+
+		createRemote: publicProcedure
+			.input(
+				z.object({
+					remoteHostId: z.string(),
+					repoUrl: z.string().optional(),
+					remoteRepoPath: z.string().optional(),
+					name: z.string().optional(),
+				}),
+			)
+			.mutation(async ({ input }) => {
+				const name =
+					input.name ||
+					extractRepoName(input.repoUrl ?? "") ||
+					input.remoteRepoPath?.split("/").filter(Boolean).pop() ||
+					"remote-project";
+
+				const project = localDb
+					.insert(projects)
+					.values({
+						name,
+						mainRepoPath:
+							input.remoteRepoPath ?? `~/superset-projects/${name}/repo`,
+						remoteHostId: input.remoteHostId,
+						color: getDefaultProjectColor(),
+						defaultBranch: "main",
+					})
+					.returning()
+					.get();
+
+				// Remote projects have no local git repo, so we skip getCurrentBranch
+				// and directly insert the workspace using the stored defaultBranch.
+				const insertResult = localDb
+					.insert(workspaces)
+					.values({
+						projectId: project.id,
+						type: "branch",
+						branch: project.defaultBranch ?? "main",
+						name: "default",
+						tabOrder: 0,
+						remoteHostId: input.remoteHostId,
+					})
+					.onConflictDoNothing()
+					.returning()
+					.all();
+
+				const workspace = insertResult[0];
+
+				if (workspace) {
+					setLastActiveWorkspace(workspace.id);
+					activateProject(project);
+
+					track("workspace_opened", {
+						workspace_id: workspace.id,
+						project_id: project.id,
+						type: "branch",
+						was_existing: false,
+						auto_created: true,
+					});
+
+					// Start remote init (fire and forget)
+					workspaceInitManager.startJob(workspace.id, project.id);
+					void initRemoteWorkspace({
+						workspaceId: workspace.id,
+						projectId: project.id,
+						remoteHostId: input.remoteHostId,
+						branch: "main",
+						repoUrl: input.repoUrl,
+						remoteRepoPath: input.remoteRepoPath,
+						projectName: name,
+						projectSlug: name
+							.toLowerCase()
+							.replace(/[^a-z0-9]+/g, "-")
+							.replace(/^-|-$/g, ""),
+						defaultBranch: "main",
+						persistState: async (state) => {
+							localDb
+								.update(projects)
+								.set({ sandboxState: JSON.stringify(state) })
+								.where(eq(projects.id, project.id))
+								.run();
+						},
+					});
+				}
+
+				track("project_opened", {
+					project_id: project.id,
+					method: "create_remote",
+				});
+
+				return { projectId: project.id, workspaceId: workspace?.id, name };
 			}),
 
 		setProjectIcon: publicProcedure

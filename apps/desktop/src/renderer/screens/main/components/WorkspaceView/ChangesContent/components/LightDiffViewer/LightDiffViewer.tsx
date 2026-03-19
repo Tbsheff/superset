@@ -69,7 +69,7 @@ export function LightDiffViewer({
 
 				/* Separator polish */
 				[data-separator] {
-					--diffs-bg-separator-override: #1a1716;
+					--diffs-bg-separator-override: #141210;
 				}
 				[data-separator='line-info'] {
 					border-top: 1px solid #2a2827;
@@ -77,7 +77,7 @@ export function LightDiffViewer({
 				}
 				[data-separator-content],
 				[data-expand-button] {
-					background-color: #1a1716 !important;
+					background-color: #141210 !important;
 					color: #6e7681 !important;
 					font-size: 12px !important;
 				}
@@ -105,7 +105,7 @@ export function LightDiffViewer({
 
 				/* File header */
 				[data-diffs-header] {
-					background-color: #1a1716 !important;
+					background-color: #141210 !important;
 					border-bottom: 1px solid #2a2827 !important;
 					padding: 8px 12px !important;
 				}

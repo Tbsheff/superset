@@ -29,7 +29,7 @@ import { Text } from "@tiptap/extension-text";
 import { Underline } from "@tiptap/extension-underline";
 import { EditorContent, ReactNodeViewRenderer, useEditor } from "@tiptap/react";
 import { useCallback, useEffect, useRef } from "react";
-import { lowlight } from "renderer/lib/lowlight";
+import { getLowlight } from "renderer/lib/lowlight";
 import { CodeBlockView } from "renderer/routes/_authenticated/_dashboard/tasks/$taskId/components/TaskMarkdownRenderer/components/CodeBlockView";
 import { Markdown } from "tiptap-markdown";
 
@@ -143,7 +143,7 @@ export function FileMarkdownEditor({
 					return ReactNodeViewRenderer(CodeBlockView);
 				},
 			}).configure({
-				lowlight,
+				lowlight: getLowlight(),
 				HTMLAttributes: {
 					class:
 						"my-3 p-3 rounded-md bg-muted overflow-x-auto font-mono text-sm",

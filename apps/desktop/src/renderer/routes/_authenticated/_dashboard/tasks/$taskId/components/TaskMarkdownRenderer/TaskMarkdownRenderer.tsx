@@ -25,7 +25,7 @@ import TaskList from "@tiptap/extension-task-list";
 import { Text } from "@tiptap/extension-text";
 import { Underline } from "@tiptap/extension-underline";
 import { EditorContent, ReactNodeViewRenderer, useEditor } from "@tiptap/react";
-import { lowlight } from "renderer/lib/lowlight";
+import { getLowlight } from "renderer/lib/lowlight";
 import { Markdown } from "tiptap-markdown";
 
 import { CodeBlockView } from "./components/CodeBlockView";
@@ -110,7 +110,7 @@ export function TaskMarkdownRenderer({
 					return ReactNodeViewRenderer(CodeBlockView);
 				},
 			}).configure({
-				lowlight,
+				lowlight: getLowlight(),
 				HTMLAttributes: {
 					class:
 						"my-3 p-3 rounded-md bg-muted overflow-x-auto font-mono text-sm",

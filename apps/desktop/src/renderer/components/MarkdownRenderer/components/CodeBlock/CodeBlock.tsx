@@ -2,7 +2,7 @@ import "./code-highlight.css";
 
 import { toHtml } from "hast-util-to-html";
 import { lazy, type ReactNode, Suspense, useMemo } from "react";
-import { lowlight } from "renderer/lib/lowlight";
+import { getLowlight } from "renderer/lib/lowlight";
 import { useTheme } from "renderer/stores";
 
 const MermaidBlock = lazy(() =>
@@ -71,13 +71,14 @@ function HighlightedCode({
 }) {
 	const html = useMemo(() => {
 		try {
+			const ll = getLowlight();
 			const tree = language
-				? lowlight.highlight(language, code)
-				: lowlight.highlightAuto(code);
+				? ll.highlight(language, code)
+				: ll.highlightAuto(code);
 			return toHtml(tree);
 		} catch {
 			// Language not registered — fall back to unhighlighted
-			const tree = lowlight.highlightAuto(code);
+			const tree = getLowlight().highlightAuto(code);
 			return toHtml(tree);
 		}
 	}, [code, language]);

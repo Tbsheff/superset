@@ -215,7 +215,7 @@ export default defineConfig({
 		publicDir: resolve(resources, "public"),
 
 		build: {
-			sourcemap: true,
+			sourcemap: process.env.NODE_ENV === "production",
 			outDir: resolve(devPath, "renderer"),
 
 			rollupOptions: {

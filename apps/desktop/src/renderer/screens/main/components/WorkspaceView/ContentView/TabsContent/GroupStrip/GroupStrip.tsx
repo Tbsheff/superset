@@ -336,7 +336,7 @@ export function GroupStrip() {
 	);
 
 	return (
-		<div className="flex h-10 min-w-0 flex-1 items-stretch">
+		<div className="flex h-9 min-w-0 flex-1 items-stretch">
 			<div
 				ref={scrollContainerRef}
 				className="flex min-w-0 flex-1 items-stretch overflow-x-auto overflow-y-hidden"
@@ -344,13 +344,12 @@ export function GroupStrip() {
 			>
 				<div ref={tabsTrackRef} className="flex items-stretch">
 					{tabs.length > 0 && (
-						<div className="flex items-stretch h-full shrink-0 gap-px">
+						<div className="flex items-stretch h-full min-w-0 gap-0.5">
 							{tabs.map((tab, index) => {
 								return (
 									<div
 										key={tab.id}
-										className="h-full shrink-0"
-										style={{ width: "160px" }}
+										className="h-full min-w-[80px] max-w-[160px] flex-1"
 									>
 										<GroupItem
 											tab={tab}

@@ -95,12 +95,15 @@ const findNextTab = (state: TabsState, tabIdToClose: string): string | null => {
 };
 
 const deriveTabName = (
-	panes: Record<string, { tabId: string; name: string }>,
+	panes: Record<string, { tabId: string; name: string; userTitle?: string }>,
 	tabId: string,
 ): string => {
 	const tabPanes = Object.values(panes).filter((p) => p.tabId === tabId);
-	if (tabPanes.length === 1) return tabPanes[0].name;
-	return `Multiple panes (${tabPanes.length})`;
+	const primary = tabPanes[0];
+	if (!primary) return "";
+	const primaryName = primary.userTitle?.trim() || primary.name;
+	const suffix = tabPanes.length > 1 ? ` +${tabPanes.length - 1}` : "";
+	return primaryName + suffix;
 };
 
 export const useTabsStore = create<TabsStore>()(

@@ -179,7 +179,7 @@ export function GroupItem({
 						drag(drop(node));
 					}}
 					className={cn(
-						"group relative flex items-center shrink-0 h-full",
+						"group relative flex items-center min-w-0 h-full w-full",
 						isOver && canDrop && "bg-primary/5",
 						isDragging && "opacity-50 text-muted-foreground/50",
 					)}

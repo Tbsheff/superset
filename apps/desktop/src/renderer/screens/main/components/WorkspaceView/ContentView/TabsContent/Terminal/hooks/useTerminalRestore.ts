@@ -1,5 +1,6 @@
 import { useCallback, useRef } from "react";
 import { DEBUG_TERMINAL } from "../config";
+import { scheduleTerminalRestore } from "../restore-scheduler";
 import type { ResttyAdapter } from "../restty/ResttyAdapter";
 import type {
 	CreateOrAttachResult,
@@ -159,66 +160,69 @@ export function useTerminalRestore({
 			const isAltScreenReattach =
 				!result.isNew && result.snapshot?.modes.alternateScreen;
 
-			// For alt-screen (TUI) sessions, enter alt-screen and trigger SIGWINCH
-			if (isAltScreenReattach) {
-				adapter.write("\x1b[?1049h", () => {
-					if (result.snapshot?.rehydrateSequences) {
-						const ESC = "\x1b";
-						const filteredRehydrate = result.snapshot.rehydrateSequences
-							.split(`${ESC}[?1049h`)
-							.join("")
-							.split(`${ESC}[?47h`)
-							.join("");
-						if (filteredRehydrate) {
-							adapter.write(filteredRehydrate);
+			// Schedule restore writes through the global restore scheduler
+			// so only one terminal writes its multi-MB payload at a time.
+			scheduleTerminalRestore({
+				paneId,
+				priority: 0,
+				run: (restoreDone) => {
+					// For alt-screen (TUI) sessions, enter alt-screen and trigger SIGWINCH
+					if (isAltScreenReattach) {
+						adapter.write("\x1b[?1049h", () => {
+							if (result.snapshot?.rehydrateSequences) {
+								const ESC = "\x1b";
+								const filteredRehydrate = result.snapshot.rehydrateSequences
+									.split(`${ESC}[?1049h`)
+									.join("")
+									.split(`${ESC}[?47h`)
+									.join("");
+								if (filteredRehydrate) {
+									adapter.write(filteredRehydrate);
+								}
+							}
+
+							isStreamReadyRef.current = true;
+							if (DEBUG_TERMINAL) {
+								console.log(
+									`[Terminal] isStreamReady=true (altScreen): ${paneId}, pendingEvents=${pendingEventsRef.current.length}`,
+								);
+							}
+							flushPendingEvents();
+							scheduleFitAndScroll();
+							restoreDone();
+						});
+						return;
+					}
+
+					const rehydrateSequences = result.snapshot?.rehydrateSequences ?? "";
+
+					const finalizeRestore = () => {
+						isStreamReadyRef.current = true;
+						scheduleFitAndScroll();
+						if (DEBUG_TERMINAL) {
+							console.log(
+								`[Terminal] isStreamReady=true (finalizeRestore): ${paneId}, pendingEvents=${pendingEventsRef.current.length}`,
+							);
 						}
+						flushPendingEvents();
+						restoreDone();
+					};
+
+					const writeSnapshot = () => {
+						if (!initialAnsi) {
+							finalizeRestore();
+							return;
+						}
+						adapter.write(initialAnsi, finalizeRestore);
+					};
+
+					if (rehydrateSequences) {
+						adapter.write(rehydrateSequences, writeSnapshot);
+					} else {
+						writeSnapshot();
 					}
-
-					isStreamReadyRef.current = true;
-					if (DEBUG_TERMINAL) {
-						console.log(
-							`[Terminal] isStreamReady=true (altScreen): ${paneId}, pendingEvents=${pendingEventsRef.current.length}`,
-						);
-					}
-					flushPendingEvents();
-
-					scheduleFitAndScroll();
-				});
-
-				if (result.snapshot?.cwd) {
-					updateCwdRef.current(result.snapshot.cwd);
-				} else {
-					updateCwdRef.current(initialAnsi);
-				}
-				return;
-			}
-
-			const rehydrateSequences = result.snapshot?.rehydrateSequences ?? "";
-
-			const finalizeRestore = () => {
-				isStreamReadyRef.current = true;
-				scheduleFitAndScroll();
-				if (DEBUG_TERMINAL) {
-					console.log(
-						`[Terminal] isStreamReady=true (finalizeRestore): ${paneId}, pendingEvents=${pendingEventsRef.current.length}`,
-					);
-				}
-				flushPendingEvents();
-			};
-
-			const writeSnapshot = () => {
-				if (!initialAnsi) {
-					finalizeRestore();
-					return;
-				}
-				adapter.write(initialAnsi, finalizeRestore);
-			};
-
-			if (rehydrateSequences) {
-				adapter.write(rehydrateSequences, writeSnapshot);
-			} else {
-				writeSnapshot();
-			}
+				},
+			});
 
 			if (result.snapshot?.cwd) {
 				updateCwdRef.current(result.snapshot.cwd);

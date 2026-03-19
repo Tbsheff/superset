@@ -21,9 +21,9 @@ const MIDNIGHT_DIFF_THEME = {
 
 const MIDNIGHT_DIFF_COLORS = {
 	background: MIDNIGHT_CODE_COLORS.background,
-	buffer: "#161b22",
-	hover: "#1c2128",
-	separator: "#161b22",
+	buffer: "#1a1716",
+	hover: "#201c1a",
+	separator: "#1a1716",
 	lineNumber: MIDNIGHT_CODE_COLORS.muted,
 	addition: MIDNIGHT_CODE_COLORS.addition,
 	deletion: MIDNIGHT_CODE_COLORS.deletion,
@@ -68,8 +68,8 @@ export function getDiffViewerStyle(
 		"--diffs-selection-color-override": MIDNIGHT_DIFF_COLORS.selection,
 		"--diffs-fg-number-addition-override": "rgba(63, 185, 80, 0.7)",
 		"--diffs-fg-number-deletion-override": "rgba(248, 81, 73, 0.7)",
-		"--diffs-bg-addition-emphasis-override": "rgba(46, 160, 67, 0.4)",
-		"--diffs-bg-deletion-emphasis-override": "rgba(248, 81, 73, 0.4)",
+		"--diffs-bg-addition-emphasis-override": "rgba(46, 160, 67, 0.5)",
+		"--diffs-bg-deletion-emphasis-override": "rgba(248, 81, 73, 0.5)",
 		"--diffs-addition-bar-color": MIDNIGHT_DIFF_COLORS.additionBar,
 		"--diffs-deletion-bar-color": MIDNIGHT_DIFF_COLORS.deletionBar,
 		backgroundColor: MIDNIGHT_DIFF_COLORS.background,

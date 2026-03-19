@@ -3,17 +3,17 @@ export const DEFAULT_CODE_EDITOR_FONT_FAMILY =
 export const DEFAULT_CODE_EDITOR_FONT_SIZE = 13;
 
 export const MIDNIGHT_CODE_COLORS = {
-	background: "#0d1117",
-	border: "#30363d",
-	muted: "#8b949e",
+	background: "#151110",
+	border: "#2a2827",
+	muted: "#a8a5a3",
 	activeLine: "#ffffff0a",
-	selection: "#264f78",
+	selection: "#3a2820",
 	search: "#e3b34133",
 	searchActive: "#e3b34155",
-	panel: "#161b22",
-	surface: "#161b22",
-	foreground: "#e6edf3",
-	addition: "rgba(46, 160, 67, 0.2)",
-	deletion: "rgba(248, 81, 73, 0.2)",
+	panel: "#1a1716",
+	surface: "#1a1716",
+	foreground: "#eae8e6",
+	addition: "rgba(46, 160, 67, 0.3)",
+	deletion: "rgba(248, 81, 73, 0.3)",
 	modified: "rgba(210, 153, 34, 0.25)",
 };

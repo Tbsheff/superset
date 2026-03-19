@@ -260,6 +260,13 @@
       "when": 1773795886548,
       "tag": "0036_add_remote_hosts",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1773860526336,
+      "tag": "0037_add_devcontainer_fields",
+      "breakpoints": true
     }
   ]
 }

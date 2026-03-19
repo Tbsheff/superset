@@ -46,6 +46,10 @@ export const projects = sqliteTable(
 		iconUrl: text("icon_url"),
 		neonProjectId: text("neon_project_id"),
 		defaultApp: text("default_app").$type<ExternalApp>(),
+		remoteHostId: text("remote_host_id").references(() => remoteHosts.id, {
+			onDelete: "set null",
+		}),
+		sandboxState: text("sandbox_state"),
 	},
 	(table) => [
 		index("projects_main_repo_path_idx").on(table.mainRepoPath),
@@ -110,6 +114,9 @@ export const remoteHosts = sqliteTable(
 		updatedAt: integer("updated_at")
 			.notNull()
 			.$defaultFn(() => Date.now()),
+		dockerMemoryLimit: text("docker_memory_limit"),
+		dockerCpuLimit: integer("docker_cpu_limit"),
+		idleTimeoutMinutes: integer("idle_timeout_minutes"),
 	},
 	(table) => [index("remote_hosts_type_idx").on(table.type)],
 );

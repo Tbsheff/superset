@@ -109,7 +109,13 @@ export class SshConnectionManager extends EventEmitter {
 
 		const connectConfig = await this.buildConnectConfig(config);
 
-		console.log("[ssh-conn] Calling client.connect with config:", { host: connectConfig.host, port: connectConfig.port, username: connectConfig.username, hasAgent: !!connectConfig.agent, hasPrivateKey: !!connectConfig.privateKey });
+		console.log("[ssh-conn] Calling client.connect with config:", {
+			host: connectConfig.host,
+			port: connectConfig.port,
+			username: connectConfig.username,
+			hasAgent: !!connectConfig.agent,
+			hasPrivateKey: !!connectConfig.privateKey,
+		});
 
 		return new Promise<Client>((resolve, reject) => {
 			client.on("ready", () => {
@@ -190,6 +196,7 @@ export class SshConnectionManager extends EventEmitter {
 				const agentSock = shellEnv.SSH_AUTH_SOCK || process.env.SSH_AUTH_SOCK;
 				if (agentSock) {
 					base.agent = agentSock;
+					base.agentForward = true;
 				}
 
 				// Try keys from SSH config first, then fall back to defaults.
@@ -213,13 +220,11 @@ export class SshConnectionManager extends EventEmitter {
 						const key = fs.readFileSync(expandedPath);
 						base.privateKey = key;
 
-						// If key is encrypted, try to get passphrase from macOS Keychain
-						if (this.isEncryptedKey(key)) {
-							const passphrase =
-								await this.getPassphraseFromKeychain(expandedPath);
-							if (passphrase) {
-								base.passphrase = passphrase;
-							}
+						// Unconditionally try Keychain — harmless if key isn't encrypted
+						const passphrase =
+							await this.getPassphraseFromKeychain(expandedPath);
+						if (passphrase) {
+							base.passphrase = passphrase;
 						}
 					} catch {
 						// Key file not readable, connection will fail with clear error

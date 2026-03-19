@@ -8,6 +8,12 @@ export type WorkspaceInitStep =
 	| "syncing" // Syncing with remote
 	| "verifying" // Verifying base branch exists
 	| "fetching" // Fetching latest changes
+	| "cloning_repo" // Cloning repository
+	| "connecting_ssh" // Connecting to remote host
+	| "checking_docker" // Checking Docker availability
+	| "building_devcontainer" // Building devcontainer
+	| "starting_container" // Starting container
+	| "configuring_tools" // Installing agent tools
 	| "creating_worktree" // Creating git worktree
 	| "copying_config" // Copying .superset configuration
 	| "copying_files" // Copying gitignored files (node_modules, .env, etc.)
@@ -29,6 +35,12 @@ export const INIT_STEP_MESSAGES: Record<WorkspaceInitStep, string> = {
 	syncing: "Syncing with remote...",
 	verifying: "Verifying base branch...",
 	fetching: "Fetching latest changes...",
+	cloning_repo: "Cloning repository...",
+	connecting_ssh: "Connecting to remote host...",
+	checking_docker: "Checking Docker availability...",
+	building_devcontainer: "Building devcontainer...",
+	starting_container: "Starting container...",
+	configuring_tools: "Installing agent tools...",
 	creating_worktree: "Creating git worktree...",
 	copying_config: "Copying configuration...",
 	copying_files: "Copying project files...",
@@ -49,6 +61,20 @@ export const INIT_STEP_ORDER: WorkspaceInitStep[] = [
 	"creating_worktree",
 	"copying_config",
 	"copying_files",
+	"finalizing",
+	"ready",
+];
+
+export const REMOTE_INIT_STEP_ORDER: WorkspaceInitStep[] = [
+	"pending",
+	"connecting_ssh",
+	"checking_docker",
+	"cloning_repo",
+	"building_devcontainer",
+	"starting_container",
+	"configuring_tools",
+	"creating_worktree",
+	"copying_config",
 	"finalizing",
 	"ready",
 ];

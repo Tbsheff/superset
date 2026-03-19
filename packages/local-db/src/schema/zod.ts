@@ -172,3 +172,42 @@ export type RemoteHostType = (typeof REMOTE_HOST_TYPES)[number];
 
 export const SSH_AUTH_METHODS = ["key", "agent", "password"] as const;
 export type SshAuthMethod = (typeof SSH_AUTH_METHODS)[number];
+
+export const PROVISIONING_STEPS = [
+	"checking_prerequisites",
+	"cloning_repo",
+	"generating_config",
+	"building_container",
+	"running_lifecycle",
+	"creating_worktree",
+] as const;
+
+export const sandboxStateSchema = z.discriminatedUnion("status", [
+	z.object({ status: z.literal("idle") }),
+	z.object({
+		status: z.literal("provisioning"),
+		step: z.enum(PROVISIONING_STEPS),
+		message: z.string(),
+		startedAt: z.number(),
+	}),
+	z.object({
+		status: z.literal("ready"),
+		containerId: z.string(),
+		readyAt: z.number(),
+	}),
+	z.object({
+		status: z.literal("stopped"),
+		containerId: z.string().optional(),
+		stoppedAt: z.number(),
+		reason: z.string().optional(),
+	}),
+	z.object({
+		status: z.literal("error"),
+		error: z.string(),
+		failedStep: z.enum(PROVISIONING_STEPS).optional(),
+		retryable: z.boolean(),
+		occurredAt: z.number(),
+	}),
+	z.object({ status: z.literal("destroying") }),
+]);
+export type SandboxState = z.infer<typeof sandboxStateSchema>;

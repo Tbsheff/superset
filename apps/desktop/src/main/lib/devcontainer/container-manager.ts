@@ -40,7 +40,9 @@ export async function cloneRepo(
 		cloneCmd = `${envPrefix} git clone --no-checkout ${repoUrl} ${paths.repoDir}`;
 	}
 
-	const clone = await sshExec(client, cloneCmd, { timeout: 60_000 });
+	const branch = opts?.branch ?? "main";
+	const cloneAndCheckoutCmd = `${cloneCmd} && cd ${paths.repoDir} && git checkout ${branch} 2>/dev/null || git checkout master`;
+	const clone = await sshExec(client, cloneAndCheckoutCmd, { timeout: 60_000 });
 	if (clone.code !== 0) {
 		const stderr = clone.stderr.toLowerCase();
 		if (
@@ -53,25 +55,6 @@ export async function cloneRepo(
 			);
 		}
 		throw new Error(`Git clone failed: ${clone.stderr.trim()}`);
-	}
-
-	// Checkout default branch
-	const branch = opts?.branch ?? "main";
-	const checkout = await sshExec(
-		client,
-		`cd ${paths.repoDir} && git checkout ${branch}`,
-		{ timeout: 30_000 },
-	);
-	if (checkout.code !== 0) {
-		// Try 'master' as fallback
-		const masterCheckout = await sshExec(
-			client,
-			`cd ${paths.repoDir} && git checkout master`,
-			{ timeout: 30_000 },
-		);
-		if (masterCheckout.code !== 0) {
-			throw new Error(`Git checkout failed: ${checkout.stderr.trim()}`);
-		}
 	}
 }
 
@@ -222,22 +205,13 @@ export async function destroyContainer(
 	paths: ProjectPaths,
 	projectId: string,
 ): Promise<void> {
-	// Remove container by ID if known
-	if (containerId) {
-		await sshExec(client, `docker rm -f ${containerId}`, {
-			timeout: 15_000,
-		}).catch(() => {});
-	}
-
-	// Also remove by label (in case container ID is stale)
-	await sshExec(
-		client,
+	const cmds = [
+		containerId ? `docker rm -f ${containerId}` : "",
 		`docker ps -a --filter "label=superset.project=${projectId}" -q | xargs -r docker rm -f`,
-		{ timeout: 15_000 },
-	).catch(() => {});
+		`rm -rf ${paths.baseDir}`,
+	].filter(Boolean).join("; ");
 
-	// Remove project directory
-	await sshExec(client, `rm -rf ${paths.baseDir}`, { timeout: 15_000 });
+	await sshExec(client, cmds, { timeout: 15_000 }).catch(() => {});
 }
 
 /**
@@ -284,15 +258,8 @@ export async function removeWorktree(
 ): Promise<void> {
 	await sshExec(
 		client,
-		`docker exec ${containerId} bash -c 'cd /workspaces/repo && git worktree remove /workspaces/worktrees/${branch} --force'`,
+		`docker exec ${containerId} bash -c 'cd /workspaces/repo && git worktree remove /workspaces/worktrees/${branch} --force 2>/dev/null; git worktree prune'`,
 		{ timeout: 30_000 },
-	).catch(() => {});
-
-	// Prune stale worktrees
-	await sshExec(
-		client,
-		`docker exec ${containerId} bash -c 'cd /workspaces/repo && git worktree prune'`,
-		{ timeout: 10_000 },
 	).catch(() => {});
 }
 

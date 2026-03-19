@@ -15,17 +15,14 @@ export async function detectExistingConfig(
 	client: Client,
 	repoDir: string,
 ): Promise<string | null> {
-	// Check standard locations
-	const paths = [
-		`${repoDir}/.devcontainer/devcontainer.json`,
-		`${repoDir}/.devcontainer.json`,
-	];
-
-	for (const path of paths) {
-		const result = await sshExec(client, `test -f ${path}`, { timeout: 5_000 });
-		if (result.code === 0) return path;
+	const result = await sshExec(
+		client,
+		`for p in "${repoDir}/.devcontainer/devcontainer.json" "${repoDir}/.devcontainer.json"; do test -f "$p" && echo "$p" && exit 0; done; exit 1`,
+		{ timeout: 5_000 },
+	);
+	if (result.code === 0 && result.stdout.trim()) {
+		return result.stdout.trim();
 	}
-
 	return null;
 }
 
@@ -57,19 +54,16 @@ export async function generateDefaultConfig(
 	const configDir = `${opts.repoDir}/.devcontainer`;
 	const configPath = `${configDir}/devcontainer.json`;
 
-	// Create .devcontainer directory
-	await sshExec(client, `mkdir -p ${configDir}`, { timeout: 5_000 });
-
-	// Write config via stdin pipe (no escaping needed)
-	const content = `${JSON.stringify(config, null, 2)}\n`;
-	await sshWriteFile(client, configPath, content);
-
-	// Exclude from git (local only, not committed)
+	// Create dir and exclude from git in one command
 	await sshExec(
 		client,
-		`grep -qxF '.devcontainer/' ${opts.repoDir}/.git/info/exclude 2>/dev/null || echo '.devcontainer/' >> ${opts.repoDir}/.git/info/exclude`,
+		`mkdir -p ${configDir} && (grep -qxF '.devcontainer/' ${opts.repoDir}/.git/info/exclude 2>/dev/null || echo '.devcontainer/' >> ${opts.repoDir}/.git/info/exclude)`,
 		{ timeout: 5_000 },
 	);
+
+	// Write config via stdin (separate RTT, unavoidable)
+	const content = `${JSON.stringify(config, null, 2)}\n`;
+	await sshWriteFile(client, configPath, content);
 
 	return configPath;
 }

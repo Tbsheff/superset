@@ -71,6 +71,7 @@ export class ResttyAdapter {
 
 		const resttyOpts: ResttyOptions = {
 			root: opts.container,
+			renderer: "webgl2",
 			appOptions: {
 				fontSize: opts.options?.fontSize ?? 14,
 				fontPreset: "none",

@@ -48,9 +48,6 @@ import { MainWindow } from "./windows/main";
 console.log("[main] Local database ready:", !!localDb);
 const IS_DEV = process.env.NODE_ENV === "development";
 
-// Increase renderer V8 heap limit to prevent OOM during restty WASM+WebGPU init
-app.commandLine.appendSwitch("js-flags", "--max-old-space-size=8192");
-
 void applyShellEnvToProcess().catch((error) => {
 	console.error("[main] Failed to apply shell environment:", error);
 });

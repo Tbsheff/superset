@@ -89,6 +89,17 @@ export function useTerminalRestore({
 			0,
 			pendingEventsRef.current.length,
 		);
+		let totalBytes = 0;
+		for (const event of events) {
+			if (event.type === "data") {
+				totalBytes += event.data.length;
+			}
+		}
+		if (totalBytes > 0) {
+			console.log(
+				`[Terminal] Flushing ${events.length} pending events (${(totalBytes / 1024).toFixed(0)}KB) for ${paneId}`,
+			);
+		}
 		for (const event of events) {
 			if (event.type === "data") {
 				updateModesRef.current(event.data);
@@ -128,7 +139,18 @@ export function useTerminalRestore({
 			};
 
 			// Canonical initial content: prefer snapshot (daemon mode) over scrollback
-			const initialAnsi = result.snapshot?.snapshotAnsi ?? result.scrollback;
+			// Cap at 512KB to prevent renderer OOM from oversized stored snapshots
+			const MAX_RESTORE_BYTES = 512 * 1024;
+			let initialAnsi = result.snapshot?.snapshotAnsi ?? result.scrollback;
+			console.log(
+				`[Terminal] Restore payload: ${initialAnsi ? `${(initialAnsi.length / 1024).toFixed(0)}KB` : "none"}, rehydrate: ${result.snapshot?.rehydrateSequences ? `${(result.snapshot.rehydrateSequences.length / 1024).toFixed(0)}KB` : "none"}, isNew=${result.isNew} for ${paneId}`,
+			);
+			if (initialAnsi && initialAnsi.length > MAX_RESTORE_BYTES) {
+				console.warn(
+					`[Terminal] Truncating restore payload: ${(initialAnsi.length / 1024).toFixed(0)}KB → ${MAX_RESTORE_BYTES / 1024}KB for ${paneId}`,
+				);
+				initialAnsi = initialAnsi.slice(-MAX_RESTORE_BYTES);
+			}
 
 			// Track alternate screen mode from snapshot
 			isAlternateScreenRef.current = !!result.snapshot?.modes.alternateScreen;

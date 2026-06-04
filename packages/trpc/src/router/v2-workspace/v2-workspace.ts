@@ -251,6 +251,7 @@ export const v2WorkspaceRouter = {
 						branch: input.branch,
 						hostId: host.machineId,
 						type: input.type,
+						runtimeKind: input.runtimeKind,
 						createdByUserId: ctx.userId,
 						taskId: input.taskId ?? null,
 					})

@@ -16,9 +16,18 @@ import {
 } from "./DaytonaWorkspaceRuntime.ts";
 import { parseRepoCoordinates } from "./parse-repo.ts";
 import { mapDaytonaState, toStoredStatus } from "./status-map.ts";
+import { syncAgentAuthToSandbox } from "./syncAgentAuth.ts";
 import type { DaytonaAdapterDeps, Sandbox } from "./types.ts";
 
 const WORKDIR = "workspace";
+
+/**
+ * Prebuilt snapshot every remote workspace is created from. It already ships the
+ * agent CLIs (Codex, Claude) so a sandbox is runnable as soon as the repo is
+ * cloned and auth is synced. Bump this id to roll forward to a new snapshot.
+ */
+const DEFAULT_DAYTONA_SNAPSHOT =
+	"terry-vCPU-4-RAM-8GB-2026-06-01-22-55-16-lbzyvi";
 
 /**
  * First remote `RuntimeAdapter`. Maps the seam's provider-neutral lifecycle onto
@@ -49,6 +58,9 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 		// tier-gated, so it cannot express a GitHub hostname allowlist, and locking
 		// it down at create time breaks cloning.
 		const sandbox = await this.deps.sdk.create({
+			// Provision from the prebuilt snapshot (agent CLIs already installed)
+			// rather than a bare language image so remote agents are runnable.
+			snapshot: DEFAULT_DAYTONA_SNAPSHOT,
 			language: CodeLanguage.TYPESCRIPT, // never default to python
 			envVars: plan.env ?? {},
 			autoStopInterval: 15, // minutes; the in-memory lease keeps it alive
@@ -62,6 +74,23 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 		} catch (error) {
 			await this.deleteAfterFailedProvision(sandbox);
 			throw error;
+		}
+
+		// Best-effort: upload the host user's agent credentials so the in-sandbox
+		// CLIs authenticate. A cred problem (missing/locked) must not fail an
+		// otherwise-provisioned workspace, and the warning carries no secret.
+		try {
+			const result = await syncAgentAuthToSandbox(
+				sandbox as unknown as Parameters<typeof syncAgentAuthToSandbox>[0],
+			);
+			console.info(
+				`[daytona] agent auth synced=${result.synced.length} skipped=${result.skipped.length}`,
+			);
+		} catch (error) {
+			console.warn(
+				"[daytona] agent auth sync failed (continuing):",
+				error instanceof Error ? error.message : String(error),
+			);
 		}
 
 		return new DaytonaWorkspaceRuntime(
@@ -112,21 +141,32 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 	): Promise<void> {
 		const { owner, repo } = parseRepoCoordinates(plan.repo.cloneUrl);
 		const { token } = await this.deps.mintRepoScopedToken({ owner, repo });
+		// Clone the BASE ref (empty => the repo's default branch). The workspace
+		// branch usually does not exist on the remote yet, so it is created in the
+		// sandbox after the clone (createBranch) rather than cloned directly.
+		const baseRef = plan.repo.ref || undefined;
 		// An empty token means no auth (e.g. a public repo): clone anonymously.
 		// Sending "x-access-token" with an empty password makes GitHub reject the
 		// clone ("Password authentication is not supported").
 		if (!token) {
-			await sandbox.git.clone(plan.repo.cloneUrl, WORKDIR, plan.repo.ref);
-			return;
+			await sandbox.git.clone(plan.repo.cloneUrl, WORKDIR, baseRef);
+		} else {
+			await sandbox.git.clone(
+				plan.repo.cloneUrl,
+				WORKDIR,
+				baseRef,
+				undefined,
+				"x-access-token",
+				token,
+			);
 		}
-		await sandbox.git.clone(
-			plan.repo.cloneUrl,
-			WORKDIR,
-			plan.repo.ref,
-			undefined,
-			"x-access-token",
-			token,
-		);
+		if (plan.repo.createBranch) {
+			const safeBranch = plan.repo.createBranch.replace(/'/g, "'\\''");
+			await sandbox.process.executeCommand(
+				`git checkout -b '${safeBranch}'`,
+				WORKDIR,
+			);
+		}
 	}
 
 	async reconnect(externalId: string): Promise<RuntimeHandleFor<RuntimeRole>> {

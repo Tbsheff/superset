@@ -73,7 +73,14 @@ export function FilesTab({
 	const workspaceQuery = workspaceTrpc.workspace.get.useQuery({
 		id: workspaceId,
 	});
-	const rootPath = workspaceQuery.data?.worktreePath ?? "";
+	// Remote (Daytona) workspaces have no host worktree (`worktreePath === ""`);
+	// their files live in the sandbox under `runtimeRoot`. The backend
+	// DaytonaFsService resolves these sandbox-relative paths, so the tree hangs
+	// off `runtimeRoot` the same way local hangs off `worktreePath`.
+	const rootPath =
+		workspaceQuery.data?.runtimeKind === "remote"
+			? (workspaceQuery.data?.runtimeRoot ?? "")
+			: (workspaceQuery.data?.worktreePath ?? "");
 
 	const openInExternalEditor = useOpenInExternalEditor(workspaceId);
 	const filePolicy = useSidebarFilePolicy();
@@ -257,6 +264,8 @@ export function FilesTab({
 						<Loader2 className="size-3.5 animate-spin" />
 						<span>Loading files...</span>
 					</>
+				) : workspaceQuery.data?.runtimeKind === "remote" ? (
+					"Workspace sandbox not available"
 				) : (
 					"Workspace worktree not available"
 				)}

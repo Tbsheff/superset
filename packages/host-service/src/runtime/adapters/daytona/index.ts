@@ -35,6 +35,12 @@ export {
 	type SandboxStateValue,
 	toStoredStatus,
 } from "./status-map.ts";
+export {
+	type SyncAgentAuthOptions,
+	type SyncAgentAuthResult,
+	type SyncAgentAuthSandbox,
+	syncAgentAuthToSandbox,
+} from "./syncAgentAuth.ts";
 export type {
 	DaytonaAdapterDeps,
 	DaytonaInstanceStore,

@@ -66,6 +66,18 @@ export function TerminalPane({
 	const paneData = ctx.pane.data as TerminalPaneData;
 	const { terminalId } = paneData;
 	const terminalInstanceId = ctx.pane.id;
+
+	// Remote workspaces have no local worktree PTY — their shell lives in the
+	// Daytona sandbox, served by the host-service runtime PTY endpoint
+	// (`/runtime/:workspaceId/pty/:paneId`). It shares the local `/terminal/:id`
+	// wire protocol (binary output frames + JSON input/resize/attached/exit), so
+	// only the path differs. Same query key the workspace page already resolved
+	// before mounting us, so this read is cache-hot (no extra network).
+	const isRemoteRuntime =
+		workspaceTrpc.workspace.get.useQuery(
+			{ id: workspaceId },
+			{ staleTime: Number.POSITIVE_INFINITY },
+		).data?.runtimeKind === "remote";
 	const containerRef = useRef<HTMLDivElement | null>(null);
 	const [isSearchOpen, setIsSearchOpen] = useState(false);
 
@@ -79,7 +91,11 @@ export function TerminalPane({
 	const themeType = resolveTerminalThemeType({
 		activeThemeType: activeTheme?.type,
 	});
-	const baseWebsocketUrl = useWorkspaceWsUrl(`/terminal/${terminalId}`);
+	const baseWebsocketUrl = useWorkspaceWsUrl(
+		isRemoteRuntime
+			? `/runtime/${workspaceId}/pty/${terminalInstanceId}`
+			: `/terminal/${terminalId}`,
+	);
 	const themedUrl = new URL(baseWebsocketUrl);
 	themedUrl.searchParams.set("workspaceId", workspaceId);
 	themedUrl.searchParams.set("themeType", themeType);

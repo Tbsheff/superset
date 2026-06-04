@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { workspaces } from "../../../db/schema";
+import { REMOTE_SANDBOX_ROOT } from "../../../runtime/filesystem";
 import { protectedProcedure, router } from "../../index";
 import { destroyWorkspace } from "../workspace-cleanup";
 
@@ -21,9 +22,19 @@ export const workspaceRouter = router({
 				});
 			}
 
+			const isRemote = localWorkspace.runtimeKind === "remote";
 			return {
 				...localWorkspace,
-				worktreeExists: existsSync(localWorkspace.worktreePath),
+				worktreeExists: isRemote
+					? true
+					: existsSync(localWorkspace.worktreePath),
+				// Root the renderer's filesystem paths hang off. Remote workspaces
+				// have no host worktree (`worktreePath === ""`); their files live in
+				// the sandbox under `REMOTE_SANDBOX_ROOT`, and the Daytona fs API
+				// resolves paths relative to the user home, so this is a
+				// sandbox-relative dir (not host-absolute). Local stays null — the
+				// renderer keeps using `worktreePath`.
+				runtimeRoot: isRemote ? REMOTE_SANDBOX_ROOT : null,
 			};
 		}),
 

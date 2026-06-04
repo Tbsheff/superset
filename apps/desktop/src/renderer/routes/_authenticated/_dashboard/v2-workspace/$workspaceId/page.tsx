@@ -1,11 +1,13 @@
 import { Workspace } from "@superset/panes";
 import { workspaceTrpc } from "@superset/workspace-client";
 import { createFileRoute } from "@tanstack/react-router";
+import { Loader2Icon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuickOpenStore } from "renderer/commandPalette/ui/QuickOpen/quickOpenStore";
 import { useV2UserPreferences } from "renderer/hooks/useV2UserPreferences";
 import { useHotkey } from "renderer/hotkeys";
+import { electronTrpcClient } from "renderer/lib/trpc-client";
 import { CommandPalette } from "renderer/screens/main/components/CommandPalette";
 import { ResizablePanel } from "renderer/screens/main/components/ResizablePanel";
 import { getV2NotificationSourcesForTab } from "renderer/stores/v2-notifications";
@@ -83,7 +85,32 @@ function V2WorkspacePage() {
 		},
 	);
 
-	if (workspaceStatusQuery.data?.worktreeExists === false) {
+	const isRemote = workspaceStatusQuery.data?.runtimeKind === "remote";
+	const [remoteRuntimeBound, setRemoteRuntimeBound] = useState(false);
+
+	// Remote workspaces run in a Daytona sandbox (no local worktree). The runtime
+	// registry reads this binding synchronously when a terminal opens, so it must
+	// land in main BEFORE V2WorkspaceContent (which can auto-open a terminal)
+	// renders — otherwise the terminal would route to the local runtime. Gate the
+	// content on the binding resolving; fail-open so an IPC error still renders.
+	useEffect(() => {
+		if (!isRemote) return;
+		let cancelled = false;
+		void electronTrpcClient.workspaces.setRuntimeBinding
+			.mutate({
+				workspaceId: workspace.id,
+				runtimeKind: "remote",
+				organizationId: workspace.organizationId,
+			})
+			.finally(() => {
+				if (!cancelled) setRemoteRuntimeBound(true);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [isRemote, workspace.id, workspace.organizationId]);
+
+	if (!isRemote && workspaceStatusQuery.data?.worktreeExists === false) {
 		return (
 			<WorkspaceMissingWorktreeState
 				workspaceId={workspace.id}
@@ -95,6 +122,15 @@ function V2WorkspacePage() {
 				}}
 				isRefreshing={workspaceStatusQuery.isFetching}
 			/>
+		);
+	}
+
+	if (isRemote && !remoteRuntimeBound) {
+		return (
+			<div className="flex h-full w-full items-center justify-center text-muted-foreground">
+				<Loader2Icon className="mr-2 size-4 animate-spin" />
+				<span>Connecting to remote runtime…</span>
+			</div>
 		);
 	}
 

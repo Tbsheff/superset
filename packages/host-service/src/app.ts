@@ -12,7 +12,12 @@ import type { ApiAuthProvider } from "./providers/auth";
 import type { HostAuthProvider } from "./providers/host-auth";
 import type { ModelProviderRuntimeResolver } from "./providers/model-providers";
 import { createRepoScopedTokenMinter } from "./runtime/adapters/daytona";
+import { createGhCliTokenMinter } from "./runtime/adapters/daytona/createGhCliTokenMinter";
 import { ChatRuntimeManager } from "./runtime/chat";
+import {
+	buildRemoteRuntimeResolver,
+	type RemoteRuntimeResolver,
+} from "./runtime/exec/runWorkspaceCommand";
 import { WorkspaceFilesystemManager } from "./runtime/filesystem";
 import type { GitCredentialProvider } from "./runtime/git";
 import { createGitFactory } from "./runtime/git";
@@ -33,7 +38,7 @@ import {
 	execGh as defaultExecGh,
 	type ExecGh,
 } from "./trpc/router/workspace-creation/utils/exec-gh";
-import type { ApiClient } from "./types";
+import type { ApiClient, HostServiceContext } from "./types";
 
 export interface CreateAppOptions {
 	config: {
@@ -98,13 +103,57 @@ export function createApp(options: CreateAppOptions): CreateAppResult {
 	// POSTs to the apps/api /api/github/scoped-token route with this host's
 	// session auth + bound org. The minted token is write-scoped and stays
 	// host-side; the minter never logs or persists it.
-	const mintRepoScopedToken = createRepoScopedTokenMinter({
-		apiBaseUrl: config.cloudApiUrl,
-		authProvider: providers.auth,
-		organizationId: config.organizationId,
-	});
+	// Dev uses the local `gh` CLI token (the GitHub App route needs real app
+	// creds + installation records a stubbed dev env lacks); production uses the
+	// repo-scoped GitHub App installation token.
+	const mintRepoScopedToken =
+		process.env.NODE_ENV === "development"
+			? createGhCliTokenMinter()
+			: createRepoScopedTokenMinter({
+					apiBaseUrl: config.cloudApiUrl,
+					authProvider: providers.auth,
+					organizationId: config.organizationId,
+				});
 
-	const filesystem = new WorkspaceFilesystemManager({ db });
+	// The remote runtime resolver is process-wide (reconnects live Daytona
+	// sandboxes), so build it once and share across requests. `buildRemoteRuntimeResolver`
+	// imports env, which a local-only host lacks; memoize the promise so a
+	// rejection isn't retried per call and consumers can catch it as "no remote".
+	let remoteRuntimeResolver: Promise<RemoteRuntimeResolver> | undefined;
+	const getRemoteRuntimeResolver = (
+		ctx: HostServiceContext,
+	): Promise<RemoteRuntimeResolver> => {
+		remoteRuntimeResolver ??= buildRemoteRuntimeResolver(ctx);
+		return remoteRuntimeResolver;
+	};
+
+	const filesystem = new WorkspaceFilesystemManager({
+		db,
+		// Remote workspaces (no host-side worktree) browse/edit files in-sandbox.
+		// The resolver needs a ctx, but only its app-scoped fields (db, git,
+		// eventBus, mintRepoScopedToken) — built lazily on first remote fs call.
+		resolveRemoteRuntime: async (workspaceId) => {
+			const resolver = await getRemoteRuntimeResolver(buildResolverCtx());
+			return resolver.resolve(workspaceId);
+		},
+	});
+	// `buildRemoteRuntimeResolver` reads only db/git/eventBus/mintRepoScopedToken
+	// off the ctx. `eventBus` is created below; this closure is invoked lazily at
+	// request time (well after construction), so referencing it forward is safe.
+	const buildResolverCtx = (): HostServiceContext =>
+		({
+			git,
+			github,
+			execGh,
+			api,
+			db,
+			runtime,
+			eventBus,
+			terminalAgentStore,
+			mintRepoScopedToken,
+			organizationId: config.organizationId,
+			isAuthenticated: false,
+		}) as unknown as HostServiceContext;
 	// GitWatcher is the single source of truth for `.git/` and worktree fs
 	// activity per workspace. Both EventBus (broadcasts to clients) and the
 	// pull-requests runtime (event-driven branch sync) subscribe to it.
@@ -211,7 +260,7 @@ export function createApp(options: CreateAppOptions): CreateAppResult {
 			router: appRouter,
 			createContext: async (_opts, c) => {
 				const isAuthenticated = await providers.hostAuth.validate(c.req.raw);
-				return {
+				const ctx: HostServiceContext = {
 					git,
 					github,
 					execGh,
@@ -223,7 +272,9 @@ export function createApp(options: CreateAppOptions): CreateAppResult {
 					mintRepoScopedToken,
 					organizationId: config.organizationId,
 					isAuthenticated,
-				} as Record<string, unknown>;
+				};
+				ctx.getRemoteRuntimeResolver = () => getRemoteRuntimeResolver(ctx);
+				return ctx as unknown as Record<string, unknown>;
 			},
 		}),
 	);

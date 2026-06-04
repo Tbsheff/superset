@@ -105,6 +105,7 @@ export function useWorkspaceCreates(): UseWorkspaceCreatesApi {
 				name: args.snapshot.name ?? args.snapshot.branch ?? "New workspace",
 				branch: args.snapshot.branch ?? args.snapshot.name ?? "New workspace",
 				type: "worktree",
+				runtimeKind: "local",
 				createdByUserId: userId,
 				taskId: args.snapshot.taskId ?? null,
 				createdAt: now,

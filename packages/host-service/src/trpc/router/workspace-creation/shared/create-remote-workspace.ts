@@ -69,6 +69,7 @@ interface CreateRemoteWorkspaceArgs {
 	id: string | undefined;
 	name: string | undefined;
 	branch: string | undefined;
+	baseBranch?: string | undefined;
 	taskId: string | undefined;
 	hostPromise: Promise<{ machineId: string }>;
 	runtime: RemoteRuntime;
@@ -136,6 +137,7 @@ export async function createRemoteWorkspace(
 		hostId: host.machineId,
 		taskId: args.taskId,
 		id: args.id,
+		runtimeKind: "remote",
 	});
 	if (!cloudRow) {
 		throw new TRPCError({
@@ -179,7 +181,11 @@ export async function createRemoteWorkspace(
 		handle = await adapter.createInstance({
 			role: "workspace",
 			workspaceId: cloudRow.id,
-			repo: { cloneUrl, ref: branch },
+			repo: {
+				cloneUrl,
+				ref: args.baseBranch ?? "",
+				createBranch: branch,
+			},
 		});
 	} catch (err) {
 		ctx.db.delete(workspaces).where(eq(workspaces.id, cloudRow.id)).run();

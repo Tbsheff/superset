@@ -1,5 +1,7 @@
+import { exec as nodeExec } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
+import { promisify } from "node:util";
 import type { HostDb } from "../../../db/index.ts";
 import { LOCAL_WORKTREE_DESCRIPTOR } from "../../descriptors/localWorktree.ts";
 import { collectWorkspacePatch } from "../../git/diff-collector/index.ts";
@@ -7,6 +9,8 @@ import type { GitFactory } from "../../git/types.ts";
 import type {
 	ActivityLease,
 	CleanupMode,
+	ExecOptions,
+	ExecResult,
 	GetDiffOptions,
 	HeartbeatResult,
 	NormalizedRuntimeStatus,
@@ -16,6 +20,12 @@ import type {
 	StartShellOptions,
 	WorkspaceRuntime,
 } from "../../seam/index.ts";
+
+const execAsync = promisify(nodeExec);
+
+/** 64 MiB — large enough that a full `git diff`/`git status` never truncates. */
+const EXEC_MAX_BUFFER = 64 * 1024 * 1024;
+
 import type { LocalPtyTransport } from "./LocalPtyTransport.ts";
 
 /**
@@ -137,6 +147,38 @@ export class LocalWorktreeRuntime implements WorkspaceRuntime {
 			statusPorcelain: patch.status,
 			unifiedPatch: opts?.staged ? patch.staged : patch.unstaged,
 		};
+	}
+
+	/**
+	 * One-shot command run in the worktree via a real shell. A non-zero exit is
+	 * returned (with whatever stdout/stderr was captured), never thrown, so the
+	 * caller branches on `exitCode` the same way it would for a remote runtime.
+	 */
+	async exec(command: string, opts?: ExecOptions): Promise<ExecResult> {
+		try {
+			const { stdout, stderr } = await execAsync(command, {
+				cwd: opts?.cwd ?? this.worktreePath,
+				env: { ...process.env, ...opts?.env },
+				maxBuffer: EXEC_MAX_BUFFER,
+				...(opts?.timeoutMs ? { timeout: opts.timeoutMs } : {}),
+			});
+			return {
+				stdout: stdout.toString(),
+				stderr: stderr.toString(),
+				exitCode: 0,
+			};
+		} catch (error) {
+			const err = error as {
+				code?: number;
+				stdout?: string | Buffer;
+				stderr?: string | Buffer;
+			};
+			return {
+				stdout: err.stdout?.toString() ?? "",
+				stderr: err.stderr?.toString() ?? "",
+				exitCode: typeof err.code === "number" ? err.code : 1,
+			};
+		}
 	}
 
 	async exposePreview(port: number): Promise<PreviewBinding> {

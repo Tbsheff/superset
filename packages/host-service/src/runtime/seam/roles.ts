@@ -38,6 +38,24 @@ export interface WorkspaceRuntime {
 	 * worktree directly and omits this.
 	 */
 	exportPatch?(): Promise<Buffer>;
+	/**
+	 * Runs a one-shot command to completion inside the runtime and returns its
+	 * captured stdout/stderr/exit code — the request/response counterpart to
+	 * `startShell`'s long-lived PTY. Optional because a runtime that only serves
+	 * interactive shells can omit it; consumers that need scripted output (status
+	 * probes, file ops, search) call it and fall back to the host-side worktree
+	 * when absent. A non-zero exit is returned, not thrown.
+	 */
+	exec?(command: string, opts?: ExecOptions): Promise<ExecResult>;
+	/**
+	 * The runtime's raw filesystem verbs, used by the host-side
+	 * `DaytonaFsService` to back the Files tab/editor for a remote workspace.
+	 * Mirrors the Daytona SDK fs surface (paths are sandbox-relative, resolved
+	 * against the user home). Optional because a local runtime has a host-side
+	 * worktree the existing `FsHostService` already serves; only a runtime with
+	 * no host worktree (Daytona) implements it.
+	 */
+	runtimeFs?(): RuntimeFsApi;
 	exposePreview(port: number): Promise<PreviewBinding>;
 	activityLease(): ActivityLease;
 	getStatus(): Promise<NormalizedRuntimeStatus>;
@@ -68,6 +86,18 @@ export interface ShellHandle {
 
 export interface GetDiffOptions {
 	staged?: boolean;
+}
+
+export interface ExecOptions {
+	cwd?: string;
+	env?: Record<string, string>;
+	timeoutMs?: number;
+}
+
+export interface ExecResult {
+	stdout: string;
+	stderr: string;
+	exitCode: number;
 }
 
 export interface RuntimeDiff {
@@ -103,4 +133,46 @@ export interface FileContentsResult {
 export interface PreviewBinding {
 	url: string;
 	tokenScheme: "standard" | "signed" | "none";
+}
+
+/** Metadata for a single file/dir entry, mirroring the Daytona SDK `FileInfo`. */
+export interface RuntimeFileInfo {
+	name: string;
+	isDir: boolean;
+	size: number;
+	/** Octal-ish mode string from the runtime (e.g. "-rw-r--r--" or "0644"). */
+	mode: string;
+	/** RFC3339 modification time. */
+	modTime: string;
+	permissions: string;
+}
+
+/** One content-search hit, mirroring the Daytona SDK `Match`. */
+export interface RuntimeFsMatch {
+	/** Sandbox-relative file path of the hit. */
+	file: string;
+	line: number;
+	content: string;
+}
+
+/**
+ * The raw filesystem verbs a `WorkspaceRuntime` exposes for host-side file
+ * browsing/editing. All paths are sandbox-relative (resolved against the user
+ * home, where the repo lives under the runtime workdir). Mirrors the subset of
+ * the Daytona SDK fs API the `DaytonaFsService` needs.
+ */
+export interface RuntimeFsApi {
+	listFiles(path: string): Promise<RuntimeFileInfo[]>;
+	getFileDetails(path: string): Promise<RuntimeFileInfo>;
+	downloadFile(path: string): Promise<Buffer>;
+	uploadFile(content: Buffer, path: string): Promise<void>;
+	createFolder(path: string, mode: string): Promise<void>;
+	deleteFile(path: string, recursive?: boolean): Promise<void>;
+	moveFiles(source: string, destination: string): Promise<void>;
+	/** Recursive copy (the SDK has no copy verb; backed by `cp -r` via exec). */
+	copyFiles(source: string, destination: string): Promise<void>;
+	/** Name-pattern (glob) search; returns sandbox-relative file paths. */
+	searchFiles(path: string, pattern: string): Promise<string[]>;
+	/** Content search; returns per-line hits with sandbox-relative file paths. */
+	findFiles(path: string, pattern: string): Promise<RuntimeFsMatch[]>;
 }

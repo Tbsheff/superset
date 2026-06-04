@@ -562,6 +562,7 @@ export const workspacesRouter = router({
 					id: input.id,
 					name: input.name,
 					branch: input.branch,
+					baseBranch: input.baseBranch,
 					taskId: input.taskId,
 					hostPromise,
 					runtime,

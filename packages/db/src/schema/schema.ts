@@ -552,6 +552,10 @@ export const v2Workspaces = pgTable(
 		name: text().notNull(),
 		branch: text().notNull(),
 		type: v2WorkspaceType().notNull().default("worktree"),
+		runtimeKind: text("runtime_kind")
+			.notNull()
+			.default("local")
+			.$type<"local" | "remote">(),
 		createdByUserId: uuid("created_by_user_id").references(() => users.id, {
 			onDelete: "set null",
 		}),

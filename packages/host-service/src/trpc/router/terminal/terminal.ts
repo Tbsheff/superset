@@ -33,6 +33,21 @@ async function createTerminalSessionFromInput({
 	input: z.infer<typeof createSessionInputSchema>;
 }) {
 	const terminalId = input.terminalId ?? crypto.randomUUID();
+
+	// Remote (Daytona) workspaces have no local worktree, so there's no daemon
+	// PTY to spawn here — their shell is created per pane by the runtime PTY
+	// endpoint (`/runtime/:workspaceId/pty/:paneId`) when the renderer's
+	// TerminalPane connects. createSession just needs to succeed cheaply and
+	// hand back an id the renderer uses as the pane's terminalId. We deliberately
+	// do NOT write a terminalSessions row: that table backs the local daemon
+	// session map (listSessions/killSession), which a remote pane never touches.
+	const workspace = ctx.db.query.workspaces
+		.findFirst({ where: eq(workspaces.id, input.workspaceId) })
+		.sync();
+	if (workspace?.runtimeKind === "remote") {
+		return { terminalId, status: "active" as const };
+	}
+
 	const result = await createTerminalSessionInternal({
 		terminalId,
 		workspaceId: input.workspaceId,

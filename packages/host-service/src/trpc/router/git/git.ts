@@ -27,11 +27,14 @@ import type {
 	PullRequestState,
 } from "./types";
 import { gitConfigWrite } from "./utils/config-write";
+import { getChangedFilesForDiff } from "./utils/git-helpers";
 import {
-	getChangedFilesForDiff,
-	getDefaultBranchName,
-	resolveBaseComparison,
-} from "./utils/git-helpers";
+	getDefaultBranchNameViaRunner,
+	getGitStatusSnapshotRemote,
+	parsePorcelainStatus,
+	resolveBaseComparisonViaRunner,
+} from "./utils/git-remote-status";
+import { resolveGitRunner } from "./utils/git-runner";
 import { getGitStatusSnapshot } from "./utils/git-status";
 import { gitStatusRefreshLimiter } from "./utils/git-status-refresh-limiter";
 import {
@@ -40,6 +43,11 @@ import {
 	REVIEW_THREADS_QUERY,
 } from "./utils/graphql";
 import { resolveWorktreePath } from "./utils/resolve-worktree";
+
+/** Single-quote a path for the remote `runtime.exec` shell arm. */
+function shellQuoteArg(arg: string): string {
+	return `'${arg.replaceAll("'", "'\\''")}'`;
+}
 
 function assertSafeRelativePath(filePath: string): void {
 	if (isAbsolute(filePath)) {
@@ -67,8 +75,7 @@ export const gitRouter = router({
 	listBranches: queryProcedure
 		.input(z.object({ workspaceId: z.string() }))
 		.query(async ({ ctx, input }) => {
-			const worktreePath = resolveWorktreePath(ctx, input.workspaceId);
-			const git = await ctx.git(worktreePath);
+			const { runner } = await resolveGitRunner(ctx, input.workspaceId);
 
 			// `%(HEAD)` emits "*" for the checked-out branch, " " otherwise.
 			// Single spawn — independent of branch count. Only `name`/`isHead`
@@ -77,7 +84,7 @@ export const gitRouter = router({
 			// ahead/behind, last-commit) cost 4 spawns each and were unused.
 			let branches: { name: string; isHead: boolean }[] = [];
 			try {
-				const raw = await git.raw([
+				const raw = await runner.raw([
 					"for-each-ref",
 					"refs/heads/",
 					"--format=%(HEAD)\t%(refname:short)",
@@ -117,6 +124,13 @@ export const gitRouter = router({
 				requestKey,
 				priority: input.priority,
 				run: async () => {
+					const resolved = await resolveGitRunner(ctx, input.workspaceId);
+					if (resolved.workspace.runtimeKind === "remote") {
+						return getGitStatusSnapshotRemote({
+							runner: resolved.runner,
+							baseBranch: input.baseBranch,
+						});
+					}
 					const worktreePath = resolveWorktreePath(ctx, input.workspaceId);
 					const git = await ctx.git(worktreePath);
 					return getGitStatusSnapshot({
@@ -137,15 +151,17 @@ export const gitRouter = router({
 			}),
 		)
 		.query(async ({ ctx, input }) => {
-			const worktreePath = resolveWorktreePath(ctx, input.workspaceId);
-			const git = await ctx.git(worktreePath);
+			const { runner } = await resolveGitRunner(ctx, input.workspaceId);
 
-			const base = await resolveBaseComparison(git, input.baseBranch);
+			const base = await resolveBaseComparisonViaRunner(
+				runner,
+				input.baseBranch,
+			);
 			const baseRef = base?.baseRef ?? "HEAD";
 
 			const commits: Commit[] = [];
 			try {
-				const raw = await git.raw([
+				const raw = await runner.raw([
 					"log",
 					`${baseRef}..HEAD`,
 					"--format=%H\t%h\t%s\t%an\t%aI",
@@ -176,11 +192,13 @@ export const gitRouter = router({
 			}),
 		)
 		.query(async ({ ctx, input }) => {
-			const worktreePath = resolveWorktreePath(ctx, input.workspaceId);
-			const git = await ctx.git(worktreePath);
+			const { runner } = await resolveGitRunner(ctx, input.workspaceId);
 
 			const from = input.fromHash ? input.fromHash : `${input.commitHash}^`;
-			const files = await getChangedFilesForDiff(git, [from, input.commitHash]);
+			const files = await getChangedFilesForDiff(runner, [
+				from,
+				input.commitHash,
+			]);
 
 			return { files };
 		}),
@@ -188,16 +206,15 @@ export const gitRouter = router({
 	getBaseBranch: queryProcedure
 		.input(z.object({ workspaceId: z.string() }))
 		.query(async ({ ctx, input }) => {
-			const worktreePath = resolveWorktreePath(ctx, input.workspaceId);
-			const git = await ctx.git(worktreePath);
+			const { runner } = await resolveGitRunner(ctx, input.workspaceId);
 			const currentBranch = (
-				await git.revparse(["--abbrev-ref", "HEAD"]).catch(() => "")
+				await runner.raw(["rev-parse", "--abbrev-ref", "HEAD"]).catch(() => "")
 			).trim();
 			if (!currentBranch || currentBranch === "HEAD") {
 				return { baseBranch: null as string | null };
 			}
 			const configured = (
-				await git
+				await runner
 					.raw(["config", `branch.${currentBranch}.base`])
 					.catch(() => "")
 			).trim();
@@ -212,10 +229,9 @@ export const gitRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const worktreePath = resolveWorktreePath(ctx, input.workspaceId);
-			const git = await ctx.git(worktreePath);
+			const { runner } = await resolveGitRunner(ctx, input.workspaceId);
 			const currentBranch = (
-				await git.revparse(["--abbrev-ref", "HEAD"]).catch(() => "")
+				await runner.raw(["rev-parse", "--abbrev-ref", "HEAD"]).catch(() => "")
 			).trim();
 			if (!currentBranch || currentBranch === "HEAD") {
 				throw new TRPCError({
@@ -224,13 +240,13 @@ export const gitRouter = router({
 				});
 			}
 			if (input.baseBranch) {
-				await gitConfigWrite(git, [
+				await gitConfigWrite(runner, [
 					"config",
 					`branch.${currentBranch}.base`,
 					input.baseBranch,
 				]);
 			} else {
-				await gitConfigWrite(git, [
+				await gitConfigWrite(runner, [
 					"config",
 					"--unset",
 					`branch.${currentBranch}.base`,
@@ -248,12 +264,11 @@ export const gitRouter = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const worktreePath = resolveWorktreePath(ctx, input.workspaceId);
-			const git = await ctx.git(worktreePath);
+			const { runner } = await resolveGitRunner(ctx, input.workspaceId);
 
 			// Check if branch has been pushed to remote
 			try {
-				const remote = await git.raw([
+				const remote = await runner.raw([
 					"ls-remote",
 					"--heads",
 					"origin",
@@ -270,7 +285,7 @@ export const gitRouter = router({
 				// ls-remote failed — probably no remote, safe to rename
 			}
 
-			await git.raw(["branch", "-m", input.oldName, input.newName]);
+			await runner.raw(["branch", "-m", input.oldName, input.newName]);
 			return { name: input.newName };
 		}),
 
@@ -283,6 +298,29 @@ export const gitRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			assertSafeRelativePath(input.filePath);
+			const { runner, workspace } = await resolveGitRunner(
+				ctx,
+				input.workspaceId,
+			);
+
+			if (workspace.runtimeKind === "remote") {
+				const statusRaw = await runner
+					.raw(["status", "--porcelain=v1", "-z"])
+					.catch(() => "");
+				const isUntracked = parsePorcelainStatus(statusRaw).some(
+					(f) =>
+						f.path === input.filePath &&
+						f.index === "?" &&
+						f.working_dir === "?",
+				);
+				if (isUntracked) {
+					await runner.execShell?.(`rm -f -- ${shellQuoteArg(input.filePath)}`);
+				} else {
+					await runner.raw(["checkout", "HEAD", "--", input.filePath]);
+				}
+				return { success: true };
+			}
+
 			const worktreePath = resolveWorktreePath(ctx, input.workspaceId);
 			const git = await ctx.git(worktreePath);
 			const status = await git.status();
@@ -298,24 +336,38 @@ export const gitRouter = router({
 	discardAllUnstaged: protectedProcedure
 		.input(z.object({ workspaceId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
-			const worktreePath = resolveWorktreePath(ctx, input.workspaceId);
-			const git = await ctx.git(worktreePath);
-			await git.raw(["checkout", "--", "."]);
-			await git.raw(["clean", "-fd"]);
+			const { runner } = await resolveGitRunner(ctx, input.workspaceId);
+			await runner.raw(["checkout", "--", "."]);
+			await runner.raw(["clean", "-fd"]);
 			return { success: true };
 		}),
 
 	discardAllStaged: protectedProcedure
 		.input(z.object({ workspaceId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
-			const worktreePath = resolveWorktreePath(ctx, input.workspaceId);
-			const git = await ctx.git(worktreePath);
-			const status = await git.status();
-
-			// Files with a staged change (index entry differs from HEAD).
-			const stagedFiles = status.files.filter(
-				(f) => f.index !== " " && f.index !== "?",
+			const { runner, workspace } = await resolveGitRunner(
+				ctx,
+				input.workspaceId,
 			);
+
+			// Files with a staged change (index entry differs from HEAD). For
+			// remote, parse `git status --porcelain` for the same `{index, path,
+			// from}` shape `git.status().files` provides locally.
+			let stagedFiles: { index: string; path: string; from?: string }[];
+			if (workspace.runtimeKind === "remote") {
+				const statusRaw = await runner
+					.raw(["status", "--porcelain=v1", "-z"])
+					.catch(() => "");
+				stagedFiles = parsePorcelainStatus(statusRaw).filter(
+					(f) => f.index !== " " && f.index !== "?",
+				);
+			} else {
+				const git = await ctx.git(resolveWorktreePath(ctx, input.workspaceId));
+				const status = await git.status();
+				stagedFiles = status.files.filter(
+					(f) => f.index !== " " && f.index !== "?",
+				);
+			}
 
 			const checkoutHeadPaths: string[] = [];
 			const resetPaths: string[] = [];
@@ -346,13 +398,21 @@ export const gitRouter = router({
 			}
 
 			if (resetPaths.length > 0) {
-				await git.raw(["reset", "HEAD", "--", ...resetPaths]);
+				await runner.raw(["reset", "HEAD", "--", ...resetPaths]);
 			}
 			if (checkoutHeadPaths.length > 0) {
-				await git.raw(["checkout", "HEAD", "--", ...checkoutHeadPaths]);
+				await runner.raw(["checkout", "HEAD", "--", ...checkoutHeadPaths]);
 			}
-			for (const filePath of deletePaths) {
-				await rm(join(worktreePath, filePath), { force: true });
+			if (deletePaths.length > 0) {
+				if (workspace.runtimeKind === "remote") {
+					const args = deletePaths.map(shellQuoteArg).join(" ");
+					await runner.execShell?.(`rm -f -- ${args}`);
+				} else {
+					const worktreePath = resolveWorktreePath(ctx, input.workspaceId);
+					for (const filePath of deletePaths) {
+						await rm(join(worktreePath, filePath), { force: true });
+					}
+				}
 			}
 			return { success: true };
 		}),
@@ -360,18 +420,16 @@ export const gitRouter = router({
 	stageAll: protectedProcedure
 		.input(z.object({ workspaceId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
-			const worktreePath = resolveWorktreePath(ctx, input.workspaceId);
-			const git = await ctx.git(worktreePath);
-			await git.raw(["add", "-A"]);
+			const { runner } = await resolveGitRunner(ctx, input.workspaceId);
+			await runner.raw(["add", "-A"]);
 			return { success: true };
 		}),
 
 	unstageAll: protectedProcedure
 		.input(z.object({ workspaceId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
-			const worktreePath = resolveWorktreePath(ctx, input.workspaceId);
-			const git = await ctx.git(worktreePath);
-			await git.raw(["reset", "HEAD"]);
+			const { runner } = await resolveGitRunner(ctx, input.workspaceId);
+			await runner.raw(["reset", "HEAD"]);
 			return { success: true };
 		}),
 
@@ -392,7 +450,10 @@ export const gitRouter = router({
 				.findFirst({ where: eq(workspaces.id, input.workspaceId) })
 				.sync();
 			if (!workspace) {
-				throw new TRPCError({ code: "NOT_FOUND", message: "Workspace not found" });
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Workspace not found",
+				});
 			}
 
 			// Remote (Daytona) workspaces have no local worktree; resolve the live
@@ -433,28 +494,33 @@ export const gitRouter = router({
 		.meta({ timeoutMs: 30_000 })
 		.input(z.object({ workspaceId: z.string() }))
 		.query(async ({ ctx, input }) => {
-			const worktreePath = resolveWorktreePath(ctx, input.workspaceId);
-			const git = await ctx.git(worktreePath);
+			const { runner, workspace } = await resolveGitRunner(
+				ctx,
+				input.workspaceId,
+			);
+			const isRemote = workspace.runtimeKind === "remote";
 
 			const currentBranch = (
-				await git.revparse(["--abbrev-ref", "HEAD"]).catch(() => "")
+				await runner.raw(["rev-parse", "--abbrev-ref", "HEAD"]).catch(() => "")
 			).trim();
 			const isDetached = !currentBranch || currentBranch === "HEAD";
 
-			const defaultBranch = await getDefaultBranchName(git);
+			const defaultBranch = await getDefaultBranchNameViaRunner(runner);
 			const isDefaultBranch =
 				!isDetached && !!defaultBranch && currentBranch === defaultBranch;
 
-			const remotes = await git.getRemotes(false).catch(() => []);
-			const hasRepo = remotes.length > 0;
+			// `git remote` lists configured remotes one per line — equivalent to
+			// simple-git's `getRemotes(false)` for the "has any remote" check.
+			const remotesRaw = await runner.raw(["remote"]).catch(() => "");
+			const hasRepo = remotesRaw.split("\n").some((line) => line.trim());
 
 			let hasUpstream = false;
 			let pushCount = 0;
 			let pullCount = 0;
 			try {
-				await git.raw(["rev-parse", "--abbrev-ref", "@{upstream}"]);
+				await runner.raw(["rev-parse", "--abbrev-ref", "@{upstream}"]);
 				hasUpstream = true;
-				const tracking = await git.raw([
+				const tracking = await runner.raw([
 					"rev-list",
 					"--left-right",
 					"--count",
@@ -475,8 +541,20 @@ export const gitRouter = router({
 			// than under-reporting briefly until the next refetch.
 			let hasUncommitted = false;
 			try {
-				const status = await git.status();
-				hasUncommitted = status.files.length > 0;
+				if (isRemote) {
+					const statusRaw = await runner.raw([
+						"status",
+						"--porcelain=v1",
+						"-z",
+					]);
+					hasUncommitted = parsePorcelainStatus(statusRaw).length > 0;
+				} else {
+					const git = await ctx.git(
+						resolveWorktreePath(ctx, input.workspaceId),
+					);
+					const status = await git.status();
+					hasUncommitted = status.files.length > 0;
+				}
 			} catch (error) {
 				console.warn(
 					"[git/getBranchSyncStatus] git.status() failed; treating working tree as clean for this read",
@@ -814,7 +892,10 @@ export const gitRouter = router({
 				.findFirst({ where: eq(workspaces.id, input.workspaceId) })
 				.sync();
 			if (!workspace) {
-				throw new TRPCError({ code: "NOT_FOUND", message: "Workspace not found" });
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Workspace not found",
+				});
 			}
 			if (workspace.runtimeKind !== "remote") {
 				throw new TRPCError({

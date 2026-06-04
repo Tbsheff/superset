@@ -6,6 +6,7 @@ import type { HostDb } from "./db";
 import type { EventBus } from "./events";
 import type { TokenMinter } from "./runtime/adapters/daytona/types";
 import type { ChatRuntimeManager } from "./runtime/chat";
+import type { RemoteRuntimeResolver } from "./runtime/exec/runWorkspaceCommand";
 import type { WorkspaceFilesystemManager } from "./runtime/filesystem";
 import type { GitFactory } from "./runtime/git";
 import type { PullRequestRuntimeManager } from "./runtime/pull-requests";
@@ -39,4 +40,12 @@ export interface HostServiceContext {
 	terminalAgentStore: TerminalAgentStore;
 	organizationId: string;
 	isAuthenticated: boolean;
+	/**
+	 * Lazily builds (and memoizes) the remote runtime resolver consumers use to
+	 * reach a live Daytona sandbox. Built on first call — `buildRemoteRuntimeResolver`
+	 * imports env, which a local-only host may lack, so callers must handle a
+	 * rejection (treat as "no remote runtime available"). Optional so test
+	 * contexts that never touch remote workspaces can omit it.
+	 */
+	getRemoteRuntimeResolver?: () => Promise<RemoteRuntimeResolver>;
 }

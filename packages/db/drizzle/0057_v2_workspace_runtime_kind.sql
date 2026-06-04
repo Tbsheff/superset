@@ -1,0 +1,1 @@
+ALTER TABLE "v2_workspaces" ADD COLUMN "runtime_kind" text DEFAULT 'local' NOT NULL;

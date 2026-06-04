@@ -4,6 +4,14 @@ import hostServicePackageJson from "@superset/host-service/package.json" with {
 };
 import { getHostId, getHostName } from "@superset/shared/host-info";
 import { TRPCError } from "@trpc/server";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
+import { workspaces } from "../../../db/schema";
+import {
+	createDaytonaSdk,
+	syncAgentAuthToSandbox,
+} from "../../../runtime/adapters/daytona";
+import { RuntimeInstanceStore } from "../../../runtime/store";
 import type { ApiClient } from "../../../types";
 import { protectedProcedure, router } from "../../index";
 
@@ -57,4 +65,54 @@ export const hostRouter = router({
 			uptime: process.uptime(),
 		};
 	}),
+
+	/**
+	 * Re-uploads the host user's agent credentials into an already-provisioned
+	 * remote (Daytona) workspace so its in-sandbox CLIs re-authenticate without a
+	 * full re-provision. Returns only the destination filenames written/skipped —
+	 * never credential values. `env` is imported lazily so loading this router on
+	 * a local-only host never triggers Daytona env validation.
+	 */
+	syncAgentAuth: protectedProcedure
+		.input(z.object({ workspaceId: z.string() }))
+		.mutation(async ({ ctx, input }) => {
+			const workspace = ctx.db.query.workspaces
+				.findFirst({ where: eq(workspaces.id, input.workspaceId) })
+				.sync();
+			if (!workspace) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Workspace not found",
+				});
+			}
+			if (workspace.runtimeKind !== "remote") {
+				throw new TRPCError({
+					code: "PRECONDITION_FAILED",
+					message: "Agent auth sync only applies to remote workspaces.",
+				});
+			}
+
+			const { env } = await import("../../../env");
+			const sdk = createDaytonaSdk(env);
+			if (!sdk) {
+				throw new TRPCError({
+					code: "PRECONDITION_FAILED",
+					message: "Daytona is not configured on this host.",
+				});
+			}
+
+			const store = new RuntimeInstanceStore(ctx.db);
+			const record = store.getByWorkspaceId(input.workspaceId);
+			if (!record?.externalId) {
+				throw new TRPCError({
+					code: "PRECONDITION_FAILED",
+					message: "Workspace has no live remote runtime to sync into.",
+				});
+			}
+
+			const sandbox = await sdk.get(record.externalId);
+			return syncAgentAuthToSandbox(
+				sandbox as unknown as Parameters<typeof syncAgentAuthToSandbox>[0],
+			);
+		}),
 });

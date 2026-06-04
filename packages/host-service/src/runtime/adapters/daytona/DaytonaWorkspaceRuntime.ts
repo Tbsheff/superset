@@ -2,12 +2,17 @@ import { DAYTONA_DESCRIPTOR } from "../../descriptors/daytona.ts";
 import {
 	type ActivityLease,
 	type CleanupMode,
+	type ExecOptions,
+	type ExecResult,
 	type FileContentsRequest,
 	type FileContentsResult,
 	type GetDiffOptions,
 	type NormalizedRuntimeStatus,
 	type PreviewBinding,
 	type RuntimeDiff,
+	type RuntimeFileInfo,
+	type RuntimeFsApi,
+	type RuntimeFsMatch,
 	RuntimeProviderError,
 	type ShellHandle,
 	type StartShellOptions,
@@ -146,13 +151,18 @@ export class DaytonaWorkspaceRuntime implements WorkspaceRuntime {
 		let newContents = "";
 
 		if (req.category === "against-base") {
-			const baseRef = (await run(`git rev-parse ${
-				req.baseBranch ? quotePath(req.baseBranch) : "HEAD"
-			}`)).trim();
+			const baseRef = (
+				await run(
+					`git rev-parse ${
+						req.baseBranch ? quotePath(req.baseBranch) : "HEAD"
+					}`,
+				)
+			).trim();
 			const ref = baseRef || "HEAD";
-			const mergeBase =
-				(await run(`git merge-base ${ref} HEAD`)).trim() || ref;
-			oldContents = await run(`git show ${quotePath(`${mergeBase}:${req.path}`)}`);
+			const mergeBase = (await run(`git merge-base ${ref} HEAD`)).trim() || ref;
+			oldContents = await run(
+				`git show ${quotePath(`${mergeBase}:${req.path}`)}`,
+			);
 			newContents = await run(`git show ${quotePath(`HEAD:${req.path}`)}`);
 		} else if (req.category === "staged") {
 			oldContents = await run(`git show ${quotePath(`HEAD:${req.path}`)}`);
@@ -193,6 +203,86 @@ export class DaytonaWorkspaceRuntime implements WorkspaceRuntime {
 			this.workdir,
 		);
 		return this.sandbox.fs.downloadFile(remotePath);
+	}
+
+	/**
+	 * One-shot command via the SDK's `executeCommand`. Daytona folds stderr into
+	 * the same `result` stream, so `stderr` is always empty and the combined
+	 * output lands in `stdout`. `timeoutMs` rounds up to whole seconds (the SDK's
+	 * unit); 0/undefined leaves the SDK default.
+	 */
+	async exec(command: string, opts?: ExecOptions): Promise<ExecResult> {
+		const cwd = opts?.cwd ?? this.workdir;
+		const timeoutSec = opts?.timeoutMs
+			? Math.max(1, Math.ceil(opts.timeoutMs / 1000))
+			: undefined;
+		const res = await this.sandbox.process.executeCommand(
+			command,
+			cwd,
+			opts?.env,
+			timeoutSec,
+		);
+		return {
+			stdout: res.result ?? "",
+			stderr: "",
+			exitCode: res.exitCode ?? 0,
+		};
+	}
+
+	/**
+	 * Raw sandbox filesystem verbs for host-side file browsing/editing. Paths are
+	 * sandbox-relative (the SDK resolves them against the user home, where the
+	 * repo lives under `this.workdir`); `DaytonaFsService` is responsible for
+	 * translating renderer paths into that space. `copyFiles`/`findFiles` have no
+	 * direct SDK verb, so they run `cp -r`/`grep` via `exec`.
+	 */
+	runtimeFs(): RuntimeFsApi {
+		const fs = this.sandbox.fs;
+		const toFileInfo = (info: {
+			name: string;
+			isDir: boolean;
+			size: number;
+			mode: string;
+			modTime: string;
+			permissions: string;
+		}): RuntimeFileInfo => ({
+			name: info.name,
+			isDir: info.isDir,
+			size: info.size,
+			mode: info.mode,
+			modTime: info.modTime,
+			permissions: info.permissions,
+		});
+		const quote = (path: string) => `'${path.replaceAll("'", "'\\''")}'`;
+		return {
+			listFiles: async (path) => (await fs.listFiles(path)).map(toFileInfo),
+			getFileDetails: async (path) => toFileInfo(await fs.getFileDetails(path)),
+			downloadFile: (path) => fs.downloadFile(path),
+			uploadFile: (content, path) => fs.uploadFile(content, path),
+			createFolder: (path, mode) => fs.createFolder(path, mode),
+			deleteFile: (path, recursive) => fs.deleteFile(path, recursive),
+			moveFiles: (source, destination) => fs.moveFiles(source, destination),
+			copyFiles: async (source, destination) => {
+				const res = await this.exec(
+					`cp -r ${quote(source)} ${quote(destination)}`,
+				);
+				if (res.exitCode !== 0) {
+					throw new Error(
+						`Failed to copy ${source} -> ${destination}: ${res.stdout}`,
+					);
+				}
+			},
+			searchFiles: async (path, pattern) =>
+				(await fs.searchFiles(path, pattern)).files,
+			findFiles: async (path, pattern): Promise<RuntimeFsMatch[]> => {
+				const matches = await fs.findFiles(path, pattern);
+				return matches.map((m) => ({
+					file: m.file,
+					line: m.line,
+					content: m.content,
+				}));
+			},
+		};
 	}
 
 	async exposePreview(port: number): Promise<PreviewBinding> {

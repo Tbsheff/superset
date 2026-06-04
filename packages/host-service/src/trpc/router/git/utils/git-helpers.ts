@@ -15,6 +15,7 @@ import {
 } from "../../../../runtime/git/refs";
 import { createUserSimpleGit } from "../../../../runtime/git/simple-git";
 import type { Branch, ChangedFile, FileStatus } from "../types";
+import type { GitRunner } from "./git-runner";
 
 export { getDefaultBranchName, resolveBaseComparison };
 
@@ -133,7 +134,7 @@ export function parseNameStatus(
 }
 
 export async function buildBranch(
-	git: SimpleGit,
+	git: GitRunner,
 	name: string,
 	isHead: boolean,
 	compareRef?: string,
@@ -343,7 +344,7 @@ export async function detectUnstagedRenames(
 }
 
 export async function getChangedFilesForDiff(
-	git: SimpleGit,
+	git: GitRunner,
 	diffArgs: string[],
 ): Promise<ChangedFile[]> {
 	try {

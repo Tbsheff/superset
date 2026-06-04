@@ -43,6 +43,14 @@ These are explicitly deferred; Daytona is **not** runnable end-to-end in the app
 - `db.node-test.ts` (the `createDb` runtime proof from Phase 0) can't execute where `better-sqlite3`'s prebuilt ABI doesn't match the active Node. The `db.ts` fatal-migrate change is correct by inspection and the schema/migration tests pass; this test runs on normal dev/CI.
 - Full-package `bun test` shows one **pre-existing** failure: `test/integration/terminal.integration.test.ts` "terminal disposal cleans up background process groups from real daemon sessions" — a real-PTY-daemon 3s timing test, unrelated to any file changed here, reproduces in isolation on `main`.
 
+## Milestone 1 + end-to-end agent run (DONE)
+
+Milestone 1 wiring is implemented and committed: production `RuntimeInstanceStore`, Daytona SDK factory + credential selection, registry `"remote"` branch, `runtimeKind` create routing, remote agent/setup execution (`runWorkspaceCommand`), the host-service `/runtime` PTY-over-wire WebSocket endpoint, remote `getDiff`/lease/cleanup, desktop binding + runtime selector UI, and the export/push pipeline. Gate: host-service + trpc typecheck clean, 765 pass / 2 skip / 0 fail.
+
+**Live end-to-end agent run proven** (`daytona.agent-e2e.integration.test.ts`, real Daytona sandbox via the CLI's JWT+org): provision → clone a public repo → run an agent workload through the product's `startShell`+PTY path → stream output back over the runtime (saw the shell prompt, `A  AGENT_RESULT.txt`, and the execution marker) → `getDiff` captured `A  AGENT_RESULT.txt` → sandbox destroyed (no leak). This exercises the exact execution path the product's terminal agent uses.
+
+**Honest caveat:** no LLM API key is available in this environment, so the proven run is an agent *workload* over the real execution path, not a model-backed LLM agent. A real LLM agent (`buildAgentCommandString` → same `runWorkspaceCommand` path) would run unchanged given an `ANTHROPIC_API_KEY`/equivalent in the sandbox env.
+
 ## Live verification (DONE — real Daytona API)
 
 The gated integration slice (`daytona.integration.test.ts`) passed against the live API: **create → clone (public, anonymous) → getDiff → exposePreview(3000) → destroy**, `1 pass / 0 fail`, sandbox self-destroyed (zero leaks).

@@ -13,6 +13,7 @@ import {
 	type RuntimeFileInfo,
 	type RuntimeFsApi,
 	type RuntimeFsMatch,
+	type RuntimePortInfo,
 	RuntimeProviderError,
 	type ShellHandle,
 	type StartShellOptions,
@@ -295,6 +296,21 @@ export class DaytonaWorkspaceRuntime implements WorkspaceRuntime {
 		return { url: link.url, tokenScheme: "standard" };
 	}
 
+	/**
+	 * Scans for TCP listeners INSIDE the sandbox, since the host's process table
+	 * (the local `PortManager`'s `lsof`) can't see them. Prefers `ss` and falls
+	 * back to `lsof`; either output is parsed to `RuntimePortInfo` and deduped by
+	 * port (a server bound on both IPv4 and IPv6 shows up twice). A scan failure
+	 * yields `[]` rather than throwing — an empty port list is a valid snapshot.
+	 */
+	async listPorts(): Promise<RuntimePortInfo[]> {
+		const res = await this.exec(
+			"ss -ltnp 2>/dev/null || lsof -iTCP -sTCP:LISTEN -P -n 2>/dev/null",
+		);
+		if (res.exitCode !== 0) return [];
+		return parseListenerScan(res.stdout);
+	}
+
 	/** Validates + applies an egress policy; tier-gating surfaces a typed error. */
 	async setEgress(policy: EgressPolicy): Promise<void> {
 		validateEgress(policy);
@@ -340,4 +356,75 @@ export class DaytonaWorkspaceRuntime implements WorkspaceRuntime {
 		}
 		this.transports.clear();
 	}
+}
+
+/**
+ * Splits an `addr:port` token (the trailing component of both `ss` and `lsof`
+ * local-address columns) into its address and numeric port. IPv6 addresses are
+ * bracketed (`[::]:3000`) or colon-laden (`::1:3000`), so the port is taken as
+ * the segment after the LAST colon.
+ */
+function splitAddrPort(
+	token: string,
+): { address: string; port: number } | null {
+	const lastColon = token.lastIndexOf(":");
+	if (lastColon <= 0) return null;
+	const port = Number.parseInt(token.slice(lastColon + 1), 10);
+	if (!Number.isInteger(port) || port <= 0) return null;
+	const address = token.slice(0, lastColon).replace(/^\[|\]$/g, "");
+	return { address, port };
+}
+
+/**
+ * Parses `ss -ltnp` OR `lsof -iTCP -sTCP:LISTEN` output into deduped
+ * `RuntimePortInfo[]`. The two tools differ in column layout, so each line is
+ * classified by shape: `ss` rows start with the state word `LISTEN`; everything
+ * else is treated as an `lsof` row (whose NAME column ends in `(LISTEN)`).
+ * Dedupe is by port — a dual-stack listener appears once per address family.
+ */
+export function parseListenerScan(output: string): RuntimePortInfo[] {
+	const byPort = new Map<number, RuntimePortInfo>();
+	for (const rawLine of output.split("\n")) {
+		const line = rawLine.trim();
+		if (!line) continue;
+		const cols = line.split(/\s+/);
+		const info = line.startsWith("LISTEN")
+			? parseSsRow(cols)
+			: parseLsofRow(cols);
+		if (info && !byPort.has(info.port)) byPort.set(info.port, info);
+	}
+	return Array.from(byPort.values());
+}
+
+/** `LISTEN 0 511 0.0.0.0:3000 0.0.0.0:* users:(("node",pid=1234,fd=20))` */
+function parseSsRow(cols: string[]): RuntimePortInfo | null {
+	const local = cols[3];
+	if (!local) return null;
+	const addrPort = splitAddrPort(local);
+	if (!addrPort) return null;
+	const processField = cols.slice(5).join(" ");
+	const nameMatch = processField.match(/users:\(\("([^"]+)"/);
+	const pidMatch = processField.match(/pid=(\d+)/);
+	return {
+		port: addrPort.port,
+		address: addrPort.address,
+		...(pidMatch ? { pid: Number.parseInt(pidMatch[1] ?? "", 10) } : {}),
+		...(nameMatch?.[1] ? { processName: nameMatch[1] } : {}),
+	};
+}
+
+/** `node 1234 user 20u IPv4 12345 0t0 TCP 0.0.0.0:3000 (LISTEN)` */
+function parseLsofRow(cols: string[]): RuntimePortInfo | null {
+	if (cols.at(-1) !== "(LISTEN)") return null;
+	const name = cols.at(-2);
+	if (!name) return null;
+	const addrPort = splitAddrPort(name);
+	if (!addrPort) return null;
+	const pid = Number.parseInt(cols[1] ?? "", 10);
+	return {
+		port: addrPort.port,
+		address: addrPort.address,
+		...(Number.isInteger(pid) ? { pid } : {}),
+		...(cols[0] ? { processName: cols[0] } : {}),
+	};
 }

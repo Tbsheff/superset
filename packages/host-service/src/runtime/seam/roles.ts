@@ -57,6 +57,15 @@ export interface WorkspaceRuntime {
 	 */
 	runtimeFs?(): RuntimeFsApi;
 	exposePreview(port: number): Promise<PreviewBinding>;
+	/**
+	 * Enumerates TCP listeners INSIDE the runtime — the request/response
+	 * counterpart to the host-PID port scan the local terminal daemon runs. A
+	 * remote (Daytona) sandbox's dev-server ports are invisible to the host's
+	 * `lsof`, so the host can only learn them by scanning in-sandbox. Optional
+	 * because a local worktree keeps the existing `PortManager` path; only a
+	 * runtime with no host-visible process table (Daytona) implements it.
+	 */
+	listPorts?(): Promise<RuntimePortInfo[]>;
 	activityLease(): ActivityLease;
 	getStatus(): Promise<NormalizedRuntimeStatus>;
 	stop(mode: CleanupMode): Promise<void>;
@@ -133,6 +142,15 @@ export interface FileContentsResult {
 export interface PreviewBinding {
 	url: string;
 	tokenScheme: "standard" | "signed" | "none";
+}
+
+/** One listening TCP port discovered by an in-runtime listener scan. */
+export interface RuntimePortInfo {
+	port: number;
+	/** Bind address as reported by the scan (e.g. "0.0.0.0", "127.0.0.1", "::"). */
+	address?: string;
+	pid?: number;
+	processName?: string;
 }
 
 /** Metadata for a single file/dir entry, mirroring the Daytona SDK `FileInfo`. */

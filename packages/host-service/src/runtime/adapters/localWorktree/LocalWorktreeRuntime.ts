@@ -16,6 +16,7 @@ import type {
 	NormalizedRuntimeStatus,
 	PreviewBinding,
 	RuntimeDiff,
+	RuntimePortInfo,
 	ShellHandle,
 	StartShellOptions,
 	WorkspaceRuntime,
@@ -185,6 +186,16 @@ export class LocalWorktreeRuntime implements WorkspaceRuntime {
 		// Local preview is the host network: the renderer reaches a listening
 		// port directly on localhost. No tokenized ingress origin is minted.
 		return { url: `http://localhost:${port}`, tokenScheme: "none" };
+	}
+
+	/**
+	 * Local ports stay on the host-PID scan: the `PortManager` fed by the local
+	 * terminal daemon already enumerates them, and the ports router keeps that
+	 * path for `runtime_kind = "local"`. Returning `[]` keeps the seam method
+	 * total without duplicating that scan or disturbing existing behavior.
+	 */
+	async listPorts(): Promise<RuntimePortInfo[]> {
+		return [];
 	}
 
 	activityLease(): ActivityLease {

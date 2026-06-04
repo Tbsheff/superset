@@ -4,9 +4,9 @@ import { eq } from "@tanstack/db";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useCallback } from "react";
 import { electronTrpcClient } from "renderer/lib/trpc-client";
+import { useIsRemoteWorkspace } from "renderer/routes/_authenticated/_dashboard/v2-workspace/$workspaceId/hooks/useIsRemoteWorkspace";
 import { useV2ProjectDefaultApp } from "renderer/routes/_authenticated/hooks/useV2ProjectDefaultApp";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
-import { useLocalHostService } from "renderer/routes/_authenticated/providers/LocalHostServiceProvider";
 
 export interface OpenInExternalEditorOptions {
 	line?: number;
@@ -15,14 +15,13 @@ export interface OpenInExternalEditorOptions {
 
 export function useOpenInExternalEditor(workspaceId: string) {
 	const collections = useCollections();
-	const { machineId } = useLocalHostService();
+	const isRemote = useIsRemoteWorkspace(workspaceId);
 	const { data: workspaceRows = [] } = useLiveQuery(
 		(q) =>
 			q
 				.from({ workspaces: collections.v2Workspaces })
 				.where(({ workspaces }) => eq(workspaces.id, workspaceId))
 				.select(({ workspaces }) => ({
-					hostId: workspaces.hostId,
 					projectId: workspaces.projectId ?? null,
 				})),
 		[collections, workspaceId],
@@ -41,8 +40,8 @@ export function useOpenInExternalEditor(workspaceId: string) {
 
 	return useCallback(
 		(path: string, opts?: OpenInExternalEditorOptions) => {
-			if (workspaceRow?.hostId !== machineId) {
-				toast.error("Can't open remote workspace paths in an external editor");
+			if (isRemote) {
+				toast.error("Not available for remote workspaces");
 				return;
 			}
 			electronTrpcClient.external.openFileInEditor
@@ -59,6 +58,6 @@ export function useOpenInExternalEditor(workspaceId: string) {
 					toast.error("Failed to open in external editor");
 				});
 		},
-		[workspaceRow, machineId, projectId, worktreePath, v2PreferredApp],
+		[isRemote, projectId, worktreePath, v2PreferredApp],
 	);
 }

@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { getSupervisor, waitForDaemonReady } from "../../../daemon";
 import { terminalSessions, workspaces } from "../../../db/schema";
+import { setRemoteInitialCommand } from "../../../runtime/exec/remote-initial-command-store";
 import {
 	countTerminalSessions,
 	createTerminalSessionInternal,
@@ -45,6 +46,12 @@ async function createTerminalSessionFromInput({
 		.findFirst({ where: eq(workspaces.id, input.workspaceId) })
 		.sync();
 	if (workspace?.runtimeKind === "remote") {
+		// The sandbox shell is created lazily when the pane's `/runtime` socket
+		// attaches, so an initial command can't run here — stash it for
+		// `RemotePtySession.attach` to write once the shell is up (consumed once).
+		if (input.initialCommand) {
+			setRemoteInitialCommand(terminalId, input.initialCommand);
+		}
 		return { terminalId, status: "active" as const };
 	}
 

@@ -227,6 +227,7 @@ export function FilesTab({
 						<FolderMenuItems
 							absolutePath={abs}
 							relativePath={rel}
+							workspaceId={workspaceId}
 							onNewFile={() => void startCreating("file", abs)}
 							onNewFolder={() => void startCreating("folder", abs)}
 							onRename={() => model.startRenaming(treePath)}
@@ -236,6 +237,7 @@ export function FilesTab({
 						<FileMenuItems
 							absolutePath={abs}
 							relativePath={rel}
+							workspaceId={workspaceId}
 							onOpen={() => onSelectFile(abs)}
 							onOpenInNewTab={() => onSelectFile(abs, true)}
 							onOpenInEditor={() => openInExternalEditor(abs)}
@@ -249,6 +251,7 @@ export function FilesTab({
 		[
 			model,
 			rootPath,
+			workspaceId,
 			startCreating,
 			handleDelete,
 			onSelectFile,

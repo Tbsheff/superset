@@ -8,6 +8,7 @@ import { PathActions } from "../PathActions";
 interface FolderMenuItemsProps {
 	absolutePath: string;
 	relativePath: string;
+	workspaceId: string;
 	onNewFile: () => void;
 	onNewFolder: () => void;
 	onRename: () => void;
@@ -17,6 +18,7 @@ interface FolderMenuItemsProps {
 export function FolderMenuItems({
 	absolutePath,
 	relativePath,
+	workspaceId,
 	onNewFile,
 	onNewFolder,
 	onRename,
@@ -33,7 +35,11 @@ export function FolderMenuItems({
 				New Folder...
 			</DropdownMenuItem>
 			<DropdownMenuSeparator />
-			<PathActions absolutePath={absolutePath} relativePath={relativePath} />
+			<PathActions
+				absolutePath={absolutePath}
+				relativePath={relativePath}
+				workspaceId={workspaceId}
+			/>
 			<DropdownMenuSeparator />
 			<DropdownMenuItem onSelect={() => setTimeout(onRename, 0)}>
 				<Pencil />

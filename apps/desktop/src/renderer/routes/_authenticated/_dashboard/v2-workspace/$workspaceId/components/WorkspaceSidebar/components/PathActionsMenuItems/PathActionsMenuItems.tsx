@@ -10,19 +10,24 @@ import { toast } from "@superset/ui/sonner";
 import { Clipboard, Copy, FolderOpen } from "lucide-react";
 import { useCopyToClipboard } from "renderer/hooks/useCopyToClipboard";
 import { electronTrpcClient } from "renderer/lib/trpc-client";
+import { useIsRemoteWorkspace } from "renderer/routes/_authenticated/_dashboard/v2-workspace/$workspaceId/hooks/useIsRemoteWorkspace";
 
 interface PathActionsMenuItemsProps {
 	absolutePath: string;
 	relativePath?: string;
 	menuType?: "context" | "dropdown";
+	workspaceId?: string;
 }
 
 export function PathActionsMenuItems({
 	absolutePath,
 	relativePath,
 	menuType = "context",
+	workspaceId,
 }: PathActionsMenuItemsProps) {
 	const { copyToClipboard } = useCopyToClipboard();
+	// Remote workspaces have no host file to reveal; Copy actions still apply.
+	const isRemote = useIsRemoteWorkspace(workspaceId);
 
 	const handleCopy = (path: string, successMessage: string) => {
 		toast.promise(copyToClipboard(path), {
@@ -45,11 +50,15 @@ export function PathActionsMenuItems({
 	if (menuType === "dropdown") {
 		return (
 			<>
-				<DropdownMenuItem onSelect={handleRevealInFinder}>
-					<FolderOpen />
-					Reveal in Finder
-				</DropdownMenuItem>
-				<DropdownMenuSeparator />
+				{!isRemote && (
+					<>
+						<DropdownMenuItem onSelect={handleRevealInFinder}>
+							<FolderOpen />
+							Reveal in Finder
+						</DropdownMenuItem>
+						<DropdownMenuSeparator />
+					</>
+				)}
 				<DropdownMenuItem
 					onSelect={() => handleCopy(absolutePath, "Path copied")}
 				>
@@ -70,11 +79,15 @@ export function PathActionsMenuItems({
 
 	return (
 		<>
-			<ContextMenuItem onSelect={handleRevealInFinder}>
-				<FolderOpen />
-				Reveal in Finder
-			</ContextMenuItem>
-			<ContextMenuSeparator />
+			{!isRemote && (
+				<>
+					<ContextMenuItem onSelect={handleRevealInFinder}>
+						<FolderOpen />
+						Reveal in Finder
+					</ContextMenuItem>
+					<ContextMenuSeparator />
+				</>
+			)}
 			<ContextMenuItem onSelect={() => handleCopy(absolutePath, "Path copied")}>
 				<Clipboard />
 				Copy Path

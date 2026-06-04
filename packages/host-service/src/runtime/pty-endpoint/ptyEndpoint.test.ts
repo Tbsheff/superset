@@ -185,6 +185,46 @@ describe("RemotePtySession", () => {
 		expect(socket.control).toEqual([{ type: "attached" }]);
 	});
 
+	test("attach: writes the initial command (newline appended) after attached", async () => {
+		const session = new RemotePtySession(
+			socket,
+			resolverFor(runtimeWith(shell)),
+			WS_ID,
+			{ initialCommand: "bun run dev" },
+		);
+
+		await session.attach();
+
+		expect(shell.writes).toEqual(["bun run dev\n"]);
+		// The command runs after output is wired so its echo isn't lost.
+		expect(socket.control).toEqual([{ type: "attached" }]);
+	});
+
+	test("attach: a command already ending in newline is not double-terminated", async () => {
+		const session = new RemotePtySession(
+			socket,
+			resolverFor(runtimeWith(shell)),
+			WS_ID,
+			{ initialCommand: "echo hi\n" },
+		);
+
+		await session.attach();
+
+		expect(shell.writes).toEqual(["echo hi\n"]);
+	});
+
+	test("attach: no initial command writes nothing to the shell", async () => {
+		const session = new RemotePtySession(
+			socket,
+			resolverFor(runtimeWith(shell)),
+			WS_ID,
+		);
+
+		await session.attach();
+
+		expect(shell.writes).toEqual([]);
+	});
+
 	test("attach: PTY output is delivered as binary UTF-8 frames, not JSON", async () => {
 		const session = new RemotePtySession(
 			socket,

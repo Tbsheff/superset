@@ -5,6 +5,10 @@ import type { FsWatchEvent } from "@superset/workspace-fs/host";
 import type { HostDb } from "../db/index.ts";
 import { workspaces } from "../db/schema.ts";
 import type { WorkspaceFilesystemManager } from "../runtime/filesystem/index.ts";
+import {
+	type RemoteRuntimeResolverLike,
+	RemoteWatchPoller,
+} from "./remote-watch-poller.ts";
 
 const execFileAsync = promisify(execFile);
 
@@ -22,6 +26,24 @@ export interface GitChangedEvent {
 }
 
 export type GitChangedListener = (event: GitChangedEvent) => void;
+
+export interface FsChangedEvent {
+	workspaceId: string;
+}
+
+export type FsChangedListener = (event: FsChangedEvent) => void;
+
+export interface GitWatcherOptions {
+	/**
+	 * Resolves the live `WorkspaceRuntime` for a remote workspace, used by the
+	 * remote poller. Omitted on local-only hosts (no Daytona), which disables
+	 * remote polling entirely. `app.ts` passes the same resolver it wires into
+	 * the filesystem/pull-request managers.
+	 */
+	resolveRemoteRuntime?: () => Promise<RemoteRuntimeResolverLike>;
+	/** Remote poll cadence. Defaults to the poller's own default; tests shorten it. */
+	remotePollIntervalMs?: number;
+}
 
 interface PendingBatch {
 	/** Any `.git/*` event seen during this debounce window. */
@@ -59,11 +81,20 @@ interface WatchedWorkspace {
  *
  * Consumers therefore only need to subscribe to `git:changed` for refetch
  * purposes — no separate client-side debounce over `fs:events`.
+ *
+ * Remote workspaces (`runtime_kind === 'remote'`) have no host-side worktree or
+ * `.git/` to watch, so the two local sources above are skipped for them. A
+ * `RemoteWatchPoller` instead polls the live runtime on an interval and emits
+ * the same `git:changed` (via `onChanged`) plus a coarse `fs:events`-style
+ * signal (via `onFsChanged`) when cheap signatures diverge. Polling only runs
+ * while a workspace is actively observed (`observeRemote`) so idle sandboxes are
+ * never woken when no `/events` client is connected.
  */
 export class GitWatcher {
 	private readonly db: HostDb;
 	private readonly filesystem: WorkspaceFilesystemManager;
 	private readonly listeners = new Set<GitChangedListener>();
+	private readonly fsListeners = new Set<FsChangedListener>();
 	private readonly watched = new Map<string, WatchedWorkspace>();
 	private readonly debounceTimers = new Map<
 		string,
@@ -72,10 +103,31 @@ export class GitWatcher {
 	private readonly pendingBatches = new Map<string, PendingBatch>();
 	private rescanTimer: ReturnType<typeof setInterval> | null = null;
 	private closed = false;
+	private readonly remotePoller: RemoteWatchPoller | null;
+	/** Remote workspace ids the latest rescan saw. Bounds `observeRemote`. */
+	private readonly remoteWorkspaceIds = new Set<string>();
+	/** Remote ids currently requested as observed by connected clients. */
+	private readonly observedRemoteIds = new Set<string>();
 
-	constructor(db: HostDb, filesystem: WorkspaceFilesystemManager) {
+	constructor(
+		db: HostDb,
+		filesystem: WorkspaceFilesystemManager,
+		options: GitWatcherOptions = {},
+	) {
 		this.db = db;
 		this.filesystem = filesystem;
+		this.remotePoller = options.resolveRemoteRuntime
+			? new RemoteWatchPoller({
+					resolveRuntime: options.resolveRemoteRuntime,
+					emit: {
+						gitChanged: (workspaceId) => this.emitGitChanged({ workspaceId }),
+						fsChanged: (workspaceId) => this.emitFsChanged({ workspaceId }),
+					},
+					...(options.remotePollIntervalMs !== undefined
+						? { intervalMs: options.remotePollIntervalMs }
+						: {}),
+				})
+			: null;
 	}
 
 	start(): void {
@@ -91,6 +143,37 @@ export class GitWatcher {
 		return () => {
 			this.listeners.delete(listener);
 		};
+	}
+
+	/**
+	 * Subscribe to coarse remote fs-change signals. The EventBus broadcasts these
+	 * as an `fs:events` overflow so the renderer's Files tree does a full refresh.
+	 * Only the remote poller emits here; local fs activity rides `git:changed`.
+	 */
+	onFsChanged(listener: FsChangedListener): () => void {
+		this.fsListeners.add(listener);
+		return () => {
+			this.fsListeners.delete(listener);
+		};
+	}
+
+	/**
+	 * Begin polling a remote workspace while a client observes it. No-op for
+	 * unknown ids, non-remote ids, or when no remote resolver is configured —
+	 * keeps polling bounded to known remote rows that someone is watching.
+	 */
+	observeRemote(workspaceId: string): void {
+		if (this.closed || !this.remotePoller) return;
+		this.observedRemoteIds.add(workspaceId);
+		if (this.remoteWorkspaceIds.has(workspaceId)) {
+			this.remotePoller.observe(workspaceId);
+		}
+	}
+
+	/** Stop polling a remote workspace once no client observes it. */
+	unobserveRemote(workspaceId: string): void {
+		this.observedRemoteIds.delete(workspaceId);
+		this.remotePoller?.unobserve(workspaceId);
 	}
 
 	close(): void {
@@ -109,6 +192,9 @@ export class GitWatcher {
 			entry.disposeWorktreeWatch();
 		}
 		this.watched.clear();
+		this.remotePoller?.close();
+		this.remoteWorkspaceIds.clear();
+		this.observedRemoteIds.clear();
 	}
 
 	private getOrCreateBatch(workspaceId: string): PendingBatch {
@@ -147,30 +233,47 @@ export class GitWatcher {
 					batch.hasGitDir || batch.paths.size === 0
 						? { workspaceId }
 						: { workspaceId, paths: [...batch.paths] };
-				for (const listener of this.listeners) {
-					// Isolate per-listener throws so one bad subscriber can't skip
-					// siblings. Other escapes fall through to the process-level net.
-					try {
-						listener(event);
-					} catch (error) {
-						console.error("[git-watcher:listener] threw — contained", {
-							error,
-						});
-					}
-				}
+				this.emitGitChanged(event);
 			}, DEBOUNCE_MS),
 		);
+	}
+
+	private emitGitChanged(event: GitChangedEvent): void {
+		for (const listener of this.listeners) {
+			// Isolate per-listener throws so one bad subscriber can't skip siblings.
+			// Other escapes fall through to the process-level net.
+			try {
+				listener(event);
+			} catch (error) {
+				console.error("[git-watcher:listener] threw — contained", { error });
+			}
+		}
+	}
+
+	private emitFsChanged(event: FsChangedEvent): void {
+		for (const listener of this.fsListeners) {
+			try {
+				listener(event);
+			} catch (error) {
+				console.error("[git-watcher:fs-listener] threw — contained", { error });
+			}
+		}
 	}
 
 	private async rescan(): Promise<void> {
 		if (this.closed) return;
 
-		let rows: Array<{ id: string; worktreePath: string }>;
+		let rows: Array<{
+			id: string;
+			worktreePath: string;
+			runtimeKind: string;
+		}>;
 		try {
 			rows = this.db
 				.select({
 					id: workspaces.id,
 					worktreePath: workspaces.worktreePath,
+					runtimeKind: workspaces.runtimeKind,
 				})
 				.from(workspaces)
 				.all();
@@ -189,10 +292,38 @@ export class GitWatcher {
 			}
 		}
 
-		// Add watchers for new workspaces
+		this.reconcileRemote(rows);
+
+		// Add watchers for new LOCAL workspaces. Remote rows have no host-side
+		// worktree (`worktreePath === ""`) or `.git/` to watch — `git rev-parse`
+		// in `watchWorkspace` would run against `''` and skip every cycle — so they
+		// are handled by the remote poller instead.
 		for (const row of rows) {
+			if (row.runtimeKind === "remote") continue;
 			if (this.watched.has(row.id)) continue;
 			await this.watchWorkspace(row.id, row.worktreePath);
+		}
+	}
+
+	/**
+	 * Sync `remoteWorkspaceIds` to the latest rows and (re)start polling for any
+	 * remote workspace a client is observing. Dropping a row stops its poll.
+	 */
+	private reconcileRemote(
+		rows: Array<{ id: string; runtimeKind: string }>,
+	): void {
+		if (!this.remotePoller) return;
+		const nextRemoteIds = new Set(
+			rows.filter((r) => r.runtimeKind === "remote").map((r) => r.id),
+		);
+
+		for (const id of this.remoteWorkspaceIds) {
+			if (!nextRemoteIds.has(id)) this.remotePoller.unobserve(id);
+		}
+		this.remoteWorkspaceIds.clear();
+		for (const id of nextRemoteIds) {
+			this.remoteWorkspaceIds.add(id);
+			if (this.observedRemoteIds.has(id)) this.remotePoller.observe(id);
 		}
 	}
 

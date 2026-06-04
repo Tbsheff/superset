@@ -205,7 +205,12 @@ describe("createRemoteWorkspace", () => {
 		const sandbox = sdk.sandboxes.get("sbx-1");
 		expect(sandbox?.calls.clone).toHaveLength(1);
 		expect(sandbox?.calls.clone[0]?.url).toBe(REPO_URL);
-		expect(sandbox?.calls.clone[0]?.branch).toBe("feature/remote");
+		// The base ref is cloned (undefined => the repo's default branch); the
+		// workspace branch is created in-sandbox after the clone, not cloned.
+		expect(sandbox?.calls.clone[0]?.branch).toBeUndefined();
+		expect(sandbox?.calls.executeCommand).toContain(
+			"git checkout -b 'feature/remote'",
+		);
 	});
 
 	test("rejects a project with no GitHub url before writing any row", async () => {

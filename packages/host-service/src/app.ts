@@ -156,8 +156,16 @@ export function createApp(options: CreateAppOptions): CreateAppResult {
 		}) as unknown as HostServiceContext;
 	// GitWatcher is the single source of truth for `.git/` and worktree fs
 	// activity per workspace. Both EventBus (broadcasts to clients) and the
-	// pull-requests runtime (event-driven branch sync) subscribe to it.
-	const gitWatcher = new GitWatcher(db, filesystem);
+	// pull-requests runtime (event-driven branch sync) subscribe to it. Remote
+	// workspaces have no host-side worktree/.git, so it polls the live runtime
+	// (via the same resolver the fs/exec/diff paths use) to emit `git:changed` +
+	// coarse `fs:events` while a client is watching.
+	const gitWatcher = new GitWatcher(db, filesystem, {
+		resolveRemoteRuntime: async () => {
+			const resolver = await getRemoteRuntimeResolver(buildResolverCtx());
+			return { resolve: (workspaceId) => resolver.resolve(workspaceId) };
+		},
+	});
 	gitWatcher.start();
 	const pullRequestRuntime = new PullRequestRuntimeManager({
 		db,
@@ -165,6 +173,12 @@ export function createApp(options: CreateAppOptions): CreateAppResult {
 		git,
 		github,
 		gitWatcher,
+		// Remote workspaces have no host `.git/`, so branch/HEAD/upstream are read
+		// in-sandbox via the same resolver the exec/diff/push paths use.
+		resolveRemoteRuntime: async (workspaceId) => {
+			const resolver = await getRemoteRuntimeResolver(buildResolverCtx());
+			return resolver.resolve(workspaceId);
+		},
 	});
 	pullRequestRuntime.start();
 	const chatRuntime =

@@ -7,6 +7,7 @@ import { projects, pullRequests, workspaces } from "../../db/schema";
 import type { GitWatcher } from "../../events/git-watcher";
 import type { ExecGh } from "../../trpc/router/workspace-creation/utils/exec-gh";
 import type { GitFactory } from "../git";
+import type { WorkspaceRuntime } from "../seam";
 import {
 	fetchPullRequestByHead,
 	fetchPullRequestByHeadFromGh,
@@ -45,6 +46,13 @@ const SAFETY_NET_INTERVAL_MS = 5 * 60_000;
 // branch/HEAD/upstream changes. The 60s repo-PR cache deduplicates across
 // concurrent triggers.
 const PROJECT_REFRESH_INTERVAL_MS = 5 * 60_000;
+// Remote (Daytona) workspaces have no host-side `.git/`, so GitWatcher never
+// fires for them. Poll them on this cadence to keep branch/HEAD/upstream rows
+// (and thus PR badges) fresh. PR-flow actions also trigger an on-demand sync
+// via `syncRemoteWorkspace`, so this is the steady-state backstop, not the only
+// path. Kept slower than the GitHub-state refresh to bound in-sandbox `git`
+// invocations.
+const REMOTE_SYNC_INTERVAL_MS = 30_000;
 // Must exceed every polling interval that hits this cache (SAFETY_NET and
 // PROJECT_REFRESH). Otherwise the cache is always stale at poll time and
 // each tick fires fresh GitHub calls for the same upstream branch.
@@ -56,6 +64,17 @@ const UNBORN_HEAD_ERROR_PATTERNS = [
 	"not a valid object name head",
 	"needed a single revision",
 ];
+
+interface BranchSnapshot {
+	branch: string;
+	headSha: string | null;
+	upstream: { owner: string; name: string; branch: string } | null;
+}
+
+/** Single-quote an arg for the remote `runtime.exec` shell command line. */
+function shellQuoteArg(arg: string): string {
+	return `'${arg.replaceAll("'", "'\\''")}'`;
+}
 
 async function getCurrentBranchName(git: Awaited<ReturnType<GitFactory>>) {
 	try {
@@ -208,6 +227,13 @@ export interface PullRequestRuntimeManagerOptions {
 	git: GitFactory;
 	github: () => Promise<Octokit>;
 	gitWatcher: GitWatcher;
+	/**
+	 * Resolves the live `WorkspaceRuntime` for a remote (Daytona) workspace so
+	 * branch/HEAD/upstream can be read in-sandbox via `runtime.exec('git ...')`.
+	 * Optional: a local-only host (or a unit test) omits it, and remote
+	 * workspaces are then skipped during sync.
+	 */
+	resolveRemoteRuntime?: (workspaceId: string) => Promise<WorkspaceRuntime>;
 }
 
 interface NormalizedRepoIdentity {
@@ -263,8 +289,12 @@ export class PullRequestRuntimeManager {
 	private readonly git: GitFactory;
 	private readonly github: () => Promise<Octokit>;
 	private readonly gitWatcher: GitWatcher;
+	private readonly resolveRemoteRuntime?: (
+		workspaceId: string,
+	) => Promise<WorkspaceRuntime>;
 	private safetyNetTimer: ReturnType<typeof setInterval> | null = null;
 	private projectRefreshTimer: ReturnType<typeof setInterval> | null = null;
+	private remoteSyncTimer: ReturnType<typeof setInterval> | null = null;
 	private unsubscribeFromGitWatcher: (() => void) | null = null;
 	private readonly inFlightProjects = new Map<string, Promise<void>>();
 	private readonly workspaceSyncState = new Map<
@@ -282,12 +312,14 @@ export class PullRequestRuntimeManager {
 		this.git = options.git;
 		this.github = options.github;
 		this.gitWatcher = options.gitWatcher;
+		this.resolveRemoteRuntime = options.resolveRemoteRuntime;
 	}
 
 	start() {
 		if (
 			this.safetyNetTimer ||
 			this.projectRefreshTimer ||
+			this.remoteSyncTimer ||
 			this.unsubscribeFromGitWatcher
 		)
 			return;
@@ -314,14 +346,25 @@ export class PullRequestRuntimeManager {
 		this.projectRefreshTimer = setInterval(() => {
 			void this.refreshEligibleProjects();
 		}, PROJECT_REFRESH_INTERVAL_MS);
+
+		// Remote workspaces get no GitWatcher events (no host `.git/`), so poll
+		// them on a dedicated cadence. No-op when no remote resolver is wired.
+		if (this.resolveRemoteRuntime) {
+			void this.syncRemoteWorkspaces();
+			this.remoteSyncTimer = setInterval(() => {
+				void this.syncRemoteWorkspaces();
+			}, REMOTE_SYNC_INTERVAL_MS);
+		}
 	}
 
 	stop() {
 		if (this.safetyNetTimer) clearInterval(this.safetyNetTimer);
 		if (this.projectRefreshTimer) clearInterval(this.projectRefreshTimer);
+		if (this.remoteSyncTimer) clearInterval(this.remoteSyncTimer);
 		this.unsubscribeFromGitWatcher?.();
 		this.safetyNetTimer = null;
 		this.projectRefreshTimer = null;
+		this.remoteSyncTimer = null;
 		this.unsubscribeFromGitWatcher = null;
 	}
 
@@ -515,12 +558,13 @@ export class PullRequestRuntimeManager {
 		workspace: typeof workspaces.$inferSelect,
 	): Promise<string | null> {
 		try {
-			const git = await this.git(workspace.worktreePath);
-			const branch = await getCurrentBranchName(git);
-			if (!branch) return null;
+			const snapshot =
+				workspace.runtimeKind === "remote"
+					? await this.readRemoteBranchSnapshot(workspace.id)
+					: await this.readLocalBranchSnapshot(workspace.worktreePath);
+			if (!snapshot) return null;
 
-			const headSha = await getHeadSha(git);
-			const upstream = await resolveWorkspaceUpstream(git, branch);
+			const { branch, headSha, upstream } = snapshot;
 			const upstreamOwner = upstream?.owner ?? null;
 			const upstreamRepo = upstream?.name ?? null;
 			const upstreamBranch = upstream?.branch ?? null;
@@ -561,11 +605,110 @@ export class PullRequestRuntimeManager {
 				{
 					workspaceId: workspace.id,
 					worktreePath: workspace.worktreePath,
+					runtimeKind: workspace.runtimeKind,
 					error,
 				},
 			);
 			return null;
 		}
+	}
+
+	private async readLocalBranchSnapshot(
+		worktreePath: string,
+	): Promise<BranchSnapshot | null> {
+		const git = await this.git(worktreePath);
+		const branch = await getCurrentBranchName(git);
+		if (!branch) return null;
+		const headSha = await getHeadSha(git);
+		const upstream = await resolveWorkspaceUpstream(git, branch);
+		return { branch, headSha, upstream };
+	}
+
+	/**
+	 * Reads branch/HEAD/upstream for a REMOTE workspace by running `git` INSIDE
+	 * the sandbox via `runtime.exec` — the remote has no host-side `.git/`. The
+	 * `@{push}` lookup resolves the configured push remote+branch (mirroring the
+	 * local `resolveWorkspaceUpstream`); a missing `@{push}` yields no upstream,
+	 * which is correct for a branch that hasn't been published yet.
+	 */
+	private async readRemoteBranchSnapshot(
+		workspaceId: string,
+	): Promise<BranchSnapshot | null> {
+		if (!this.resolveRemoteRuntime) return null;
+		const runtime = await this.resolveRemoteRuntime(workspaceId);
+		if (!runtime.exec) return null;
+
+		const branch = await this.remoteGit(runtime, [
+			"rev-parse",
+			"--abbrev-ref",
+			"HEAD",
+		]);
+		if (!branch || branch === "HEAD") return null;
+
+		const headSha = await this.remoteGit(runtime, ["rev-parse", "HEAD"]);
+
+		let upstream: BranchSnapshot["upstream"] = null;
+		const pushRef = await this.remoteGit(runtime, [
+			"rev-parse",
+			"--abbrev-ref",
+			`${branch}@{push}`,
+		]);
+		if (pushRef) {
+			const slash = pushRef.indexOf("/");
+			if (slash > 0) {
+				const remoteName = pushRef.slice(0, slash);
+				const url = await this.remoteGit(runtime, [
+					"remote",
+					"get-url",
+					remoteName,
+				]);
+				const parsed = url ? parseGitHubRemote(url) : null;
+				if (parsed) {
+					upstream = {
+						owner: parsed.owner,
+						name: parsed.name,
+						branch: pushRef.slice(slash + 1),
+					};
+				}
+			}
+		}
+
+		return { branch, headSha, upstream };
+	}
+
+	private async remoteGit(
+		runtime: WorkspaceRuntime,
+		args: string[],
+	): Promise<string | null> {
+		if (!runtime.exec) return null;
+		const command = ["git", ...args.map(shellQuoteArg)].join(" ");
+		const result = await runtime.exec(command);
+		if (result.exitCode !== 0) return null;
+		return result.stdout.trim() || null;
+	}
+
+	/** Polls every remote workspace's branch state (no GitWatcher events fire). */
+	private async syncRemoteWorkspaces(): Promise<void> {
+		if (!this.resolveRemoteRuntime) return;
+		const ids = this.db
+			.select({ id: workspaces.id })
+			.from(workspaces)
+			.where(eq(workspaces.runtimeKind, "remote"))
+			.all();
+		for (const row of ids) {
+			await this.enqueueWorkspaceSync(row.id);
+		}
+	}
+
+	/**
+	 * On-demand branch sync for a single remote workspace. Called from PR-flow
+	 * actions (publish/create) so the badge reflects the new branch/HEAD without
+	 * waiting for the next poll tick. Coalesces through the same per-workspace
+	 * queue as the poll path.
+	 */
+	async syncRemoteWorkspace(workspaceId: string): Promise<void> {
+		if (!this.resolveRemoteRuntime) return;
+		await this.enqueueWorkspaceSync(workspaceId);
 	}
 
 	private async refreshEligibleProjects(): Promise<void> {

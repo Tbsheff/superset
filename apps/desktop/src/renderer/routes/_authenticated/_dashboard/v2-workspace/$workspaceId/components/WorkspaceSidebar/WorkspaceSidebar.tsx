@@ -1,5 +1,6 @@
 import { Button } from "@superset/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
+import { workspaceTrpc } from "@superset/workspace-client";
 import { eq } from "@tanstack/db";
 import { useLiveQuery } from "@tanstack/react-db";
 import { Search } from "lucide-react";
@@ -18,10 +19,11 @@ import { usePRFlowState } from "./hooks/usePRFlowState";
 import { useReviewTab } from "./hooks/useReviewTab";
 import type { SidebarTabDefinition } from "./types";
 
-// Gates the "Create PR" button only — the chat-driven create flow doesn't
-// exist in v2 yet. The PR status group (link + merge dropdown for an open PR)
-// always renders so users can see PR state and merge once a PR exists.
-const CREATE_PR_BUTTON_ENABLED = false;
+// Gates the "Create PR" button for LOCAL workspaces only — the chat-driven
+// create flow doesn't exist in v2 yet. Remote workspaces publish + open the PR
+// host-side (no agent needed), so their button is enabled below. The PR status
+// group (link + merge dropdown for an open PR) always renders regardless.
+const CREATE_PR_BUTTON_ENABLED_LOCAL = false;
 
 type SidebarTabId = "changes" | "files" | "review";
 
@@ -149,8 +151,14 @@ export function WorkspaceSidebar({
 			: undefined,
 	});
 
+	const workspaceQuery = workspaceTrpc.workspace.get.useQuery({
+		id: workspaceId,
+	});
+	const isRemote = workspaceQuery.data?.runtimeKind === "remote";
+
 	const { flowState, onRetry } = usePRFlowState(workspaceId);
 	const dispatch = usePRFlowDispatch({
+		workspaceId,
 		onOpenChat: onOpenChat ?? (() => {}),
 	});
 
@@ -183,7 +191,7 @@ export function WorkspaceSidebar({
 				state={flowState}
 				dispatch={dispatch}
 				onRetry={onRetry}
-				createPREnabled={CREATE_PR_BUTTON_ENABLED}
+				createPREnabled={isRemote || CREATE_PR_BUTTON_ENABLED_LOCAL}
 			/>
 			<SidebarHeader
 				tabs={tabs}

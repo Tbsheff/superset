@@ -22,6 +22,7 @@ import {
 	disposeTransport,
 	sendDispose,
 	sendInput,
+	sendKill,
 	sendResize,
 	type TerminalLogEntry,
 	type TerminalTransport,
@@ -319,6 +320,17 @@ class TerminalRuntimeRegistryImpl {
 		const entry = this.getEntry(terminalId, instanceId);
 		if (!entry) return;
 		sendInput(entry.transport, data);
+	}
+
+	/**
+	 * Terminate a remote (Daytona) PTY over its socket (`{type:"kill"}`). Remote
+	 * shells live in the runtime PTY endpoint, not the local daemon, so force-stop
+	 * routes here instead of the `terminal.killSession` mutation.
+	 */
+	killRemote(terminalId: string, instanceId?: string): void {
+		const entry = this.getEntry(terminalId, instanceId);
+		if (!entry) return;
+		sendKill(entry.transport);
 	}
 
 	findNext(terminalId: string, query: string, instanceId?: string): boolean {

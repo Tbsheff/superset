@@ -6,6 +6,7 @@ import { useLiveQuery } from "@tanstack/react-db";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useWorkspaceEvent } from "renderer/hooks/host-service/useWorkspaceEvent";
 import { buildTerminalCommand } from "renderer/lib/terminal/launch-command";
+import { terminalRuntimeRegistry } from "renderer/lib/terminal/terminal-runtime-registry";
 import { useWorkspace } from "renderer/routes/_authenticated/_dashboard/v2-workspace/providers/WorkspaceProvider";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 import type {
@@ -83,6 +84,7 @@ export function useV2WorkspaceRun({
 	const { workspace } = useWorkspace();
 	const workspaceId = workspace.id;
 	const projectId = workspace.projectId;
+	const isRemoteRuntime = workspace.runtimeKind === "remote";
 	const collections = useCollections();
 	const [isPending, setIsPending] = useState(false);
 	const isStartingRef = useRef(false);
@@ -239,11 +241,20 @@ export function useV2WorkspaceRun({
 		setIsPending(true);
 		try {
 			const stopRequestedAt = Date.now();
-			await writeInputMutation.mutateAsync({
-				terminalId: runningState.terminalId,
-				workspaceId,
-				data: CTRL_C_INPUT,
-			});
+			if (isRemoteRuntime) {
+				// Remote run panes have no daemon session; Ctrl-C rides the pane's
+				// runtime PTY socket instead of the terminal.writeInput mutation.
+				terminalRuntimeRegistry.writeInput(
+					runningState.terminalId,
+					CTRL_C_INPUT,
+				);
+			} else {
+				await writeInputMutation.mutateAsync({
+					terminalId: runningState.terminalId,
+					workspaceId,
+					data: CTRL_C_INPUT,
+				});
+			}
 			const stoppedAt = Date.now();
 			updateWorkspaceRunTerminals((states) => {
 				const state = states[runningState.terminalId];
@@ -274,6 +285,7 @@ export function useV2WorkspaceRun({
 			setIsPending(false);
 		}
 	}, [
+		isRemoteRuntime,
 		runningState,
 		updateWorkspaceRunTerminals,
 		workspaceId,
@@ -284,6 +296,20 @@ export function useV2WorkspaceRun({
 		if (!runningState) return;
 		setIsPending(true);
 		try {
+			if (isRemoteRuntime) {
+				// Force-stop a remote run pane by killing the sandbox PTY over its
+				// socket; there's no daemon session for killSession to target. No
+				// listSessions invalidation — that query only tracks local sessions.
+				terminalRuntimeRegistry.killRemote(runningState.terminalId);
+				const stoppedAt = Date.now();
+				updateWorkspaceRunTerminals((states) => {
+					const state = states[runningState.terminalId];
+					if (!state) return;
+					state.stopRequestedAt ??= stoppedAt;
+					markStopped(state, stoppedAt, { state: "stopped-by-user" });
+				});
+				return;
+			}
 			await killSessionMutation.mutateAsync({
 				terminalId: runningState.terminalId,
 				workspaceId,
@@ -315,6 +341,7 @@ export function useV2WorkspaceRun({
 			setIsPending(false);
 		}
 	}, [
+		isRemoteRuntime,
 		killSessionMutation,
 		runningState,
 		updateWorkspaceRunTerminals,

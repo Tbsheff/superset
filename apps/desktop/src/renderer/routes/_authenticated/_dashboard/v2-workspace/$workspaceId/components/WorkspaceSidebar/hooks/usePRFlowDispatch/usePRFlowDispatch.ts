@@ -1,3 +1,5 @@
+import { toast } from "@superset/ui/sonner";
+import { workspaceTrpc } from "@superset/workspace-client";
 import { useCallback } from "react";
 import type { ChatPaneData } from "../../../../types";
 import { buildPRContext } from "../../components/PRActionHeader/utils/buildPRContext";
@@ -20,23 +22,57 @@ export interface PRFlowDispatchArgs {
 export type PRFlowDispatch = (args: PRFlowDispatchArgs) => void;
 
 interface UsePRFlowDispatchOptions {
+	workspaceId: string;
 	onOpenChat: OpenChatFn;
 }
 
 export function usePRFlowDispatch({
+	workspaceId,
 	onOpenChat,
 }: UsePRFlowDispatchOptions): PRFlowDispatch {
+	// Remote (Daytona) workspaces have no on-disk worktree, so the agent-driven
+	// `/pr/create-pr` flow (which runs `git push` + `gh pr create` in the
+	// worktree cwd) can't ship them. They publish + open the PR host-side.
+	const workspaceQuery = workspaceTrpc.workspace.get.useQuery({
+		id: workspaceId,
+	});
+	const isRemote = workspaceQuery.data?.runtimeKind === "remote";
+
+	const refreshPRMutation =
+		workspaceTrpc.pullRequests.refreshByWorkspaces.useMutation();
+	const publishMutation =
+		workspaceTrpc.pullRequests.publishAndCreatePR.useMutation({
+			onMutate: () => ({ toastId: toast.loading("Creating pull request…") }),
+			onSuccess: async (data, _variables, context) => {
+				toast.success(`PR #${data.number} created`, { id: context?.toastId });
+				await refreshPRMutation
+					.mutateAsync({ workspaceIds: [workspaceId] })
+					.catch(() => {});
+			},
+			onError: (error, _variables, context) => {
+				toast.error(`Create PR failed: ${error.message}`, {
+					id: context?.toastId,
+				});
+			},
+		});
+
 	return useCallback(
 		({ state, draft }: PRFlowDispatchArgs) => {
+			if (state.kind !== "no-pr") return;
+
+			if (isRemote) {
+				publishMutation.mutate({ workspaceId, draft: draft === true });
+				return;
+			}
+
 			const plan = planDispatch(state, { draft: draft === true });
 			if (!plan) return;
-
 			onOpenChat({
 				initialPrompt: plan.prompt,
 				initialFiles: [plan.attachment],
 			});
 		},
-		[onOpenChat],
+		[isRemote, onOpenChat, publishMutation, workspaceId],
 	);
 }
 

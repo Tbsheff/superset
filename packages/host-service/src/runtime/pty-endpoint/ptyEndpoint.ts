@@ -9,6 +9,7 @@ import type { TokenMinter } from "../adapters/daytona/types.ts";
 import {
 	buildRemoteRuntimeResolver,
 	type RemoteRuntimeResolver,
+	takeRemoteInitialCommand,
 } from "../exec/index.ts";
 import type { GitFactory } from "../git/index.ts";
 import type {
@@ -125,7 +126,17 @@ export class RemotePtySession {
 		private readonly socket: PtyEndpointSocket,
 		private readonly resolver: RemoteRuntimeResolver,
 		private readonly workspaceId: string,
-		private readonly opts: { cols?: number; rows?: number } = {},
+		private readonly opts: {
+			cols?: number;
+			rows?: number;
+			/**
+			 * Command to write into the shell immediately after it starts. Carries
+			 * a preset / Run / agent launch's command into the lazily-created remote
+			 * shell (local panes write this via the daemon's initialCommand instead).
+			 * The caller consumes it once so a reconnect doesn't re-run it.
+			 */
+			initialCommand?: string;
+		} = {},
 	) {}
 
 	/**
@@ -200,6 +211,24 @@ export class RemotePtySession {
 		});
 
 		sendControl(this.socket, { type: "attached" });
+
+		// Run the launch command (preset / Run / agent) now that output is wired.
+		// The sandbox PTY buffers stdin until the shell reads it, so writing
+		// immediately is safe — same as the local `queueInitialCommand` and
+		// `runWorkspaceCommand`, neither of which gates on shell readiness.
+		const initialCommand = this.opts.initialCommand;
+		if (initialCommand) {
+			try {
+				shell.write(
+					initialCommand.endsWith("\n")
+						? initialCommand
+						: `${initialCommand}\n`,
+				);
+			} catch {
+				// A write to a torn-down sandbox PTY surfaces on the next op; the
+				// runtime's exit handling owns teardown.
+			}
+		}
 	}
 
 	/**
@@ -416,9 +445,18 @@ export function registerRuntimePtyRoute({
 						}
 						const cols = Number(c.req.query("cols"));
 						const rows = Number(c.req.query("rows"));
+						// The renderer passes the pane's terminalId so we can claim the
+						// initial command `createSession` stashed for this launch. Consumed
+						// once here (delete-on-read) so a reconnect's fresh shell won't
+						// re-run it.
+						const paneTerminalId = c.req.query("terminalId");
+						const initialCommand = paneTerminalId
+							? takeRemoteInitialCommand(paneTerminalId)
+							: undefined;
 						session = new RemotePtySession(socket, resolver, workspaceId, {
 							...(Number.isFinite(cols) ? { cols } : {}),
 							...(Number.isFinite(rows) ? { rows } : {}),
+							...(initialCommand ? { initialCommand } : {}),
 						});
 						await session.attach();
 					})().catch((error) => {

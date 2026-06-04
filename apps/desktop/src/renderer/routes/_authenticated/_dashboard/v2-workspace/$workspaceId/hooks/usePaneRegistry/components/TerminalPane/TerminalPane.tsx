@@ -1,4 +1,5 @@
 import type { RendererContext } from "@superset/panes";
+import { toast } from "@superset/ui/sonner";
 import { cn } from "@superset/ui/utils";
 import { workspaceTrpc } from "@superset/workspace-client";
 import "@xterm/xterm/css/xterm.css";
@@ -24,6 +25,7 @@ import {
 	terminalRuntimeRegistry,
 } from "renderer/lib/terminal/terminal-runtime-registry";
 import { electronTrpcClient } from "renderer/lib/trpc-client";
+import { useIsRemoteWorkspace } from "renderer/routes/_authenticated/_dashboard/v2-workspace/$workspaceId/hooks/useIsRemoteWorkspace";
 import { useOpenInExternalEditor } from "renderer/routes/_authenticated/_dashboard/v2-workspace/$workspaceId/hooks/useOpenInExternalEditor";
 import type {
 	PaneViewerData,
@@ -73,11 +75,7 @@ export function TerminalPane({
 	// wire protocol (binary output frames + JSON input/resize/attached/exit), so
 	// only the path differs. Same query key the workspace page already resolved
 	// before mounting us, so this read is cache-hot (no extra network).
-	const isRemoteRuntime =
-		workspaceTrpc.workspace.get.useQuery(
-			{ id: workspaceId },
-			{ staleTime: Number.POSITIVE_INFINITY },
-		).data?.runtimeKind === "remote";
+	const isRemoteRuntime = useIsRemoteWorkspace(workspaceId);
 	const containerRef = useRef<HTMLDivElement | null>(null);
 	const [isSearchOpen, setIsSearchOpen] = useState(false);
 
@@ -99,6 +97,12 @@ export function TerminalPane({
 	const themedUrl = new URL(baseWebsocketUrl);
 	themedUrl.searchParams.set("workspaceId", workspaceId);
 	themedUrl.searchParams.set("themeType", themeType);
+	// Remote panes attach by paneId, but the launch command was stashed under the
+	// pane's terminalId at createSession time. Pass it so the runtime PTY endpoint
+	// can claim and run that command once the sandbox shell starts.
+	if (isRemoteRuntime) {
+		themedUrl.searchParams.set("terminalId", terminalId);
+	}
 	const websocketUrl = themedUrl.toString();
 	const websocketUrlRef = useRef(websocketUrl);
 	websocketUrlRef.current = websocketUrl;
@@ -379,6 +383,15 @@ export function TerminalPane({
 	const resolveDroppedText = (dataTransfer: DataTransfer): string | null => {
 		const files = Array.from(dataTransfer.files);
 		if (files.length > 0) {
+			// Dropped OS files resolve to host paths, which mean nothing inside a
+			// remote sandbox shell. Suppress the file branch and fall through to
+			// text/plain only.
+			if (isRemoteRuntime) {
+				toast.error(
+					"Drag-drop of local files isn't supported for remote workspaces yet",
+				);
+				return null;
+			}
 			const paths = files
 				.map((file) => window.webUtils.getPathForFile(file))
 				.filter(Boolean);

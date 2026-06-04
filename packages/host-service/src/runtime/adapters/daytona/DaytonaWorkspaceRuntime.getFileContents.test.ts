@@ -6,7 +6,9 @@ import { DaytonaWorkspaceRuntime, type RuntimeSandbox } from "./index.ts";
  * records every command run, so the test asserts BOTH the exact git invocations
  * `getFileContents` issues and how their output maps into the per-file result.
  */
-function stubSandbox(responses: Record<string, { result: string; exitCode?: number }>): {
+function stubSandbox(
+	responses: Record<string, { result: string; exitCode?: number }>,
+): {
 	sandbox: RuntimeSandbox;
 	commands: string[];
 } {
@@ -34,7 +36,11 @@ function runtimeFor(sandbox: RuntimeSandbox): DaytonaWorkspaceRuntime {
 		markDestroyed: () => {},
 		get: () => undefined,
 	};
-	return new DaytonaWorkspaceRuntime(sandbox, { store, now: () => 1 }, "workspace");
+	return new DaytonaWorkspaceRuntime(
+		sandbox,
+		{ store, now: () => 1 },
+		"workspace",
+	);
 }
 
 describe("DaytonaWorkspaceRuntime.getFileContents", () => {

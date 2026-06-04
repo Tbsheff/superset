@@ -16,6 +16,7 @@ import { PathActions } from "../PathActions";
 interface FileMenuItemsProps {
 	absolutePath: string;
 	relativePath: string;
+	workspaceId: string;
 	onOpen: () => void;
 	onOpenInNewTab: () => void;
 	onOpenInEditor: () => void;
@@ -26,6 +27,7 @@ interface FileMenuItemsProps {
 export function FileMenuItems({
 	absolutePath,
 	relativePath,
+	workspaceId,
 	onOpen,
 	onOpenInNewTab,
 	onOpenInEditor,
@@ -60,7 +62,11 @@ export function FileMenuItems({
 				)}
 			</DropdownMenuItem>
 			<DropdownMenuSeparator />
-			<PathActions absolutePath={absolutePath} relativePath={relativePath} />
+			<PathActions
+				absolutePath={absolutePath}
+				relativePath={relativePath}
+				workspaceId={workspaceId}
+			/>
 			<DropdownMenuSeparator />
 			<DropdownMenuItem onSelect={() => setTimeout(onRename, 0)}>
 				<Pencil />

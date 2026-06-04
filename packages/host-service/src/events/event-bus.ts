@@ -68,7 +68,14 @@ export class EventBus {
 	private readonly gitWatcher: GitWatcher;
 	private readonly filesystem: WorkspaceFilesystemManager;
 	private removeGitListener: (() => void) | null = null;
+	private removeFsListener: (() => void) | null = null;
 	private removePortListeners: (() => void) | null = null;
+	/**
+	 * How many connected clients are watching each workspace's fs. Drives the
+	 * remote poller's observe/unobserve so a sandbox is polled only while at
+	 * least one client cares, and stops the instant the last watcher drops.
+	 */
+	private readonly fsWatchRefcounts = new Map<string, number>();
 
 	constructor(options: EventBusOptions) {
 		this.filesystem = options.filesystem;
@@ -83,6 +90,18 @@ export class EventBus {
 				type: "git:changed",
 				workspaceId: event.workspaceId,
 				...(event.paths !== undefined ? { paths: event.paths } : {}),
+			});
+		});
+
+		// Remote fs liveness: the poller can't produce precise per-path events, so
+		// it signals a coarse change and we broadcast an `overflow` event. Both
+		// renderer fs consumers treat `overflow` as a full-tree refresh regardless
+		// of path, so the synthetic `absolutePath` only needs to be non-empty.
+		this.removeFsListener = this.gitWatcher.onFsChanged((event) => {
+			this.broadcast({
+				type: "fs:events",
+				workspaceId: event.workspaceId,
+				events: [{ kind: "overflow", absolutePath: event.workspaceId }],
 			});
 		});
 
@@ -103,12 +122,15 @@ export class EventBus {
 	close(): void {
 		this.removeGitListener?.();
 		this.removeGitListener = null;
+		this.removeFsListener?.();
+		this.removeFsListener = null;
 		this.removePortListeners?.();
 		this.removePortListeners = null;
 		for (const [socket, state] of this.clients) {
 			this.cleanupClient(socket, state);
 		}
 		this.clients.clear();
+		this.fsWatchRefcounts.clear();
 	}
 
 	handleOpen(socket: WsSocket): void {
@@ -267,6 +289,7 @@ export class EventBus {
 		};
 
 		state.fsSubscriptions.set(workspaceId, { workspaceId, dispose });
+		this.retainFsWatch(workspaceId);
 
 		// Start streaming events to this client
 		void (async () => {
@@ -303,14 +326,37 @@ export class EventBus {
 		if (sub) {
 			sub.dispose();
 			state.fsSubscriptions.delete(workspaceId);
+			this.releaseFsWatch(workspaceId);
 		}
 	}
 
 	private cleanupClient(_socket: WsSocket, state: ClientState): void {
 		for (const sub of state.fsSubscriptions.values()) {
 			sub.dispose();
+			this.releaseFsWatch(sub.workspaceId);
 		}
 		state.fsSubscriptions.clear();
+	}
+
+	/**
+	 * Mark one more client watching `workspaceId`'s fs. The first watcher starts
+	 * the remote poll (no-op for local/unknown workspaces inside `observeRemote`).
+	 */
+	private retainFsWatch(workspaceId: string): void {
+		const next = (this.fsWatchRefcounts.get(workspaceId) ?? 0) + 1;
+		this.fsWatchRefcounts.set(workspaceId, next);
+		if (next === 1) this.gitWatcher.observeRemote(workspaceId);
+	}
+
+	/** Drop one watcher; the poll stops when the count reaches zero. */
+	private releaseFsWatch(workspaceId: string): void {
+		const current = this.fsWatchRefcounts.get(workspaceId) ?? 0;
+		if (current <= 1) {
+			this.fsWatchRefcounts.delete(workspaceId);
+			this.gitWatcher.unobserveRemote(workspaceId);
+			return;
+		}
+		this.fsWatchRefcounts.set(workspaceId, current - 1);
 	}
 }
 

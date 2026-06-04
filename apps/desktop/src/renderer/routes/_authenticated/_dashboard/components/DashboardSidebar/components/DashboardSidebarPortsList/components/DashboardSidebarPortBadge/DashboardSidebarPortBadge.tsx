@@ -1,13 +1,36 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { cn } from "@superset/ui/utils";
 import { useNavigate } from "@tanstack/react-router";
-import type { MouseEvent } from "react";
+import { type MouseEvent, useState } from "react";
 import { LuExternalLink, LuLoaderCircle, LuX } from "react-icons/lu";
 import { electronTrpc } from "renderer/lib/electron-trpc";
+import { getHostServiceClientByUrl } from "renderer/lib/host-service-client";
 import { navigateToV2Workspace } from "renderer/routes/_authenticated/_dashboard/utils/workspace-navigation";
 import { STROKE_WIDTH } from "renderer/screens/main/components/WorkspaceSidebar/constants";
 import { useDashboardSidebarPortKill } from "../../hooks/useDashboardSidebarPortKill";
 import type { DashboardSidebarPort } from "../../hooks/useDashboardSidebarPortsData";
+
+/**
+ * Resolves the URL to open for a port. A remote workspace's dev server isn't on
+ * the host network, so the host-service `exposePreview` mints a tokenized origin
+ * for it; local workspaces resolve to `http://localhost:port`. Falls back to
+ * localhost if the host URL or procedure is unavailable.
+ */
+async function resolvePreviewUrl(port: DashboardSidebarPort): Promise<string> {
+	const fallback = `http://localhost:${port.port}`;
+	if (!port.hostUrl) return fallback;
+	try {
+		const result = await getHostServiceClientByUrl(
+			port.hostUrl,
+		).ports.exposePreview.mutate({
+			workspaceId: port.workspaceId,
+			port: port.port,
+		});
+		return result.url || fallback;
+	} catch {
+		return fallback;
+	}
+}
 
 interface DashboardSidebarPortBadgeProps {
 	port: DashboardSidebarPort;
@@ -19,7 +42,9 @@ export function DashboardSidebarPortBadge({
 	const navigate = useNavigate();
 	const openUrl = electronTrpc.external.openUrl.useMutation();
 	const { isPending, killPort } = useDashboardSidebarPortKill();
-	const canOpenInBrowser = port.hostType === "local-device";
+	const [isResolvingPreview, setIsResolvingPreview] = useState(false);
+	const canOpenInBrowser =
+		port.hostType === "local-device" || Boolean(port.hostUrl);
 	const hostLabel =
 		port.hostType === "local-device" ? "Local device" : "Remote host";
 
@@ -33,25 +58,31 @@ export function DashboardSidebarPortBadge({
 	};
 
 	const handleOpenInBrowser = (event: MouseEvent<HTMLButtonElement>) => {
-		if (!canOpenInBrowser) return;
+		if (!canOpenInBrowser || isResolvingPreview) return;
 
 		// Hardcoded modifier rule — this is an explicit "open in browser"
 		// affordance, not a configurable file row, so it shouldn't pick up
 		// whatever the user mapped sidebar files to.
-		const url = `http://localhost:${port.port}`;
-		if (event.metaKey || event.ctrlKey) {
-			if (openUrl.isPending) return;
-			openUrl.mutate(url);
-			return;
-		}
+		const openInSystemBrowser = event.metaKey || event.ctrlKey;
+		const openUrlTarget = event.shiftKey ? "new-tab" : "current-tab";
+		if (openInSystemBrowser && openUrl.isPending) return;
 
-		void navigateToV2Workspace(port.workspaceId, navigate, {
-			search: {
-				openUrl: url,
-				openUrlTarget: event.shiftKey ? "new-tab" : "current-tab",
-				openUrlRequestId: crypto.randomUUID(),
-			},
-		});
+		setIsResolvingPreview(true);
+		void resolvePreviewUrl(port)
+			.then((url) => {
+				if (openInSystemBrowser) {
+					openUrl.mutate(url);
+					return;
+				}
+				return navigateToV2Workspace(port.workspaceId, navigate, {
+					search: {
+						openUrl: url,
+						openUrlTarget,
+						openUrlRequestId: crypto.randomUUID(),
+					},
+				});
+			})
+			.finally(() => setIsResolvingPreview(false));
 	};
 
 	const handleClose = () => {
@@ -91,11 +122,22 @@ export function DashboardSidebarPortBadge({
 						<button
 							type="button"
 							onClick={handleOpenInBrowser}
-							disabled={openUrl.isPending}
+							disabled={openUrl.isPending || isResolvingPreview}
+							aria-busy={isResolvingPreview}
 							aria-label={`Open ${port.label || `port ${port.port}`} in browser`}
 							className="text-muted-foreground opacity-0 transition-opacity hover:text-primary focus-visible:opacity-100 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 group-hover:opacity-100"
 						>
-							<LuExternalLink className="size-3.5" strokeWidth={STROKE_WIDTH} />
+							{isResolvingPreview ? (
+								<LuLoaderCircle
+									className="size-3.5 animate-spin"
+									strokeWidth={STROKE_WIDTH}
+								/>
+							) : (
+								<LuExternalLink
+									className="size-3.5"
+									strokeWidth={STROKE_WIDTH}
+								/>
+							)}
 						</button>
 					)}
 					<button

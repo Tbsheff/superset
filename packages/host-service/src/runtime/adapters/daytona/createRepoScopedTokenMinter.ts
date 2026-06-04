@@ -13,7 +13,9 @@ interface ScopedTokenWireResponse {
 	expiresAt: number;
 }
 
-function isScopedTokenResponse(value: unknown): value is ScopedTokenWireResponse {
+function isScopedTokenResponse(
+	value: unknown,
+): value is ScopedTokenWireResponse {
 	if (!value || typeof value !== "object") return false;
 	const v = value as Record<string, unknown>;
 	return typeof v.token === "string" && typeof v.expiresAt === "number";

@@ -428,6 +428,18 @@ export function sendDispose(transport: TerminalTransport) {
 	}
 }
 
+/**
+ * Terminate a remote (Daytona) PTY over its existing socket. The runtime PTY
+ * endpoint owns the sandbox shell, so killing it routes through `{type:"kill"}`
+ * on this socket rather than the daemon `terminal.killSession` mutation (which
+ * only knows about local worktree sessions).
+ */
+export function sendKill(transport: TerminalTransport) {
+	if (transport.socket?.readyState === WebSocket.OPEN) {
+		transport.socket.send(JSON.stringify({ type: "kill" }));
+	}
+}
+
 export function disposeTransport(transport: TerminalTransport) {
 	cancelReconnect(transport);
 	if (transport.socket) {

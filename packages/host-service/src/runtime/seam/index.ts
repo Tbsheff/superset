@@ -32,6 +32,7 @@ export type {
 	RuntimeFsApi,
 	RuntimeFsMatch,
 	RuntimeHandleFor,
+	RuntimePortInfo,
 	RuntimeRole,
 	ShellHandle,
 	StartShellOptions,

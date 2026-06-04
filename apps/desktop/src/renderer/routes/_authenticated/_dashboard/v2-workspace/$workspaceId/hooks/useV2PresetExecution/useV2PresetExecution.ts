@@ -9,6 +9,7 @@ import {
 	buildTerminalCommand,
 	normalizeTerminalCommand,
 } from "renderer/lib/terminal/launch-command";
+import { terminalRuntimeRegistry } from "renderer/lib/terminal/terminal-runtime-registry";
 import { useWorkspace } from "renderer/routes/_authenticated/_dashboard/v2-workspace/providers/WorkspaceProvider";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 import type { V2TerminalPresetRow } from "renderer/routes/_authenticated/providers/CollectionsProvider/dashboardSidebarLocal";
@@ -110,6 +111,7 @@ export function useV2PresetExecution({
 	const { workspace } = useWorkspace();
 	const workspaceId = workspace.id;
 	const projectId = workspace.projectId;
+	const isRemoteRuntime = workspace.runtimeKind === "remote";
 	const collections = useCollections();
 	const workspaceQuery = workspaceTrpc.workspace.get.useQuery(
 		{ id: workspaceId },
@@ -200,17 +202,29 @@ export function useV2PresetExecution({
 					case "active-terminal": {
 						const command = launchCommands[0];
 						if (!activeTerminal || !command) break;
-						await writeInput.mutateAsync({
-							terminalId: activeTerminal.terminalId,
-							workspaceId,
-							data: normalizeTerminalCommand(
-								buildFocusedTerminalCommand({
-									command,
-									cwd,
-									worktreePath: workspaceQuery.data?.worktreePath,
-								}),
-							),
-						});
+						const sequentialInput = normalizeTerminalCommand(
+							buildFocusedTerminalCommand({
+								command,
+								cwd,
+								worktreePath: workspaceQuery.data?.worktreePath,
+							}),
+						);
+						if (isRemoteRuntime) {
+							// The active pane's shell lives in the sandbox (no daemon
+							// session), so feed the sequential command through that pane's
+							// runtime PTY socket, addressed by its paneId.
+							terminalRuntimeRegistry.writeInput(
+								activeTerminal.terminalId,
+								sequentialInput,
+								activeTerminal.paneId,
+							);
+						} else {
+							await writeInput.mutateAsync({
+								terminalId: activeTerminal.terminalId,
+								workspaceId,
+								data: sequentialInput,
+							});
+						}
 						if (title && !activeTerminal.titleOverride?.trim()) {
 							// Reused terminals keep their existing pane, so apply the
 							// first preset label explicitly instead of relying on creation
@@ -300,6 +314,7 @@ export function useV2PresetExecution({
 			}
 		},
 		[
+			isRemoteRuntime,
 			store,
 			launcher,
 			resolvePresetCommands,

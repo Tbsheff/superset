@@ -1,8 +1,10 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { cn } from "@superset/ui/utils";
 import { useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { LuExternalLink, LuLoaderCircle, LuX } from "react-icons/lu";
 import { electronTrpc } from "renderer/lib/electron-trpc";
+import { getHostServiceClientByUrl } from "renderer/lib/host-service-client";
 import { navigateToWorkspace } from "renderer/routes/_authenticated/_dashboard/utils/workspace-navigation";
 import { useTabsStore } from "renderer/stores/tabs/store";
 import type { EnrichedPort } from "shared/types";
@@ -13,6 +15,28 @@ interface MergedPortBadgeProps {
 	port: EnrichedPort;
 }
 
+/**
+ * Resolves the URL to open for a port. A port with a `hostUrl` is served by a
+ * host-service runtime that may be remote (its dev server isn't on localhost),
+ * so `exposePreview` mints the correct origin; ports without one are local and
+ * resolve to `http://localhost:port`. Falls back to localhost on any failure.
+ */
+async function resolvePreviewUrl(port: EnrichedPort): Promise<string> {
+	const fallback = `http://localhost:${port.port}`;
+	if (!port.hostUrl) return fallback;
+	try {
+		const result = await getHostServiceClientByUrl(
+			port.hostUrl,
+		).ports.exposePreview.mutate({
+			workspaceId: port.workspaceId,
+			port: port.port,
+		});
+		return result.url || fallback;
+	} catch {
+		return fallback;
+	}
+}
+
 export function MergedPortBadge({ port }: MergedPortBadgeProps) {
 	const navigate = useNavigate();
 	const openInBrowserPane = useTabsStore((s) => s.openInBrowserPane);
@@ -20,22 +44,26 @@ export function MergedPortBadge({ port }: MergedPortBadgeProps) {
 		electronTrpc.settings.getOpenLinksInApp.useQuery();
 	const openUrl = electronTrpc.external.openUrl.useMutation();
 	const { isPending, killPort } = useKillPort();
+	const [isResolvingPreview, setIsResolvingPreview] = useState(false);
 
 	const handleClick = () => {
 		navigateToWorkspace(port.workspaceId, navigate);
 	};
 
 	const handleOpenInBrowser = () => {
-		if (openUrl.isPending) return;
-		const url = `http://localhost:${port.port}`;
+		if (openUrl.isPending || isResolvingPreview) return;
 
-		if (openLinksInApp) {
-			navigateToWorkspace(port.workspaceId, navigate);
-			openInBrowserPane(port.workspaceId, url);
-			return;
-		}
-
-		openUrl.mutate(url);
+		setIsResolvingPreview(true);
+		void resolvePreviewUrl(port)
+			.then((url) => {
+				if (openLinksInApp) {
+					navigateToWorkspace(port.workspaceId, navigate);
+					openInBrowserPane(port.workspaceId, url);
+					return;
+				}
+				openUrl.mutate(url);
+			})
+			.finally(() => setIsResolvingPreview(false));
 	};
 
 	const handleClose = () => {
@@ -74,11 +102,19 @@ export function MergedPortBadge({ port }: MergedPortBadgeProps) {
 					<button
 						type="button"
 						onClick={handleOpenInBrowser}
-						disabled={openUrl.isPending}
+						disabled={openUrl.isPending || isResolvingPreview}
+						aria-busy={isResolvingPreview}
 						aria-label={`Open ${port.label || `port ${port.port}`} in browser`}
 						className="text-muted-foreground opacity-0 transition-opacity hover:text-primary focus-visible:opacity-100 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 group-hover:opacity-100"
 					>
-						<LuExternalLink className="size-3.5" strokeWidth={STROKE_WIDTH} />
+						{isResolvingPreview ? (
+							<LuLoaderCircle
+								className="size-3.5 animate-spin"
+								strokeWidth={STROKE_WIDTH}
+							/>
+						) : (
+							<LuExternalLink className="size-3.5" strokeWidth={STROKE_WIDTH} />
+						)}
 					</button>
 					<button
 						type="button"

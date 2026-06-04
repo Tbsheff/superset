@@ -11,13 +11,15 @@ function captureRequest(): {
 	fetchImpl: typeof fetch;
 } {
 	const calls: Array<{ url: string; init: RequestInit | undefined }> = [];
-	const fetchImpl = mock(async (input: string | URL | Request, init?: RequestInit) => {
-		calls.push({ url: String(input), init });
-		return Response.json({
-			token: SCOPED_TOKEN,
-			expiresAt: 1_700_000_000_000,
-		});
-	}) as unknown as typeof fetch;
+	const fetchImpl = mock(
+		async (input: string | URL | Request, init?: RequestInit) => {
+			calls.push({ url: String(input), init });
+			return Response.json({
+				token: SCOPED_TOKEN,
+				expiresAt: 1_700_000_000_000,
+			});
+		},
+	) as unknown as typeof fetch;
 	return { calls, fetchImpl };
 }
 
@@ -108,10 +110,9 @@ describe("createRepoScopedTokenMinter", () => {
 		// not surface it in the error. Assert the secret never appears.
 		const fetchImpl = mock(
 			async () =>
-				new Response(
-					JSON.stringify({ token: SCOPED_TOKEN, expiresAt: 1 }),
-					{ status: 500 },
-				),
+				new Response(JSON.stringify({ token: SCOPED_TOKEN, expiresAt: 1 }), {
+					status: 500,
+				}),
 		) as unknown as typeof fetch;
 		const minter = makeMinter(fetchImpl);
 
@@ -135,10 +136,9 @@ describe("createRepoScopedTokenMinter", () => {
 			info: console.info,
 			debug: console.debug,
 		};
-		const capture =
-			(...args: unknown[]) => {
-				logged.push(args.map(String).join(" "));
-			};
+		const capture = (...args: unknown[]) => {
+			logged.push(args.map(String).join(" "));
+		};
 		console.log = capture;
 		console.error = capture;
 		console.warn = capture;

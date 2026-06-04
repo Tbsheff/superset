@@ -72,7 +72,8 @@ describe.skipIf(!RUN)("daytona agent e2e (real API)", () => {
 			DAYTONA_API_URL: process.env.DAYTONA_API_URL,
 			DAYTONA_TARGET: process.env.DAYTONA_TARGET,
 		});
-		if (!sdk) throw new Error("createDaytonaSdk returned undefined despite creds");
+		if (!sdk)
+			throw new Error("createDaytonaSdk returned undefined despite creds");
 
 		const mintRepoScopedToken: TokenMinter = async () => ({
 			token: "",

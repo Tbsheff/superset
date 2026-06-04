@@ -1,11 +1,13 @@
 import type { BranchPrefixMode } from "@superset/shared/workspace-launch";
 import {
+	type AnySQLiteColumn,
 	index,
 	integer,
 	sqliteTable,
 	text,
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
+import type { NormalizedRuntimeStatus, RuntimeMetadata } from "./types/index.ts";
 
 export const terminalSessions = sqliteTable(
 	"terminal_sessions",
@@ -16,6 +18,10 @@ export const terminalSessions = sqliteTable(
 			{ onDelete: "set null" },
 		),
 		status: text().notNull().default("active"),
+		runtimeInstanceId: text("runtime_instance_id").references(
+			(): AnySQLiteColumn => runtimeInstances.id,
+			{ onDelete: "set null" },
+		),
 		createdAt: integer("created_at")
 			.notNull()
 			.$defaultFn(() => Date.now()),
@@ -151,6 +157,11 @@ export const workspaces = sqliteTable(
 		pullRequestId: text("pull_request_id").references(() => pullRequests.id, {
 			onDelete: "set null",
 		}),
+		runtimeKind: text("runtime_kind").notNull().default("local"),
+		currentRuntimeId: text("current_runtime_id").references(
+			(): AnySQLiteColumn => runtimeInstances.id,
+			{ onDelete: "set null" },
+		),
 		createdAt: integer("created_at")
 			.notNull()
 			.$defaultFn(() => Date.now()),
@@ -163,5 +174,34 @@ export const workspaces = sqliteTable(
 			table.upstreamBranch,
 		),
 		index("workspaces_pull_request_id_idx").on(table.pullRequestId),
+	],
+);
+
+export const runtimeInstances = sqliteTable(
+	"runtime_instances",
+	{
+		id: text().primaryKey(),
+		workspaceId: text("workspace_id")
+			.notNull()
+			.references(() => workspaces.id, { onDelete: "cascade" }),
+		provider: text().notNull(),
+		role: text().notNull().default("workspace"),
+		externalId: text("external_id"),
+		status: text().notNull().$type<NormalizedRuntimeStatus>(),
+		previewUrl: text("preview_url"),
+		lastActivityAt: integer("last_activity_at"),
+		ttlExpiresAt: integer("ttl_expires_at"),
+		metadataJson: text("metadata_json")
+			.notNull()
+			.default("{}")
+			.$type<RuntimeMetadata>(),
+		createdAt: integer("created_at")
+			.notNull()
+			.$defaultFn(() => Date.now()),
+		destroyedAt: integer("destroyed_at"),
+		failureReason: text("failure_reason"),
+	},
+	(table) => [
+		index("runtime_instances_workspace_id_idx").on(table.workspaceId),
 	],
 );

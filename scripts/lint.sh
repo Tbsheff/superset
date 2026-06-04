@@ -14,5 +14,6 @@ fi
 ./scripts/check-desktop-git-env.sh
 ./scripts/check-git-ref-strings.sh
 bash ./scripts/check-simple-git-usage.sh
+bash ./scripts/check-runtime-capability.sh
 
 exit $exit_code

@@ -9,9 +9,14 @@ import {
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { SimpleGit } from "simple-git";
-import { resolveUpstream } from "../../../../runtime/git/refs";
+import {
+	getDefaultBranchName,
+	resolveBaseComparison,
+} from "../../../../runtime/git/refs";
 import { createUserSimpleGit } from "../../../../runtime/git/simple-git";
 import type { Branch, ChangedFile, FileStatus } from "../types";
+
+export { getDefaultBranchName, resolveBaseComparison };
 
 // Skip line counting for files larger than this — anything over a MB
 // of "source" is almost certainly a data file or accidental binary,
@@ -125,45 +130,6 @@ export function parseNameStatus(
 		}
 	}
 	return results;
-}
-
-export async function getDefaultBranchName(
-	git: SimpleGit,
-): Promise<string | null> {
-	try {
-		const ref = await git.raw([
-			"symbolic-ref",
-			"refs/remotes/origin/HEAD",
-			"--short",
-		]);
-		return ref.trim().replace(/^origin\//, "");
-	} catch {
-		return null;
-	}
-}
-
-/**
- * Resolve the base comparison for "this branch vs its upstream default"
- * views. Honors the local default branch's configured upstream
- * (e.g. `upstream/main`) before falling back to `origin/<name>`. Returns
- * null when no default branch can be determined.
- */
-export async function resolveBaseComparison(
-	git: SimpleGit,
-	explicitBranch?: string,
-): Promise<{ branchName: string; baseRef: string } | null> {
-	const branchName = explicitBranch ?? (await getDefaultBranchName(git));
-	if (!branchName) return null;
-	const upstream = await resolveUpstream(git, branchName);
-	// Git encodes a branch tracking another local branch as
-	// `branch.<name>.remote = .` — in that case the merge target is
-	// already a bare branch name in this repo, not `./<name>`.
-	const baseRef = upstream
-		? upstream.remote === "."
-			? upstream.remoteBranch
-			: `${upstream.remote}/${upstream.remoteBranch}`
-		: `origin/${branchName}`;
-	return { branchName, baseRef };
 }
 
 export async function buildBranch(

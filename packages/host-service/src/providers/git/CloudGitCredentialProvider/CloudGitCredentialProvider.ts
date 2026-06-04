@@ -1,6 +1,7 @@
 import { unlink } from "node:fs/promises";
 import type { GitCredentialProvider } from "../../../runtime/git/types";
 import { writeTempAskpass } from "./askpass";
+import { repoCacheKey } from "./repoCacheKey";
 
 interface CachedCredential {
 	expiresAt: number;
@@ -11,7 +12,7 @@ export class CloudGitCredentialProvider implements GitCredentialProvider {
 	private tokenFetcher: (
 		remoteUrl: string,
 	) => Promise<{ token: string; expiresAt: number }>;
-	private cachedCredential: CachedCredential | null = null;
+	private cachedCredentials = new Map<string, CachedCredential>();
 	private cachedToken: { token: string; expiresAt: number } | null = null;
 
 	constructor(
@@ -29,23 +30,26 @@ export class CloudGitCredentialProvider implements GitCredentialProvider {
 			return { env: { GIT_TERMINAL_PROMPT: "0" } };
 		}
 
-		if (this.cachedCredential && this.cachedCredential.expiresAt > Date.now()) {
+		const cacheKey = repoCacheKey(remoteUrl);
+		const cached = this.cachedCredentials.get(cacheKey);
+
+		if (cached && cached.expiresAt > Date.now()) {
 			return {
 				env: {
-					GIT_ASKPASS: this.cachedCredential.askpassPath,
+					GIT_ASKPASS: cached.askpassPath,
 					GIT_TERMINAL_PROMPT: "0",
 				},
 			};
 		}
 
-		if (this.cachedCredential?.askpassPath) {
-			unlink(this.cachedCredential.askpassPath).catch(() => {});
+		if (cached?.askpassPath) {
+			unlink(cached.askpassPath).catch(() => {});
 		}
 
 		const { token, expiresAt } = await this.tokenFetcher(remoteUrl);
 		const askpassPath = await writeTempAskpass(token);
 
-		this.cachedCredential = { expiresAt, askpassPath };
+		this.cachedCredentials.set(cacheKey, { expiresAt, askpassPath });
 
 		return {
 			env: {

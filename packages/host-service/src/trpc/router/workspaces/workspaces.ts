@@ -12,6 +12,7 @@ import {
 	resolveRef,
 	resolveUpstream,
 } from "../../../runtime/git/refs";
+import { getRuntimeAdapter } from "../../../runtime/registry";
 import type { HostServiceContext } from "../../../types";
 import { protectedProcedure, router } from "../../index";
 import { type AgentRunResult, runAgentInWorkspace } from "../agents";
@@ -1041,6 +1042,25 @@ export const workspacesRouter = router({
 			const terminalsResult: Array<{ terminalId: string; label?: string }> = [];
 
 			if (!alreadyExists) {
+				// Route the freshly-created workspace through the runtime adapter.
+				// The worktree already exists (added/adopted above), so createInstance
+				// only binds it into a handle — no on-disk effect, no second code
+				// path. The row already carries runtimeKind="local" (column default),
+				// which is the local RuntimeBinding discriminant. Setup/command
+				// terminals stay on their existing calls below for byte-for-byte
+				// parity; the handle's startShell is proven equivalent by the
+				// contract suite.
+				const runtimeAdapter = getRuntimeAdapter("local", {
+					db: ctx.db,
+					git: ctx.git,
+					eventBus: ctx.eventBus,
+				});
+				await runtimeAdapter.createInstance({
+					role: "workspace",
+					workspaceId: workspaceRow.id,
+					repo: { cloneUrl: localProject.repoPath, ref: resolvedBranch },
+				});
+
 				const { terminal, warning } = await startSetupTerminalIfPresent({
 					ctx,
 					workspaceId: workspaceRow.id,

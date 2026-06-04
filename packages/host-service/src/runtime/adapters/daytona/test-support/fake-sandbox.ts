@@ -1,0 +1,235 @@
+import type { PtyHandle } from "@daytonaio/sdk";
+import {
+	applyShellCommand,
+	InMemoryFs,
+} from "../../fakeWorkspaceCore/index.ts";
+import type { DaytonaInstanceStore, RuntimeInstanceRecord } from "../types.ts";
+
+/**
+ * Deterministic in-memory model of one Daytona sandbox, enough to drive the
+ * adapter unit tests and the descriptor-driven contract suite WITHOUT a network.
+ * It interprets the contract WRITE/STAGE/RM grammar through `process.createPty`
+ * and reflects the resulting FS state through `process.executeCommand` for the
+ * `git status`/`git diff` surfaces the adapter's `getDiff` runs.
+ */
+export class FakeSandbox {
+	state: string;
+	readonly id: string;
+	readonly target = "us";
+	readonly fsModel = new InMemoryFs();
+	recoverable?: boolean;
+	errorReason?: string;
+
+	readonly calls = {
+		refreshActivity: 0,
+		refreshData: 0,
+		createPty: [] as string[],
+		executeCommand: [] as string[],
+		clone: [] as Array<{
+			url: string;
+			path: string;
+			branch?: string;
+			username?: string;
+			password?: string;
+		}>,
+		updateNetworkSettings: [] as Array<{
+			networkBlockAll?: boolean;
+			networkAllowList?: string;
+		}>,
+		killedPtys: [] as string[],
+		started: 0,
+		deleted: 0,
+	};
+
+	/** When set, the next updateNetworkSettings rejects (tier-gating). */
+	tierGated = false;
+
+	constructor(id: string, state = "started") {
+		this.id = id;
+		this.state = state;
+	}
+
+	readonly git = {
+		clone: async (
+			url: string,
+			path: string,
+			branch?: string,
+			_commitId?: string,
+			username?: string,
+			password?: string,
+		): Promise<void> => {
+			this.calls.clone.push({ url, path, branch, username, password });
+		},
+	};
+
+	readonly fs = {
+		downloadFile: async (_remotePath: string): Promise<Buffer> =>
+			Buffer.from("PATCH-BYTES"),
+	};
+
+	readonly process = {
+		createPty: async (
+			options: {
+				id: string;
+				onData: (data: Uint8Array) => void | Promise<void>;
+			} & Record<string, unknown>,
+		): Promise<PtyHandle> => {
+			this.calls.createPty.push(options.id);
+			const fsModel = this.fsModel;
+			const killed = this.calls.killedPtys;
+			const encoder = new TextEncoder();
+			const handle = {
+				sessionId: options.id,
+				exitCode: undefined as number | undefined,
+				error: undefined as string | undefined,
+				isConnected: () => true,
+				waitForConnection: async () => {},
+				sendInput: async (data: string | Uint8Array) => {
+					const text =
+						typeof data === "string" ? data : new TextDecoder().decode(data);
+					const out = applyShellCommand(fsModel, text);
+					await options.onData(encoder.encode(out));
+				},
+				resize: async () => ({}) as never,
+				disconnect: async () => {},
+				wait: async () => ({ exitCode: 0 }),
+				kill: async () => {
+					killed.push(options.id);
+				},
+			};
+			return handle as unknown as PtyHandle;
+		},
+		connectPty: async (
+			sessionId: string,
+			options: { onData: (data: Uint8Array) => void | Promise<void> },
+		): Promise<PtyHandle> => {
+			return this.process.createPty({ id: sessionId, ...options });
+		},
+		executeCommand: async (command: string, _cwd?: string) => {
+			this.calls.executeCommand.push(command);
+			if (command.includes("git status --porcelain")) {
+				// Real `git status` reports a file with EITHER staged OR unstaged
+				// changes, so the path stays visible after `git add`. The InMemoryFs
+				// renders only one axis at a time, so union both for porcelain.
+				const unstaged = this.fsModel.diff(false).statusPorcelain;
+				const staged = this.fsModel.diff(true).statusPorcelain;
+				const lines = new Set<string>();
+				for (const block of [unstaged, staged]) {
+					for (const line of block.split("\n")) {
+						if (line.trim().length > 0) lines.add(line.trim());
+					}
+				}
+				return { exitCode: 0, result: [...lines].join("\n") };
+			}
+			if (command.includes("git diff --cached")) {
+				return { exitCode: 0, result: this.fsModel.diff(true).unifiedPatch };
+			}
+			if (command.includes("git diff")) {
+				return { exitCode: 0, result: this.fsModel.diff(false).unifiedPatch };
+			}
+			return { exitCode: 0, result: "" };
+		},
+	};
+
+	async refreshActivity(): Promise<void> {
+		this.calls.refreshActivity += 1;
+	}
+
+	async refreshData(): Promise<void> {
+		this.calls.refreshData += 1;
+	}
+
+	async getPreviewLink(port: number) {
+		return {
+			sandboxId: this.id,
+			url: `https://${port}-${this.id}.proxy.daytona.test`,
+			token: `secret-preview-token-${port}`,
+		};
+	}
+
+	async updateNetworkSettings(settings: {
+		networkBlockAll?: boolean;
+		networkAllowList?: string;
+	}): Promise<void> {
+		if (this.tierGated) {
+			throw new Error("403: tier does not allow network policy");
+		}
+		this.calls.updateNetworkSettings.push(settings);
+	}
+
+	async start(): Promise<void> {
+		this.calls.started += 1;
+		this.state = "started";
+	}
+}
+
+/** A fake `DaytonaSdk` backed by a registry of `FakeSandbox` state machines. */
+export class FakeDaytonaSdk {
+	readonly sandboxes = new Map<string, FakeSandbox>();
+	private seq = 0;
+
+	readonly lastCreate: {
+		language?: string;
+		networkBlockAll?: boolean;
+		networkAllowList?: string;
+	} = {};
+
+	create = async (params?: {
+		language?: string;
+		networkBlockAll?: boolean;
+		networkAllowList?: string;
+	}) => {
+		const id = `sbx-${++this.seq}`;
+		const sandbox = new FakeSandbox(id, "started");
+		this.sandboxes.set(id, sandbox);
+		this.lastCreate.language = params?.language;
+		this.lastCreate.networkBlockAll = params?.networkBlockAll;
+		this.lastCreate.networkAllowList = params?.networkAllowList;
+		return sandbox as never;
+	};
+
+	get = async (id: string) => {
+		const sandbox = this.sandboxes.get(id);
+		if (!sandbox) throw new Error(`fake-sdk: unknown sandbox ${id}`);
+		return sandbox as never;
+	};
+
+	stop = async (sandbox: { id: string }) => {
+		const s = this.sandboxes.get(sandbox.id);
+		if (s) s.state = "stopped";
+	};
+
+	delete = async (sandbox: { id: string }, _timeout?: number) => {
+		const s = this.sandboxes.get(sandbox.id);
+		if (s) {
+			s.calls.deleted += 1;
+			s.state = "destroyed";
+		}
+	};
+}
+
+/** In-memory `DaytonaInstanceStore` capturing every write for assertions. */
+export class FakeInstanceStore implements DaytonaInstanceStore {
+	readonly records = new Map<string, RuntimeInstanceRecord>();
+
+	insert(record: RuntimeInstanceRecord): void {
+		if (record.externalId) this.records.set(record.externalId, { ...record });
+	}
+
+	setPreviewUrl(externalId: string, previewUrl: string): void {
+		const record = this.records.get(externalId);
+		if (record) record.previewUrl = previewUrl;
+	}
+
+	markDestroyed(externalId: string, destroyedAt: number): void {
+		const record = this.records.get(externalId);
+		if (record) {
+			record.destroyedAt = destroyedAt;
+			record.status = "stopped";
+		}
+	}
+
+	get(externalId: string): RuntimeInstanceRecord | undefined {
+		return this.records.get(externalId);
+	}
+}

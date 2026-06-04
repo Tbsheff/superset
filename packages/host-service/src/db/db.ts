@@ -23,7 +23,13 @@ export function createDb(dbPath: string, migrationsFolder: string) {
 	try {
 		migrate(db, { migrationsFolder });
 	} catch (error) {
-		console.error("[host-service:db] Migration failed:", error);
+		console.error(
+			`[host-service:db] FATAL: migration failed for ${dbPath} (migrations: ${migrationsFolder}). ` +
+				"Refusing to run on an un-migrated database.",
+			error,
+		);
+		sqlite.close(); // release the file/WAL handle before crashing
+		throw error;
 	}
 
 	return db;

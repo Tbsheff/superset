@@ -1,9 +1,15 @@
-import { readFile, rm } from "node:fs/promises";
+import { rm } from "node:fs/promises";
 import { isAbsolute, join, normalize, sep } from "node:path";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { pullRequests, workspaces } from "../../../db/schema";
+import { collectFileDiff } from "../../../runtime/git/diff-collector";
+import {
+	pushRemotePatch as pushRemotePatchHost,
+	type RepoLookup,
+} from "../../../runtime/git/push-remote-patch";
+import { isRuntimeProviderError } from "../../../runtime/seam";
 import { protectedProcedure, queryProcedure, router } from "../../index";
 import { resolveGithubRepo } from "../workspace-creation/shared/project-helpers";
 import type {
@@ -381,68 +387,14 @@ export const gitRouter = router({
 		.query(async ({ ctx, input }) => {
 			const worktreePath = resolveWorktreePath(ctx, input.workspaceId);
 			const git = await ctx.git(worktreePath);
-
-			let originalContent = "";
-			let modifiedContent = "";
-
-			if (input.category === "against-base") {
-				const base = await resolveBaseComparison(git, input.baseBranch);
-				const baseRef = base?.baseRef ?? "HEAD";
-				// Use the merge base so the diff excludes unrelated changes
-				// landed on the base branch after we forked — matches what the
-				// file list (3-dot diff) is already filtered by.
-				const originRef = await git
-					.raw(["merge-base", baseRef, "HEAD"])
-					.then((s) => s.trim())
-					.catch(() => baseRef);
-				try {
-					originalContent = await git.show([`${originRef}:${input.path}`]);
-				} catch {}
-				try {
-					modifiedContent = await git.show([`HEAD:${input.path}`]);
-				} catch {}
-			} else if (input.category === "staged") {
-				try {
-					originalContent = await git.show([`HEAD:${input.path}`]);
-				} catch {}
-				try {
-					modifiedContent = await git.show([`:0:${input.path}`]);
-				} catch {}
-			} else if (input.category === "commit") {
-				if (!input.commitHash) {
-					throw new TRPCError({
-						code: "BAD_REQUEST",
-						message: "commitHash is required for commit diffs",
-					});
-				}
-				const from = input.fromHash ?? `${input.commitHash}^`;
-				try {
-					originalContent = await git.show([`${from}:${input.path}`]);
-				} catch {}
-				try {
-					modifiedContent = await git.show([
-						`${input.commitHash}:${input.path}`,
-					]);
-				} catch {}
-			} else {
-				// Unstaged: compare index (staged version) against working tree
-				// If file isn't in index (untracked), originalContent stays empty = "new file"
-				try {
-					originalContent = await git.show([`:0:${input.path}`]);
-				} catch {}
-				try {
-					modifiedContent = await readFile(
-						`${worktreePath}/${input.path}`,
-						"utf-8",
-					);
-				} catch {}
-			}
-
-			const fileName = input.path.split("/").pop() ?? input.path;
-			return {
-				oldFile: { name: fileName, contents: originalContent },
-				newFile: { name: fileName, contents: modifiedContent },
-			};
+			return collectFileDiff(git, {
+				category: input.category,
+				path: input.path,
+				worktreePath,
+				baseBranch: input.baseBranch,
+				commitHash: input.commitHash,
+				fromHash: input.fromHash,
+			});
 		}),
 
 	getBranchSyncStatus: queryProcedure
@@ -712,5 +664,71 @@ export const gitRouter = router({
 			}
 
 			return { threadId: input.threadId, isResolved: input.resolved };
+		}),
+
+	/**
+	 * Host-side apply + push for a REMOTE (Daytona) workspace. The sandbox runs
+	 * with no broad token; it exports a working-tree patch (`exportPatch()`),
+	 * the renderer/main hands it here, and the host applies it into the real
+	 * worktree and pushes with a single-repo-scoped token that never enters the
+	 * sandbox. Includes a SAME-REPO / NON-FORK guard: a repo-scoped token can
+	 * only push to the one repo it owns, so a fork (or an unwritable repo) is
+	 * refused before any token is minted.
+	 */
+	pushRemotePatch: protectedProcedure
+		.input(
+			z.object({
+				workspaceId: z.string(),
+				/** Base64-encoded patch bytes from `exportPatch()` (binary-safe). */
+				patchBase64: z.string(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			if (!ctx.mintRepoScopedToken) {
+				throw new TRPCError({
+					code: "PRECONDITION_FAILED",
+					message:
+						"Remote-runtime push is not configured on this host (no scoped-token minter).",
+				});
+			}
+
+			const workspace = ctx.db.query.workspaces
+				.findFirst({ where: eq(workspaces.id, input.workspaceId) })
+				.sync();
+			if (!workspace?.worktreePath) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Workspace not found",
+				});
+			}
+
+			const repo = await resolveGithubRepo(ctx, workspace.projectId);
+
+			const patch = Buffer.from(input.patchBase64, "base64");
+
+			try {
+				const result = await pushRemotePatchHost(
+					{
+						git: ctx.git,
+						octokit: (await ctx.github()) as unknown as RepoLookup,
+						mintRepoScopedToken: ctx.mintRepoScopedToken,
+					},
+					{
+						worktreePath: workspace.worktreePath,
+						branch: workspace.branch,
+						repo: { owner: repo.owner, repo: repo.name },
+						patch,
+					},
+				);
+				return result;
+			} catch (error) {
+				if (isRuntimeProviderError(error) && error.code === "CROSS_REPO_PUSH") {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: error.message,
+					});
+				}
+				throw error;
+			}
 		}),
 });

@@ -20,6 +20,11 @@ export const env = createEnv({
 			.optional(),
 		PORT: z.coerce.number().int().positive().default(4879),
 		RELAY_URL: z.string().url().optional(),
+		// Daytona is optional so a host with no remote-runtime config still boots;
+		// the adapter throws a clear CONFIG_MISSING error only when selected.
+		DAYTONA_API_KEY: z.string().min(1).optional(),
+		DAYTONA_API_URL: z.string().url().optional(),
+		DAYTONA_TARGET: z.string().optional(),
 	},
 	runtimeEnv: process.env,
 	emptyStringAsUndefined: true,

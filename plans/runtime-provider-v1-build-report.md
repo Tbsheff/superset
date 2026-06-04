@@ -58,12 +58,21 @@ RUN_DAYTONA_INTEGRATION=1 DAYTONA_JWT_TOKEN=<cli accessToken> DAYTONA_ORGANIZATI
   bun test src/runtime/adapters/daytona/daytona.integration.test.ts
 ```
 
-## Still pending (production wiring, from the follow-up workflow's own blockers)
+## Done in the finishing pass
 
-The four follow-ups landed and unit-test green, but full in-app use still needs:
-- Wire the host-service `TokenMinter` to actually POST `apps/api` `/api/github/scoped-token` (the adapter consumes a stub in tests).
-- Wire the desktop `RemotePtyTransportFactory` / `WorkspaceRuntimeKindResolver` to the real host-service `DaytonaPtyTransport`.
-- Security review follow-ups: decide the token-mint authz boundary (any org member can currently mint a write token — medium), and the two low hardening items (askpass via env var, `repoCacheKey` userinfo strip).
+- **Token-mint authz tightened** to per-repo push access (`getCollaboratorPermissionLevel` via the caller's linked GitHub login), falling back to org membership when no GitHub account is linked. (Decision: hybrid two-gate; the fallback exists because GitHub is one of three sign-in methods.)
+- **Credential hardening**: askpass passes the token via process env (`GIT_ASKPASS_TOKEN`), never in the script body; `repoCacheKey` strips/rejects embedded userinfo.
+- **Production `TokenMinter`** calls `/api/github/scoped-token` and is wired into `createApp`'s `ctx.mintRepoScopedToken`.
+
+## The one real remaining gap (in-app remote terminals)
+
+Desktop transport wiring is **partial by necessity**: the host-service `DaytonaPtyTransport` runs in-process and is exposed by **no tRPC/WebSocket procedure**, so the desktop main cannot stream remote PTY bytes over the wire yet. The desktop scaffolding (`RemotePtyTransportFactory`, `setWorkspaceRemote` resolver) is in place but inert until:
+1. host-service adds a **PTY-over-wire streaming endpoint** for remote sandboxes, and
+2. something authoritative **calls `setWorkspaceRemote(workspaceId, orgId)`** to mark a workspace remote.
+
+Until then, the Daytona adapter is verified at the host-service layer (live public-repo slice) but remote workspaces don't render terminals in the desktop app.
+
+Not exercised live: the authz route (octokit mocked) and the `TokenMinter` HTTP path (fetch mocked); private-repo clone needs a real scoped token (GH App creds + running `apps/api`).
 
 ## Next steps
 

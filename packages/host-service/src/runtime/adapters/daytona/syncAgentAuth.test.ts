@@ -14,24 +14,24 @@ const CODEX_AUTH = JSON.stringify({
 const CLAUDE_CREDS = JSON.stringify({ claudeAiOauth: { accessToken: "tok" } });
 
 function makeFakeSandbox() {
-	const folders: Array<{ path: string; mode: string }> = [];
-	const uploads: Array<{ path: string; bytes: Buffer }> = [];
-	const perms: Array<{ path: string; mode?: string }> = [];
+	const commands: string[] = [];
 	const sandbox: SyncAgentAuthSandbox = {
-		fs: {
-			createFolder: async (path, mode) => {
-				folders.push({ path, mode });
-			},
-			uploadFile: async (file, remotePath) => {
-				uploads.push({ path: remotePath, bytes: file });
-			},
-			setFilePermissions: async (path, p) => {
-				perms.push({ path, mode: p.mode });
+		process: {
+			executeCommand: async (command: string) => {
+				commands.push(command);
+				return { exitCode: 0 };
 			},
 		},
-		process: { executeCommand: async () => ({}) },
 	};
-	return { sandbox, folders, uploads, perms };
+	return { sandbox, commands };
+}
+
+/** Decode the base64 payload the write command embeds for a given target path. */
+function writtenContent(commands: string[], targetPath: string): string | null {
+	const cmd = commands.find((c) => c.includes(`> '${targetPath}'`));
+	if (!cmd) return null;
+	const match = cmd.match(/printf '%s' '([A-Za-z0-9+/=]*)'/);
+	return match?.[1] ? Buffer.from(match[1], "base64").toString() : null;
 }
 
 describe("syncAgentAuthToSandbox", () => {
@@ -45,11 +45,11 @@ describe("syncAgentAuthToSandbox", () => {
 		await rm(home, { recursive: true, force: true });
 	});
 
-	test("uploads codex + claude creds and reports only filenames", async () => {
+	test("writes codex + claude creds and reports only filenames", async () => {
 		await mkdir(join(home, ".codex"), { recursive: true });
 		await writeFile(join(home, ".codex", "auth.json"), CODEX_AUTH);
 		await writeFile(join(home, ".codex", "config.json"), "{}");
-		const { sandbox, uploads } = makeFakeSandbox();
+		const { sandbox, commands } = makeFakeSandbox();
 
 		const result = await syncAgentAuthToSandbox(sandbox, {
 			homeDir: home,
@@ -62,9 +62,13 @@ describe("syncAgentAuthToSandbox", () => {
 		// No secret value ever appears in the returned object.
 		expect(JSON.stringify(result)).not.toContain("sk-secret-value");
 		expect(JSON.stringify(result)).not.toContain("tok");
-		// The actual bytes were uploaded.
-		const authUpload = uploads.find((u) => u.path === ".codex/auth.json");
-		expect(authUpload?.bytes.toString()).toBe(CODEX_AUTH);
+		// The actual bytes were written (base64-decoded from the exec command).
+		expect(writtenContent(commands, ".codex/auth.json")).toBe(CODEX_AUTH);
+		expect(writtenContent(commands, ".claude/.credentials.json")).toBe(
+			CLAUDE_CREDS,
+		);
+		// Secrets ride only inside the base64 payload, never in plaintext.
+		expect(commands.join("\n")).not.toContain("sk-secret-value");
 	});
 
 	test("skips codex when auth.json is absent, still syncs claude", async () => {
@@ -95,13 +99,9 @@ describe("syncAgentAuthToSandbox", () => {
 		await mkdir(join(home, ".codex"), { recursive: true });
 		await writeFile(join(home, ".codex", "auth.json"), CODEX_AUTH);
 		const sandbox: SyncAgentAuthSandbox = {
-			fs: {
-				createFolder: async () => {
-					throw new Error("fs down");
-				},
-				uploadFile: async () => {},
+			process: {
+				executeCommand: async () => ({ exitCode: 1, result: "fs down" }),
 			},
-			process: { executeCommand: async () => ({}) },
 		};
 		const result = await syncAgentAuthToSandbox(sandbox, {
 			homeDir: home,

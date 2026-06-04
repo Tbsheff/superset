@@ -28,6 +28,7 @@ import {
 } from "./egress.ts";
 import { mapDaytonaState } from "./status-map.ts";
 import type { DaytonaInstanceStore, Sandbox } from "./types.ts";
+import { writeSandboxFileViaExec } from "./writeSandboxFileViaExec.ts";
 
 /**
  * The `Sandbox` surface the runtime handle needs. A `Pick` keeps the unit-test
@@ -259,7 +260,15 @@ export class DaytonaWorkspaceRuntime implements WorkspaceRuntime {
 			listFiles: async (path) => (await fs.listFiles(path)).map(toFileInfo),
 			getFileDetails: async (path) => toFileInfo(await fs.getFileDetails(path)),
 			downloadFile: (path) => fs.downloadFile(path),
-			uploadFile: (content, path) => fs.uploadFile(content, path),
+			// Write via executeCommand+base64 instead of fs.uploadFile: the SDK's
+			// upload needs `form-data`, which the bundled host-service runtime can't
+			// resolve. Paths are home-relative, matching fs.uploadFile.
+			uploadFile: (content, path) =>
+				writeSandboxFileViaExec(
+					(command) => this.sandbox.process.executeCommand(command),
+					content,
+					path,
+				),
 			createFolder: (path, mode) => fs.createFolder(path, mode),
 			deleteFile: (path, recursive) => fs.deleteFile(path, recursive),
 			moveFiles: (source, destination) => fs.moveFiles(source, destination),

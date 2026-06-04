@@ -27,7 +27,22 @@ const WORKDIR = "workspace";
  * cloned and auth is synced. Bump this id to roll forward to a new snapshot.
  */
 const DEFAULT_DAYTONA_SNAPSHOT =
-	"terry-vCPU-4-RAM-8GB-2026-06-01-22-55-16-lbzyvi";
+	"terry-vCPU-4-RAM-8GB-2026-06-03-20-58-37-mdi1vf";
+
+/**
+ * Resolve the snapshot to provision from. `DAYTONA_SNAPSHOT` overrides the
+ * default (set it to a valid snapshot id from your Daytona account); set it to
+ * an empty string to provision a bare language image instead (no preinstalled
+ * agent CLIs). Returns null to mean "no snapshot — use the base image".
+ */
+function resolveSnapshotId(): string | null {
+	const override = process.env.DAYTONA_SNAPSHOT;
+	if (override !== undefined) {
+		const trimmed = override.trim();
+		return trimmed.length > 0 ? trimmed : null;
+	}
+	return DEFAULT_DAYTONA_SNAPSHOT;
+}
 
 /**
  * First remote `RuntimeAdapter`. Maps the seam's provider-neutral lifecycle onto
@@ -57,15 +72,25 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 		// a deferred opt-in (see egress.ts): Daytona egress is IPv4-CIDR-only and
 		// tier-gated, so it cannot express a GitHub hostname allowlist, and locking
 		// it down at create time breaks cloning.
-		const sandbox = await this.deps.sdk.create({
-			// Provision from the prebuilt snapshot (agent CLIs already installed)
-			// rather than a bare language image so remote agents are runnable.
-			snapshot: DEFAULT_DAYTONA_SNAPSHOT,
-			language: CodeLanguage.TYPESCRIPT, // never default to python
-			envVars: plan.env ?? {},
-			autoStopInterval: 15, // minutes; the in-memory lease keeps it alive
-			ephemeral: false,
-		});
+		const snapshotId = resolveSnapshotId();
+		const sandbox = await this.deps.sdk.create(
+			snapshotId
+				? {
+						// Provision from the prebuilt snapshot (agent CLIs already
+						// installed) so remote agents are runnable once the repo clones.
+						snapshot: snapshotId,
+						envVars: plan.env ?? {},
+						autoStopInterval: 15, // minutes; the in-memory lease keeps it alive
+						ephemeral: false,
+					}
+				: {
+						// No snapshot configured: a bare TS image (no agent CLIs).
+						language: CodeLanguage.TYPESCRIPT, // never default to python
+						envVars: plan.env ?? {},
+						autoStopInterval: 15,
+						ephemeral: false,
+					},
+		);
 
 		// A failure after create() must not leak a paid sandbox.
 		try {

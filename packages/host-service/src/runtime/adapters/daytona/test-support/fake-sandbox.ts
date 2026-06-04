@@ -169,12 +169,14 @@ export class FakeDaytonaSdk {
 	private seq = 0;
 
 	readonly lastCreate: {
+		snapshot?: string;
 		language?: string;
 		networkBlockAll?: boolean;
 		networkAllowList?: string;
 	} = {};
 
 	create = async (params?: {
+		snapshot?: string;
 		language?: string;
 		networkBlockAll?: boolean;
 		networkAllowList?: string;
@@ -182,6 +184,7 @@ export class FakeDaytonaSdk {
 		const id = `sbx-${++this.seq}`;
 		const sandbox = new FakeSandbox(id, "started");
 		this.sandboxes.set(id, sandbox);
+		this.lastCreate.snapshot = params?.snapshot;
 		this.lastCreate.language = params?.language;
 		this.lastCreate.networkBlockAll = params?.networkBlockAll;
 		this.lastCreate.networkAllowList = params?.networkAllowList;

@@ -3,35 +3,43 @@ import { readFile } from "node:fs/promises";
 import os from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import { writeSandboxFileViaExec } from "./writeSandboxFileViaExec.ts";
 
 const execFileAsync = promisify(execFile);
 
 /**
- * The slice of the Daytona sandbox fs surface the auth sync writes through. Paths
- * are sandbox-relative (resolved against the sandbox user home, the same
- * convention `runtimeFs()` uses — e.g. the repo lives under `workspace`).
+ * The slice of the Daytona sandbox the auth sync writes through. Files are
+ * written via `process.executeCommand` + base64 (see `writeSandboxFileViaExec`)
+ * rather than `fs.uploadFile`, which needs the `form-data` module the bundled
+ * host-service runtime can't resolve. Paths resolve against the sandbox user
+ * `$HOME`, the same convention `fs.uploadFile`/`runtimeFs()` use.
  */
-interface SandboxFs {
-	createFolder(path: string, mode: string): Promise<void>;
-	uploadFile(file: Buffer, remotePath: string, timeout?: number): Promise<void>;
-	setFilePermissions?(
-		path: string,
-		permissions: { mode?: string; owner?: string; group?: string },
-	): Promise<void>;
-}
-
 interface SandboxProcess {
 	executeCommand(
 		command: string,
 		cwd?: string,
 		env?: Record<string, string>,
 		timeout?: number,
-	): Promise<unknown>;
+	): Promise<{ result?: string; exitCode?: number }>;
 }
 
 export interface SyncAgentAuthSandbox {
-	fs: SandboxFs;
 	process: SandboxProcess;
+}
+
+/** Write one home-relative file into the sandbox via executeCommand + base64. */
+function writeToSandbox(
+	sandbox: SyncAgentAuthSandbox,
+	content: Buffer,
+	homeRelativePath: string,
+	mode?: string,
+): Promise<void> {
+	return writeSandboxFileViaExec(
+		(command) => sandbox.process.executeCommand(command),
+		content,
+		homeRelativePath,
+		mode ? { mode } : undefined,
+	);
 }
 
 export interface SyncAgentAuthOptions {
@@ -115,16 +123,14 @@ async function syncCodex(
 			skipped.push(`${CODEX_DIR}/auth.json`);
 			return;
 		}
-		await sandbox.fs.createFolder(CODEX_DIR, "700");
-		await sandbox.fs.uploadFile(authBytes, `${CODEX_DIR}/auth.json`);
-		await setMode(sandbox, `${CODEX_DIR}/auth.json`, "600");
+		await writeToSandbox(sandbox, authBytes, `${CODEX_DIR}/auth.json`, "600");
 		synced.push(`${CODEX_DIR}/auth.json`);
 
 		const configBytes = await readHostFile(
 			join(homeDir, CODEX_DIR, "config.json"),
 		);
 		if (configBytes) {
-			await sandbox.fs.uploadFile(configBytes, `${CODEX_DIR}/config.json`);
+			await writeToSandbox(sandbox, configBytes, `${CODEX_DIR}/config.json`);
 			synced.push(`${CODEX_DIR}/config.json`);
 		} else {
 			skipped.push(`${CODEX_DIR}/config.json`);
@@ -148,27 +154,17 @@ async function syncClaude(
 			skipped.push(`${CLAUDE_DIR}/.credentials.json`);
 			return;
 		}
-		await sandbox.fs.createFolder(CLAUDE_DIR, "700");
-		await sandbox.fs.uploadFile(
+		await writeToSandbox(
+			sandbox,
 			Buffer.from(credentials, "utf8"),
 			`${CLAUDE_DIR}/.credentials.json`,
+			"600",
 		);
-		await setMode(sandbox, `${CLAUDE_DIR}/.credentials.json`, "600");
 		synced.push(`${CLAUDE_DIR}/.credentials.json`);
 	} catch (error) {
 		// No keychain item / not macOS / upload failed: skip gracefully.
 		console.warn("[syncAgentAuth] claude sync skipped:", describe(error));
 		skipped.push(`${CLAUDE_DIR}/.credentials.json`);
-	}
-}
-
-async function setMode(
-	sandbox: SyncAgentAuthSandbox,
-	path: string,
-	mode: string,
-): Promise<void> {
-	if (sandbox.fs.setFilePermissions) {
-		await sandbox.fs.setFilePermissions(path, { mode });
 	}
 }
 

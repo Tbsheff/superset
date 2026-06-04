@@ -47,15 +47,17 @@ const plan = {
 };
 
 describe("DaytonaRuntimeAdapter.createInstance", () => {
-	test("creates an allow-all (no deny-all), typescript sandbox — never python", async () => {
+	test("creates an allow-all (no deny-all) sandbox from the configured snapshot", async () => {
 		const { deps, sdk } = makeDeps();
 		const adapter = new DaytonaRuntimeAdapter(deps);
 		await adapter.createInstance(plan);
 		// v1 defaults to allow-all so the in-sandbox clone reaches GitHub.
 		expect(sdk.lastCreate.networkBlockAll).toBeUndefined();
 		expect(sdk.lastCreate.networkAllowList).toBeUndefined();
-		expect(sdk.lastCreate.language).toBe("typescript");
-		expect(sdk.lastCreate.language).not.toBe("python");
+		// Provisions from the prebuilt snapshot (agent CLIs preinstalled); the
+		// snapshot defines the image, so no bare `language` is sent.
+		expect(sdk.lastCreate.snapshot).toBeTruthy();
+		expect(sdk.lastCreate.language).toBeUndefined();
 	});
 
 	test("inserts a runtime_instances row mapped from the sandbox state", async () => {

@@ -49,7 +49,9 @@ Milestone 1 wiring is implemented and committed: production `RuntimeInstanceStor
 
 **Live end-to-end agent run proven** (`daytona.agent-e2e.integration.test.ts`, real Daytona sandbox via the CLI's JWT+org): provision → clone a public repo → run an agent workload through the product's `startShell`+PTY path → stream output back over the runtime (saw the shell prompt, `A  AGENT_RESULT.txt`, and the execution marker) → `getDiff` captured `A  AGENT_RESULT.txt` → sandbox destroyed (no leak). This exercises the exact execution path the product's terminal agent uses.
 
-**Honest caveat:** no LLM API key is available in this environment, so the proven run is an agent *workload* over the real execution path, not a model-backed LLM agent. A real LLM agent (`buildAgentCommandString` → same `runWorkspaceCommand` path) would run unchanged given an `ANTHROPIC_API_KEY`/equivalent in the sandbox env.
+**Real LLM agent run (DONE):** a model-backed coding agent ran end-to-end in a remote Daytona sandbox using the user's Codex ChatGPT OAuth. Flow: provision → inject `~/.codex/auth.json` (OAuth, via a base64 sandbox env var, never logged) → `npm i -g @openai/codex` → `codex exec -m gpt-5.5 --dangerously-bypass-approvals-and-sandbox "create HELLO_AGENT.md (haiku)"`. The agent authenticated, reasoned, ran `pwd && ls`, applied a patch creating `HELLO_AGENT.md` with a generated haiku (verified by `cat` + `git status`), used ~7.1k tokens; sandbox destroyed. This drove the Daytona PTY directly (the one-off proof injects secrets, so it was not committed); the product's terminal-agent path uses the same PTY primitive, whose streaming the committed `daytona.agent-e2e` test verifies.
+
+**Operational findings from the live runs:** the sandbox's non-interactive `executeCommand` shell (`/usr/bin/zsh`) is not execable — use the PTY; the PTY must wait for boot-readiness before allocation or it fails `permission denied`; Codex with a ChatGPT account rejects its default model and needs an allowed one (`-m gpt-5.5`).
 
 ## Live verification (DONE — real Daytona API)
 

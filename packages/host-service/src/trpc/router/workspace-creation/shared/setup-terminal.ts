@@ -2,17 +2,20 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import { projects, workspaces } from "../../../../db/schema";
+import type { RemoteRuntimeResolver } from "../../../../runtime/exec";
+import { runWorkspaceCommand } from "../../../../runtime/exec";
 import {
 	getResolvedSetupCommands,
 	loadSetupConfig,
 } from "../../../../runtime/setup/config";
-import { createTerminalSessionInternal } from "../../../../terminal/terminal";
 import type { HostServiceContext } from "../../../../types";
 import type { TerminalDescriptor } from "./types";
 
 interface StartSetupTerminalArgs {
 	ctx: HostServiceContext;
 	workspaceId: string;
+	/** Injected by tests so the remote path never touches Daytona. */
+	remoteResolver?: RemoteRuntimeResolver;
 }
 
 interface StartSetupTerminalResult {
@@ -40,6 +43,7 @@ export async function startSetupTerminalIfPresent(
 	const row = args.ctx.db
 		.select({
 			worktreePath: workspaces.worktreePath,
+			runtimeKind: workspaces.runtimeKind,
 			repoPath: projects.repoPath,
 			projectId: workspaces.projectId,
 		})
@@ -48,25 +52,33 @@ export async function startSetupTerminalIfPresent(
 		.where(eq(workspaces.id, args.workspaceId))
 		.get();
 
-	if (!row || !row.worktreePath || !row.repoPath) {
+	// A remote workspace has no local worktree (sentinel empty path), so the
+	// worktreePath gate only applies to local runtimes. Both still need a
+	// repoPath to resolve the project's setup config.
+	if (!row || !row.repoPath) {
+		return { terminal: null, warning: null };
+	}
+	const isRemote = row.runtimeKind === "remote";
+	if (!isRemote && !row.worktreePath) {
 		return { terminal: null, warning: null };
 	}
 
 	const initialCommand = resolveInitialCommand({
 		repoPath: row.repoPath,
 		projectId: row.projectId,
+		// Remote setup runs inside the sandbox at the cloned repo root, so the
+		// `setup.sh` fallback must be sandbox-relative, not a host absolute path.
+		fallbackScriptStyle: isRemote ? "relative" : "absolute",
 	});
 	if (!initialCommand) {
 		return { terminal: null, warning: null };
 	}
 
-	const terminalId = crypto.randomUUID();
-	const result = await createTerminalSessionInternal({
-		terminalId,
+	const result = await runWorkspaceCommand({
+		ctx: args.ctx,
 		workspaceId: args.workspaceId,
-		db: args.ctx.db,
-		eventBus: args.ctx.eventBus,
-		initialCommand,
+		command: initialCommand,
+		...(args.remoteResolver ? { remoteResolver: args.remoteResolver } : {}),
 	});
 	if ("error" in result) {
 		return {
@@ -75,9 +87,13 @@ export async function startSetupTerminalIfPresent(
 		};
 	}
 
+	// Only the local path owns a host-tracked terminal id the UI can attach to.
+	// Remote setup runs in the sandbox PTY; its descriptor is reported without a
+	// terminal id (the desktop streams remote panes separately).
+	const id = result.kind === "local" ? result.terminalId : args.workspaceId;
 	return {
 		terminal: {
-			id: terminalId,
+			id,
 			role: "setup",
 			label: "Workspace Setup",
 		},
@@ -91,11 +107,25 @@ export function resolveInitialCommand(args: {
 	projectId: string;
 	/** Override $HOME for tests. */
 	homeDir?: string;
+	/**
+	 * How to address the `.superset/setup.sh` fallback. `absolute` (default) uses
+	 * the host repo path for the local daemon; `relative` uses the sandbox-cloned
+	 * `.superset/setup.sh` for a remote runtime whose cwd is the repo root.
+	 */
+	fallbackScriptStyle?: "absolute" | "relative";
 }): string | null {
 	const config = loadSetupConfig(args);
 	const commands = getResolvedSetupCommands(config);
 	if (commands.length > 0) {
 		return commands.join(" && ");
+	}
+
+	if ((args.fallbackScriptStyle ?? "absolute") === "relative") {
+		// The repo is cloned into the sandbox; the host can confirm the script is
+		// committed by checking its own copy, but the command itself stays
+		// sandbox-relative so it resolves against the runtime's working directory.
+		const hostCopy = join(args.repoPath, ".superset", "setup.sh");
+		return existsSync(hostCopy) ? "bash .superset/setup.sh" : null;
 	}
 
 	const fallbackScript = join(args.repoPath, ".superset", "setup.sh");

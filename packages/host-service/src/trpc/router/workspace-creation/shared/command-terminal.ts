@@ -1,4 +1,5 @@
-import { createTerminalSessionInternal } from "../../../../terminal/terminal";
+import type { RemoteRuntimeResolver } from "../../../../runtime/exec";
+import { runWorkspaceCommand } from "../../../../runtime/exec";
 import type { HostServiceContext } from "../../../../types";
 import type { TerminalDescriptor } from "./types";
 
@@ -6,6 +7,8 @@ interface StartCommandTerminalArgs {
 	ctx: HostServiceContext;
 	workspaceId: string;
 	command: string;
+	/** Injected by tests so the remote path never touches Daytona. */
+	remoteResolver?: RemoteRuntimeResolver;
 }
 
 interface StartCommandTerminalResult {
@@ -14,20 +17,19 @@ interface StartCommandTerminalResult {
 }
 
 /**
- * Start a terminal session that runs an arbitrary command in the workspace
- * worktree. Mirrors the setup terminal, but the command is supplied by the
- * caller (the CLI `--command` flag) instead of resolved from config.
+ * Start a terminal session that runs an arbitrary command in the workspace,
+ * routed by runtime kind: a local worktree PTY or, for remote workspaces, the
+ * Daytona sandbox PTY. Mirrors the setup terminal, but the command is supplied
+ * by the caller (the CLI `--command` flag) instead of resolved from config.
  */
 export async function startCommandTerminal(
 	args: StartCommandTerminalArgs,
 ): Promise<StartCommandTerminalResult> {
-	const terminalId = crypto.randomUUID();
-	const result = await createTerminalSessionInternal({
-		terminalId,
+	const result = await runWorkspaceCommand({
+		ctx: args.ctx,
 		workspaceId: args.workspaceId,
-		db: args.ctx.db,
-		eventBus: args.ctx.eventBus,
-		initialCommand: args.command,
+		command: args.command,
+		...(args.remoteResolver ? { remoteResolver: args.remoteResolver } : {}),
 	});
 	if ("error" in result) {
 		return {
@@ -36,8 +38,11 @@ export async function startCommandTerminal(
 		};
 	}
 
+	// Only the local path owns a host-tracked terminal id; remote runs in the
+	// sandbox PTY and is streamed by the desktop separately.
+	const id = result.kind === "local" ? result.terminalId : args.workspaceId;
 	return {
-		terminal: { id: terminalId, role: "command", label: "Command" },
+		terminal: { id, role: "command", label: "Command" },
 		warning: null,
 	};
 }

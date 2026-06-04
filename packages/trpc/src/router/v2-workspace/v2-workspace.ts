@@ -197,6 +197,12 @@ export const v2WorkspaceRouter = {
 				type: z.enum(v2WorkspaceTypeValues).default("worktree"),
 				taskId: z.string().uuid().optional(),
 				id: z.string().uuid().optional(),
+				// Which runtime backs the workspace. Host-service is the system of
+				// record (host `workspaces.runtime_kind`); the cloud `v2_workspaces`
+				// table has no runtime column yet, so this is accepted and defaulted
+				// here for forward compatibility but not persisted until a migration
+				// adds the column. See plans/remote-workspaces-remaining-work.md #4.
+				runtimeKind: z.enum(["local", "remote"]).default("local"),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {

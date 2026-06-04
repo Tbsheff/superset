@@ -2,6 +2,8 @@ import { DAYTONA_DESCRIPTOR } from "../../descriptors/daytona.ts";
 import {
 	type ActivityLease,
 	type CleanupMode,
+	type FileContentsRequest,
+	type FileContentsResult,
 	type GetDiffOptions,
 	type NormalizedRuntimeStatus,
 	type PreviewBinding,
@@ -117,6 +119,64 @@ export class DaytonaWorkspaceRuntime implements WorkspaceRuntime {
 		return {
 			statusPorcelain,
 			unifiedPatch: opts?.staged ? staged : unstaged,
+		};
+	}
+
+	/**
+	 * Per-file before/after CONTENT, run in-sandbox via `executeCommand`. Mirrors
+	 * the local `collectFileDiff` projection 1:1 (same refs per category, same
+	 * empty-on-miss degradation) so the Changes view renders byte-identically for
+	 * remote and local. `git show <ref>` resolves committed/staged content;
+	 * `cat -- <path>` reads the working-tree file for the unstaged "new" side.
+	 *
+	 * `against-base` resolves the merge base the same way the local collector does
+	 * (`merge-base <baseRef> HEAD`, falling back to the base ref) so the remote
+	 * diff excludes unrelated base-branch commits landed after the fork point.
+	 */
+	async getFileContents(req: FileContentsRequest): Promise<FileContentsResult> {
+		const run = (cmd: string) =>
+			this.sandbox.process
+				.executeCommand(cmd, this.workdir)
+				.then((r) => (r.exitCode === 0 ? (r.result ?? "") : ""))
+				.catch(() => "");
+		const quotePath = (path: string) => `'${path.replaceAll("'", "'\\''")}'`;
+		const path = quotePath(req.path);
+
+		let oldContents = "";
+		let newContents = "";
+
+		if (req.category === "against-base") {
+			const baseRef = (await run(`git rev-parse ${
+				req.baseBranch ? quotePath(req.baseBranch) : "HEAD"
+			}`)).trim();
+			const ref = baseRef || "HEAD";
+			const mergeBase =
+				(await run(`git merge-base ${ref} HEAD`)).trim() || ref;
+			oldContents = await run(`git show ${quotePath(`${mergeBase}:${req.path}`)}`);
+			newContents = await run(`git show ${quotePath(`HEAD:${req.path}`)}`);
+		} else if (req.category === "staged") {
+			oldContents = await run(`git show ${quotePath(`HEAD:${req.path}`)}`);
+			newContents = await run(`git show ${quotePath(`:0:${req.path}`)}`);
+		} else if (req.category === "commit") {
+			if (!req.commitHash) {
+				throw new Error("commitHash is required for commit diffs");
+			}
+			const from = req.fromHash ?? `${req.commitHash}^`;
+			oldContents = await run(`git show ${quotePath(`${from}:${req.path}`)}`);
+			newContents = await run(
+				`git show ${quotePath(`${req.commitHash}:${req.path}`)}`,
+			);
+		} else {
+			// Unstaged: index (staged) version vs. working tree. A miss on the index
+			// side leaves oldContents empty so an untracked file renders as new.
+			oldContents = await run(`git show ${quotePath(`:0:${req.path}`)}`);
+			newContents = await run(`cat -- ${path}`);
+		}
+
+		const fileName = req.path.split("/").pop() ?? req.path;
+		return {
+			oldFile: { name: fileName, contents: oldContents },
+			newFile: { name: fileName, contents: newContents },
 		};
 	}
 

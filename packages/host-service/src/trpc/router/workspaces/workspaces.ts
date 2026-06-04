@@ -24,6 +24,10 @@ import {
 	listWorktreeBranches,
 } from "../workspace-creation/shared/branch-search";
 import { startCommandTerminal } from "../workspace-creation/shared/command-terminal";
+import {
+	buildRemoteRuntime,
+	createRemoteWorkspace,
+} from "../workspace-creation/shared/create-remote-workspace";
 import { enablePushAutoSetupRemote } from "../workspace-creation/shared/git-config";
 import { requireLocalProject } from "../workspace-creation/shared/local-project";
 import { startSetupTerminalIfPresent } from "../workspace-creation/shared/setup-terminal";
@@ -81,6 +85,11 @@ const createInputSchema = z
 		// inferring the path from `branch`. When present, `branch` is
 		// caller context only; the server reads the current branch from git.
 		worktreePath: z.string().min(1).optional(),
+		// Which runtime backs the workspace. `local` is a git worktree on this
+		// host; `remote` provisions a Daytona sandbox (no local worktree). The
+		// switch routes `getRuntimeAdapter` below; defaults to `local` so every
+		// existing client keeps its current behavior.
+		runtimeKind: z.enum(["local", "remote"]).default("local"),
 	})
 	.refine((value) => !(value.branch && value.pr), {
 		message: "`branch` and `pr` cannot both be set",
@@ -540,6 +549,72 @@ export const workspacesRouter = router({
 			// the promise rejection into a TRPCError with rollback.
 			const hostPromise = startHostEnsure(ctx);
 			hostPromise.catch(() => {});
+
+			// Remote workspaces never touch the local-worktree machinery below
+			// (PR materialize, `git worktree add`, adopt-existing). They clone
+			// inside a Daytona sandbox, so route them through the dedicated
+			// no-worktree path and return early.
+			if (input.runtimeKind === "remote") {
+				const runtime = await buildRemoteRuntime(ctx);
+				const { workspace } = await createRemoteWorkspace({
+					ctx,
+					localProject,
+					id: input.id,
+					name: input.name,
+					branch: input.branch,
+					taskId: input.taskId,
+					hostPromise,
+					runtime,
+				});
+
+				// Setup, agents, and the optional command all run INSIDE the sandbox
+				// via runWorkspaceCommand (routed by runtimeKind="remote"), the same
+				// launchers the local path uses. Setup runs first so dependencies are
+				// installed before an agent or command starts.
+				const remoteTerminals: Array<{ terminalId: string; label?: string }> =
+					[];
+				const { terminal: setupTerminal, warning: setupWarning } =
+					await startSetupTerminalIfPresent({ ctx, workspaceId: workspace.id });
+				if (setupWarning) {
+					console.warn(`[workspaces.create] setup warning: ${setupWarning}`);
+				}
+				if (setupTerminal) {
+					remoteTerminals.push({
+						terminalId: setupTerminal.id,
+						label: setupTerminal.label,
+					});
+				}
+
+				const [agentsResult, commandResult] = await Promise.all([
+					dispatchSugarAgents(ctx, workspace.id, input.agents ?? []),
+					input.command
+						? startCommandTerminal({
+								ctx,
+								workspaceId: workspace.id,
+								command: input.command,
+							})
+						: Promise.resolve(null),
+				]);
+				if (commandResult?.warning) {
+					console.warn(
+						`[workspaces.create] command warning: ${commandResult.warning}`,
+					);
+				}
+				if (commandResult?.terminal) {
+					remoteTerminals.push({
+						terminalId: commandResult.terminal.id,
+						label: commandResult.terminal.label,
+					});
+				}
+
+				return {
+					workspace,
+					terminals: remoteTerminals,
+					agents: agentsResult,
+					alreadyExists: false,
+					txid: extractCreateTxid(workspace),
+				};
+			}
 
 			// Kick off AI naming in parallel when the user supplied a prompt
 			// but left at least one of (name, branch) blank. The LLM call
@@ -1043,14 +1118,16 @@ export const workspacesRouter = router({
 
 			if (!alreadyExists) {
 				// Route the freshly-created workspace through the runtime adapter.
-				// The worktree already exists (added/adopted above), so createInstance
-				// only binds it into a handle — no on-disk effect, no second code
-				// path. The row already carries runtimeKind="local" (column default),
-				// which is the local RuntimeBinding discriminant. Setup/command
-				// terminals stay on their existing calls below for byte-for-byte
-				// parity; the handle's startShell is proven equivalent by the
-				// contract suite.
-				const runtimeAdapter = getRuntimeAdapter("local", {
+				// `input.runtimeKind` is always "local" here — remote returns early
+				// above — but threading it (not a literal "local") keeps this the one
+				// switch a future caller flips. The worktree already exists
+				// (added/adopted above), so createInstance only binds it into a handle
+				// — no on-disk effect, no second code path. The row carries
+				// runtimeKind="local" (column default), the local RuntimeBinding
+				// discriminant. Setup/command terminals stay on their existing calls
+				// below for byte-for-byte parity; the handle's startShell is proven
+				// equivalent by the contract suite.
+				const runtimeAdapter = getRuntimeAdapter(input.runtimeKind, {
 					db: ctx.db,
 					git: ctx.git,
 					eventBus: ctx.eventBus,

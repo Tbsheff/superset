@@ -20,6 +20,24 @@ export interface WorkspaceRuntime {
 	readonly externalId: string; // provider id/name for reconnect; "" for not-yet-created
 	startShell(opts: StartShellOptions): Promise<ShellHandle>;
 	getDiff(opts?: GetDiffOptions): Promise<RuntimeDiff>;
+	/**
+	 * Per-file before/after CONTENT for one path, mirroring the local
+	 * `collectFileDiff` projection so the Changes view renders byte-identically
+	 * for remote and local. Optional because `getDiff` (whole-workspace
+	 * status + patch) is the only required diff verb; a runtime that can't serve
+	 * per-file content (or whose worktree lives host-side) omits this and the
+	 * caller falls back to the local worktree path.
+	 */
+	getFileContents?(req: FileContentsRequest): Promise<FileContentsResult>;
+	/**
+	 * Exports the workspace's outstanding work as a single git patch (binary-safe
+	 * bytes), collected INSIDE the runtime. The host applies + pushes it with a
+	 * single-repo-scoped token that never enters the runtime (see
+	 * `runtime/git/push-remote-patch`). Optional because only a runtime with no
+	 * host-side worktree (e.g. Daytona) needs it; a local runtime pushes its own
+	 * worktree directly and omits this.
+	 */
+	exportPatch?(): Promise<Buffer>;
 	exposePreview(port: number): Promise<PreviewBinding>;
 	activityLease(): ActivityLease;
 	getStatus(): Promise<NormalizedRuntimeStatus>;
@@ -55,6 +73,31 @@ export interface GetDiffOptions {
 export interface RuntimeDiff {
 	statusPorcelain: string;
 	unifiedPatch: string;
+}
+
+/**
+ * Which revision pair a per-file content diff compares. Mirrors the local
+ * `git.getDiff` categories (`runtime/git/diff-collector`) so a remote runtime
+ * resolves the same before/after content the local endpoint does.
+ */
+export type FileContentsCategory =
+	| "against-base"
+	| "staged"
+	| "unstaged"
+	| "commit";
+
+export interface FileContentsRequest {
+	/** Worktree-relative path. */
+	path: string;
+	category: FileContentsCategory;
+	baseBranch?: string;
+	commitHash?: string;
+	fromHash?: string;
+}
+
+export interface FileContentsResult {
+	oldFile: { name: string; contents: string };
+	newFile: { name: string; contents: string };
 }
 
 export interface PreviewBinding {

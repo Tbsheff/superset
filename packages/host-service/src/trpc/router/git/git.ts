@@ -4,8 +4,11 @@ import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { pullRequests, workspaces } from "../../../db/schema";
+import { buildRemoteRuntimeResolver } from "../../../runtime/exec";
 import { collectFileDiff } from "../../../runtime/git/diff-collector";
 import {
+	createTempWorktreeProvider,
+	exportAndPushRemote,
 	pushRemotePatch as pushRemotePatchHost,
 	type RepoLookup,
 } from "../../../runtime/git/push-remote-patch";
@@ -385,6 +388,35 @@ export const gitRouter = router({
 			}),
 		)
 		.query(async ({ ctx, input }) => {
+			const workspace = ctx.db.query.workspaces
+				.findFirst({ where: eq(workspaces.id, input.workspaceId) })
+				.sync();
+			if (!workspace) {
+				throw new TRPCError({ code: "NOT_FOUND", message: "Workspace not found" });
+			}
+
+			// Remote (Daytona) workspaces have no local worktree; resolve the live
+			// runtime and read per-file content in-sandbox instead of through the
+			// host worktree path (which is "" and would throw NOT_FOUND).
+			if (workspace.runtimeKind === "remote") {
+				const resolver = await buildRemoteRuntimeResolver(ctx);
+				const runtime = await resolver.resolve(input.workspaceId);
+				if (!runtime.getFileContents) {
+					throw new TRPCError({
+						code: "PRECONDITION_FAILED",
+						message:
+							"Remote runtime does not support per-file diffs on this host.",
+					});
+				}
+				return runtime.getFileContents({
+					path: input.path,
+					category: input.category,
+					baseBranch: input.baseBranch,
+					commitHash: input.commitHash,
+					fromHash: input.fromHash,
+				});
+			}
+
 			const worktreePath = resolveWorktreePath(ctx, input.workspaceId);
 			const git = await ctx.git(worktreePath);
 			return collectFileDiff(git, {
@@ -695,7 +727,7 @@ export const gitRouter = router({
 			const workspace = ctx.db.query.workspaces
 				.findFirst({ where: eq(workspaces.id, input.workspaceId) })
 				.sync();
-			if (!workspace?.worktreePath) {
+			if (!workspace) {
 				throw new TRPCError({
 					code: "NOT_FOUND",
 					message: "Workspace not found",
@@ -703,30 +735,116 @@ export const gitRouter = router({
 			}
 
 			const repo = await resolveGithubRepo(ctx, workspace.projectId);
-
 			const patch = Buffer.from(input.patchBase64, "base64");
+			const pushDeps = {
+				git: ctx.git,
+				octokit: (await ctx.github()) as unknown as RepoLookup,
+				mintRepoScopedToken: ctx.mintRepoScopedToken,
+			};
 
 			try {
-				const result = await pushRemotePatchHost(
-					{
+				// Remote (Daytona) workspaces have no host worktree (`worktree_path`
+				// is the "" sentinel): apply + push through a throwaway worktree
+				// forked from the project's local clone. Local workspaces push their
+				// existing worktree directly.
+				if (workspace.runtimeKind === "remote") {
+					const worktreeProvider = createTempWorktreeProvider({
 						git: ctx.git,
-						octokit: (await ctx.github()) as unknown as RepoLookup,
-						mintRepoScopedToken: ctx.mintRepoScopedToken,
-					},
-					{
-						worktreePath: workspace.worktreePath,
+						repoPath: repo.repoPath,
+					});
+					const { worktreePath } = await worktreeProvider.acquire({
 						branch: workspace.branch,
-						repo: { owner: repo.owner, repo: repo.name },
-						patch,
-					},
-				);
-				return result;
+					});
+					try {
+						return await pushRemotePatchHost(pushDeps, {
+							worktreePath,
+							branch: workspace.branch,
+							repo: { owner: repo.owner, repo: repo.name },
+							patch,
+						});
+					} finally {
+						await worktreeProvider.release(worktreePath).catch(() => {});
+					}
+				}
+
+				if (!workspace.worktreePath) {
+					throw new TRPCError({
+						code: "PRECONDITION_FAILED",
+						message: "Workspace has no local worktree to push from.",
+					});
+				}
+
+				return await pushRemotePatchHost(pushDeps, {
+					worktreePath: workspace.worktreePath,
+					branch: workspace.branch,
+					repo: { owner: repo.owner, repo: repo.name },
+					patch,
+				});
 			} catch (error) {
 				if (isRuntimeProviderError(error) && error.code === "CROSS_REPO_PUSH") {
 					throw new TRPCError({
 						code: "FORBIDDEN",
 						message: error.message,
 					});
+				}
+				throw error;
+			}
+		}),
+
+	/**
+	 * End-to-end export-and-push for a REMOTE (Daytona) workspace: collects the
+	 * patch INSIDE the runtime (`exportPatch()`), then applies + pushes it
+	 * host-side with a single-repo-scoped token that never enters the sandbox.
+	 * This is the one procedure the desktop drives to ship work out of a remote
+	 * workspace; `pushRemotePatch` above stays as the lower-level "patch already
+	 * in hand" entry point.
+	 */
+	exportAndPushRemote: protectedProcedure
+		.input(z.object({ workspaceId: z.string() }))
+		.mutation(async ({ ctx, input }) => {
+			if (!ctx.mintRepoScopedToken) {
+				throw new TRPCError({
+					code: "PRECONDITION_FAILED",
+					message:
+						"Remote-runtime push is not configured on this host (no scoped-token minter).",
+				});
+			}
+
+			const workspace = ctx.db.query.workspaces
+				.findFirst({ where: eq(workspaces.id, input.workspaceId) })
+				.sync();
+			if (!workspace) {
+				throw new TRPCError({ code: "NOT_FOUND", message: "Workspace not found" });
+			}
+			if (workspace.runtimeKind !== "remote") {
+				throw new TRPCError({
+					code: "PRECONDITION_FAILED",
+					message:
+						"exportAndPushRemote only applies to remote workspaces; local workspaces push their own worktree.",
+				});
+			}
+
+			const repo = await resolveGithubRepo(ctx, workspace.projectId);
+
+			try {
+				return await exportAndPushRemote({
+					workspaceId: input.workspaceId,
+					branch: workspace.branch,
+					repo: { owner: repo.owner, repo: repo.name },
+					resolver: await buildRemoteRuntimeResolver(ctx),
+					worktreeProvider: createTempWorktreeProvider({
+						git: ctx.git,
+						repoPath: repo.repoPath,
+					}),
+					push: {
+						git: ctx.git,
+						octokit: (await ctx.github()) as unknown as RepoLookup,
+						mintRepoScopedToken: ctx.mintRepoScopedToken,
+					},
+				});
+			} catch (error) {
+				if (isRuntimeProviderError(error) && error.code === "CROSS_REPO_PUSH") {
+					throw new TRPCError({ code: "FORBIDDEN", message: error.message });
 				}
 				throw error;
 			}

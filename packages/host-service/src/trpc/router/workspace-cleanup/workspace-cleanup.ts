@@ -4,6 +4,10 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { workspaces } from "../../../db/schema";
 import { invalidateLabelCache } from "../../../ports/static-ports";
+import {
+	destroyRemoteWorkspace,
+	type RemoteWorkspaceDestroyer,
+} from "../../../runtime/cleanup";
 import { runTeardown, type TeardownResult } from "../../../runtime/teardown";
 import { disposeSessionsByWorkspaceId } from "../../../terminal/terminal";
 import type { HostServiceContext } from "../../../types";
@@ -33,6 +37,12 @@ export interface DestroyWorkspaceInput {
 	workspaceId: string;
 	deleteBranch: boolean;
 	force: boolean;
+	/**
+	 * Injectable remote-runtime destroyer. Defaults to the production builder
+	 * (`buildRemoteWorkspaceDestroyer`). Tests pass a fake to assert
+	 * `adapter.destroy` is reached without any Daytona wiring.
+	 */
+	remoteDestroyer?: RemoteWorkspaceDestroyer;
 }
 
 /**
@@ -82,7 +92,10 @@ export const workspaceCleanupRouter = router({
 			}
 
 			const { local } = main;
-			if (!local) {
+			if (!local || local.runtimeKind === "remote") {
+				// Remote workspaces have no local worktree to inspect for
+				// dirty/unpushed state; the destroy saga tears the sandbox down
+				// regardless, so report deletable with no local-state warnings.
 				return {
 					canDelete: true,
 					reason: null,
@@ -201,11 +214,13 @@ async function runDestroy(
 		throw new TRPCError({ code: "BAD_REQUEST", message: main.reason });
 	}
 	const { local, project } = main;
+	const isRemote = local?.runtimeKind === "remote";
 
 	// ─── Step 0: Preflight ─────────────────────────────────────────
 	// Block only on dirty worktree (the common "I forgot to commit"
 	// case). Missing/broken local state is handled by the cleanup phase.
-	if (!input.force && local && project) {
+	// Remote workspaces have no local worktree to inspect, so skip.
+	if (!isRemote && !input.force && local && project) {
 		try {
 			const git = await ctx.git(local.worktreePath);
 			const status = await git.status();
@@ -234,8 +249,9 @@ async function runDestroy(
 	// ─── Step 1: Teardown ──────────────────────────────────────────
 	// Script is the user's last chance to stop services / flush state
 	// before the workspace goes away. Failure here is recoverable
-	// via force-retry, which skips this step.
-	if (!input.force && local && project) {
+	// via force-retry, which skips this step. Remote teardown runs
+	// in-sandbox elsewhere; there is no local worktree to run it against.
+	if (!isRemote && !input.force && local && project) {
 		const teardown: TeardownResult = await runTeardown({
 			db: ctx.db,
 			workspaceId: input.workspaceId,
@@ -277,7 +293,12 @@ async function runDestroy(
 	let worktreeRemoved = false;
 	let branchDeleted = false;
 	let git: Awaited<ReturnType<typeof ctx.git>> | null = null;
-	if (local && !project) {
+	// Remote workspaces own no local worktree (worktreePath is the "" sentinel);
+	// report it as already-removed and skip every worktree/branch git operation.
+	if (isRemote) {
+		worktreeRemoved = true;
+	}
+	if (!isRemote && local && !project) {
 		worktreeRemoved = !existsSync(local.worktreePath);
 		if (!worktreeRemoved) {
 			warnings.push(
@@ -285,7 +306,7 @@ async function runDestroy(
 			);
 		}
 	}
-	if (local && project) {
+	if (!isRemote && local && project) {
 		worktreeRemoved = !existsSync(local.worktreePath);
 		try {
 			git = await ctx.git(project.repoPath);
@@ -324,6 +345,21 @@ async function runDestroy(
 				}
 			}
 		}
+	}
+
+	// ─── Step 2c: Remote runtime destroy ───────────────────────────
+	// For a remote workspace, delete the paid Daytona sandbox and release its
+	// keep-alive lease before committing the cloud delete. Best-effort: a failure
+	// becomes a warning (the destroy is idempotent and retryable) rather than
+	// blocking the workspace from being removed. Runs before cloud delete so a
+	// failed sandbox-destroy leaves the workspace visible/retryable.
+	if (isRemote) {
+		const remoteWarning = await destroyRemoteWorkspace(
+			ctx,
+			input.workspaceId,
+			input.remoteDestroyer,
+		);
+		if (remoteWarning) warnings.push(remoteWarning);
 	}
 
 	// ─── Step 3: Cloud delete ──────────────────────────────────────

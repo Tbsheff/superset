@@ -139,4 +139,38 @@ describe("resolveInitialCommand", () => {
 
 		expect(resolve()).toBe("from-main");
 	});
+
+	it("uses a sandbox-relative fallback script for remote runtimes", () => {
+		writeFallbackScript(sandbox.repoPath);
+		const cmd = resolveInitialCommand({
+			repoPath: sandbox.repoPath,
+			projectId: PROJECT_ID,
+			homeDir: sandbox.homeDir,
+			fallbackScriptStyle: "relative",
+		});
+		expect(cmd).toBe("bash .superset/setup.sh");
+	});
+
+	it("returns null for a remote fallback when the script is not committed", () => {
+		const cmd = resolveInitialCommand({
+			repoPath: sandbox.repoPath,
+			projectId: PROJECT_ID,
+			homeDir: sandbox.homeDir,
+			fallbackScriptStyle: "relative",
+		});
+		expect(cmd).toBeNull();
+	});
+
+	it("remote: config setup still wins over the fallback script", () => {
+		writeConfig(sandbox.repoPath, { setup: ["bun install"] });
+		writeFallbackScript(sandbox.repoPath);
+		expect(
+			resolveInitialCommand({
+				repoPath: sandbox.repoPath,
+				projectId: PROJECT_ID,
+				homeDir: sandbox.homeDir,
+				fallbackScriptStyle: "relative",
+			}),
+		).toBe("bun install");
+	});
 });

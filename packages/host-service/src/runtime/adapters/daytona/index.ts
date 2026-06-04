@@ -1,5 +1,12 @@
 export { DaytonaRuntimeAdapter } from "./adapter.ts";
 export {
+	createDaytonaSdk,
+	type DaytonaCredentials,
+	type DaytonaEnvSlice,
+	resolveDaytonaCredentials,
+	toDaytonaConfig,
+} from "./createDaytonaSdk.ts";
+export {
 	type CreateRepoScopedTokenMinterDeps,
 	createRepoScopedTokenMinter,
 } from "./createRepoScopedTokenMinter.ts";

@@ -32,7 +32,8 @@ export type RuntimeProviderErrorCode =
 	| "EGRESS_TIER_GATED"
 	| "EGRESS_INVALID_CIDR"
 	| "CONFIG_MISSING"
-	| "CROSS_REPO_PUSH";
+	| "CROSS_REPO_PUSH"
+	| "UNSUPPORTED";
 
 /**
  * A provider-level failure with a machine-readable code, so a caller can branch

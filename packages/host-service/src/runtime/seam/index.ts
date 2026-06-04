@@ -20,6 +20,9 @@ export type {
 } from "./facets.ts";
 export type { RuntimePlan } from "./plan.ts";
 export type {
+	FileContentsCategory,
+	FileContentsRequest,
+	FileContentsResult,
 	GetDiffOptions,
 	PreviewBinding,
 	RuntimeDiff,

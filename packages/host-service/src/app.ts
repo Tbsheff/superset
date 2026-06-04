@@ -11,12 +11,13 @@ import { EventBus, GitWatcher, registerEventBusRoute } from "./events";
 import type { ApiAuthProvider } from "./providers/auth";
 import type { HostAuthProvider } from "./providers/host-auth";
 import type { ModelProviderRuntimeResolver } from "./providers/model-providers";
+import { createRepoScopedTokenMinter } from "./runtime/adapters/daytona";
 import { ChatRuntimeManager } from "./runtime/chat";
 import { WorkspaceFilesystemManager } from "./runtime/filesystem";
 import type { GitCredentialProvider } from "./runtime/git";
 import { createGitFactory } from "./runtime/git";
-import { createRepoScopedTokenMinter } from "./runtime/adapters/daytona";
 import { runMainWorkspaceSweep } from "./runtime/main-workspace-sweep";
+import { registerRuntimePtyRoute } from "./runtime/pty-endpoint";
 import { PullRequestRuntimeManager } from "./runtime/pull-requests";
 import { registerRemoteControlRoute } from "./terminal/remote-control/route";
 import {
@@ -172,6 +173,7 @@ export function createApp(options: CreateAppOptions): CreateAppResult {
 	};
 	app.use("/terminal/*", wsAuth);
 	app.use("/events", wsAuth);
+	app.use("/runtime/*", wsAuth);
 	// `/remote-control/*` does NOT use `wsAuth` — viewers come in via the
 	// relay tunnel (already PSK-authenticated end-to-end) and authenticate
 	// per-session with an HMAC `remoteControlToken` validated by
@@ -183,6 +185,17 @@ export function createApp(options: CreateAppOptions): CreateAppResult {
 		app,
 		db,
 		eventBus,
+		upgradeWebSocket,
+	});
+	// Remote (Daytona) PTY-over-wire endpoint. The desktop
+	// HostServiceRemoteTransport connects to /runtime/:workspaceId/pty/:paneId;
+	// the live sandbox PTY is resolved per connection via the runtime registry.
+	registerRuntimePtyRoute({
+		app,
+		db,
+		git,
+		eventBus,
+		mintRepoScopedToken,
 		upgradeWebSocket,
 	});
 

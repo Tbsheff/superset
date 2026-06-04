@@ -4,7 +4,7 @@ import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { HostDb } from "../../../db";
 import { hostAgentConfigs } from "../../../db/schema";
-import { createTerminalSessionInternal } from "../../../terminal/terminal";
+import { runWorkspaceCommand } from "../../../runtime/exec";
 import type { HostServiceContext } from "../../../types";
 import { protectedProcedure, router } from "../../index";
 import { resolveAttachmentPath } from "../attachments/storage";
@@ -224,7 +224,7 @@ async function runChatAgent(
 }
 
 async function runTerminalAgent(
-	ctx: { db: HostDb; eventBus: import("../../../events").EventBus },
+	ctx: HostServiceContext,
 	input: AgentRunInput,
 ): Promise<AgentRunResult> {
 	const config = resolveHostAgentConfig(ctx.db, input.agent);
@@ -251,13 +251,13 @@ async function runTerminalAgent(
 	const command = buildAgentCommandString(config, prompt);
 	const fullCommand = `${envOverlayPrefix(config.env)}${command}`;
 
-	const terminalId = crypto.randomUUID();
-	const result = await createTerminalSessionInternal({
-		terminalId,
+	// Routed by runtime kind: local runs in the daemon PTY, remote runs the same
+	// agent command line inside the Daytona sandbox PTY (the env overlay still
+	// rides the command string, so remote agents get the same config.env).
+	const result = await runWorkspaceCommand({
+		ctx,
 		workspaceId: input.workspaceId,
-		db: ctx.db,
-		eventBus: ctx.eventBus,
-		initialCommand: fullCommand,
+		command: fullCommand,
 	});
 
 	if ("error" in result) {
@@ -267,9 +267,13 @@ async function runTerminalAgent(
 		});
 	}
 
+	// Remote agents run in the sandbox PTY without a host terminal id; the
+	// workspace id is the stable handle the desktop uses to stream remote panes.
+	const sessionId =
+		result.kind === "local" ? result.terminalId : input.workspaceId;
 	return {
 		kind: "terminal",
-		sessionId: result.terminalId,
+		sessionId,
 		label: config.label,
 	};
 }

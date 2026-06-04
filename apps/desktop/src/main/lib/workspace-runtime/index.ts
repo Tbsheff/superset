@@ -15,9 +15,18 @@
 
 export { LocalWorkspaceRuntime } from "./local";
 export {
+	createWorkspaceRuntimeRegistry,
 	getWorkspaceRuntimeRegistry,
 	resetWorkspaceRuntimeRegistry,
+	type WorkspaceRuntimeKind,
+	type WorkspaceRuntimeKindResolver,
+	type WorkspaceRuntimeRegistryDeps,
 } from "./registry";
+export {
+	type RemotePtyTransport,
+	type RemotePtyTransportFactory,
+	RemoteWorkspaceRuntime,
+} from "./remote";
 export type {
 	TerminalCapabilities,
 	TerminalEventSource,

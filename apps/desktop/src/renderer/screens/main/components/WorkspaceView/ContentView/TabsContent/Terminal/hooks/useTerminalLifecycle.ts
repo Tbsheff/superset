@@ -103,6 +103,7 @@ export interface UseTerminalLifecycleOptions {
 	commandBufferRef: MutableRefObject<string>;
 	isFocusedRef: MutableRefObject<boolean>;
 	isRestoredModeRef: MutableRefObject<boolean>;
+	isReadOnlyRef: MutableRefObject<boolean>;
 	connectionErrorRef: MutableRefObject<string | null>;
 	initialThemeRef: MutableRefObject<ITheme | null>;
 	handleFileLinkClickRef: MutableRefObject<
@@ -166,6 +167,7 @@ export function useTerminalLifecycle({
 	commandBufferRef,
 	isFocusedRef,
 	isRestoredModeRef,
+	isReadOnlyRef,
 	connectionErrorRef,
 	initialThemeRef,
 	handleFileLinkClickRef,
@@ -462,6 +464,7 @@ export function useTerminalLifecycle({
 		restartTerminalRef.current = restartTerminalSession;
 
 		const handleTerminalInput = (data: string) => {
+			if (isReadOnlyRef.current) return;
 			if (isRestoredModeRef.current || connectionErrorRef.current) return;
 			if (isExitedRef.current) {
 				const isWorkspaceRunPane = hasPaneWorkspaceRun(paneId);
@@ -487,6 +490,7 @@ export function useTerminalLifecycle({
 			key: string;
 			domEvent: KeyboardEvent;
 		}) => {
+			if (isReadOnlyRef.current) return;
 			if (isRestoredModeRef.current || connectionErrorRef.current) return;
 			const { domEvent } = event;
 			if (domEvent.key === "Enter") {

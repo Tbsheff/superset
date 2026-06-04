@@ -2,6 +2,12 @@ export interface TerminalProps {
 	paneId: string;
 	tabId: string;
 	workspaceId: string;
+	/**
+	 * Drive the terminal from a runtime stream without an interactive shell:
+	 * data flows to xterm, user keystrokes are dropped, and a read-only badge
+	 * shows. Used for streaming-command runtimes that have no PTY.
+	 */
+	readOnly?: boolean;
 }
 
 export type TerminalExitReason = "killed" | "exited" | "error";

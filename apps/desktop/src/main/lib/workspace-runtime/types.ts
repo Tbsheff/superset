@@ -185,8 +185,11 @@ export interface TerminalRuntime
  * Workspace runtime interface - the workspace-scoped provider boundary.
  *
  * This is the primary abstraction for local vs daemon vs cloud backends.
- * The terminal runtime is a sub-component; future work will add
- * changes/files/agentEvents to this same boundary for cloud workspaces.
+ * Remote backends are selected per workspace via the host-service
+ * `RuntimeAdapter` layer (see
+ * `plans/runtime-provider-phase0-reconciliation.md`); this desktop boundary
+ * stays terminal-only and routes remote terminal ops over the host-service
+ * transport.
  */
 export interface WorkspaceRuntime {
 	/** Unique identifier for this runtime instance */

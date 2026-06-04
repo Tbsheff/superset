@@ -8,7 +8,7 @@ import { sanitizeTerminalFontFamily } from "renderer/lib/terminal/appearance";
 import { buildTerminalCommand } from "renderer/lib/terminal/launch-command";
 import { useTabsStore } from "renderer/stores/tabs/store";
 import { useTerminalTheme } from "renderer/stores/theme";
-import { SessionKilledOverlay } from "./components";
+import { ReadOnlyModeOverlay, SessionKilledOverlay } from "./components";
 import { DEFAULT_TERMINAL_FONT_SIZE } from "./config";
 import { getDefaultTerminalBg } from "./helpers";
 import {
@@ -40,6 +40,7 @@ export const Terminal = memo(function Terminal({
 	paneId,
 	tabId,
 	workspaceId,
+	readOnly,
 }: TerminalProps) {
 	const pane = useTabsStore((s) => s.panes[paneId]);
 	const isWorkspaceRunPane = Boolean(pane?.workspaceRun?.workspaceId);
@@ -244,6 +245,8 @@ export const Terminal = memo(function Terminal({
 	// Avoid effect re-runs: track overlay states via refs for input gating
 	const isRestoredModeRef = useRef(isRestoredMode);
 	isRestoredModeRef.current = isRestoredMode;
+	const isReadOnlyRef = useRef(Boolean(readOnly));
+	isReadOnlyRef.current = Boolean(readOnly);
 	const connectionErrorRef = useRef(connectionError);
 	connectionErrorRef.current = connectionError;
 
@@ -318,6 +321,7 @@ export const Terminal = memo(function Terminal({
 		commandBufferRef,
 		isFocusedRef,
 		isRestoredModeRef,
+		isReadOnlyRef,
 		connectionErrorRef,
 		initialThemeRef,
 		handleFileLinkClickRef,
@@ -463,6 +467,7 @@ export const Terminal = memo(function Terminal({
 				onClose={() => setIsSearchOpen(false)}
 			/>
 			<ScrollToBottomButton terminal={xtermInstance} />
+			{readOnly && <ReadOnlyModeOverlay />}
 			{exitStatus === "killed" &&
 				!connectionError &&
 				!isRestoredMode &&

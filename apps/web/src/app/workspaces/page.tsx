@@ -66,6 +66,7 @@ export default function WorkspacesPage() {
 	const [branch, setBranch] = useState("");
 	const [projectId, setProjectId] = useState("");
 	const [hostId, setHostId] = useState("");
+	const [runtimeKind, setRuntimeKind] = useState<"local" | "remote">("local");
 	const [creating, setCreating] = useState(false);
 
 	const [search, setSearch] = useState("");
@@ -182,6 +183,7 @@ export default function WorkspacesPage() {
 				name: name.trim(),
 				branch: branch.trim(),
 				hostId,
+				runtimeKind,
 			});
 			setName("");
 			setBranch("");
@@ -191,7 +193,15 @@ export default function WorkspacesPage() {
 		} finally {
 			setCreating(false);
 		}
-	}, [organizationId, projectId, name, branch, hostId, loadWorkspaces]);
+	}, [
+		organizationId,
+		projectId,
+		name,
+		branch,
+		hostId,
+		runtimeKind,
+		loadWorkspaces,
+	]);
 
 	return (
 		<div className="mx-auto min-h-[100dvh] max-w-3xl px-5 py-8">
@@ -244,6 +254,17 @@ export default function WorkspacesPage() {
 								{hostLabel(host)}
 							</option>
 						))}
+					</select>
+					<select
+						aria-label="Runtime"
+						value={runtimeKind}
+						onChange={(event) =>
+							setRuntimeKind(event.target.value as "local" | "remote")
+						}
+						className="rounded-md border bg-transparent px-3 py-2 text-sm"
+					>
+						<option value="local">Local machine</option>
+						<option value="remote">Remote sandbox</option>
 					</select>
 				</div>
 				{hosts.length === 0 && (

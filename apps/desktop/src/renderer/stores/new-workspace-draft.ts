@@ -19,6 +19,9 @@ export type LinkedPR = {
 
 export type BaseBranchSource = "local" | "remote-tracking";
 
+/** Which runtime backs the workspace: the local machine or a remote sandbox. */
+export type WorkspaceRuntimeKind = "local" | "remote";
+
 export interface DraftAttachment {
 	localId: string;
 	state: "uploading" | "ready" | "error";
@@ -41,6 +44,7 @@ export interface NewWorkspaceDraft {
 	linkedPR: LinkedPR | null;
 	selectedAgentId: string | null;
 	attachments: DraftAttachment[];
+	runtimeKind: WorkspaceRuntimeKind;
 }
 
 interface NewWorkspaceDraftState extends NewWorkspaceDraft {
@@ -67,6 +71,7 @@ function buildInitialDraft(): NewWorkspaceDraft {
 		linkedPR: null,
 		selectedAgentId: null,
 		attachments: [],
+		runtimeKind: "local",
 	};
 }
 

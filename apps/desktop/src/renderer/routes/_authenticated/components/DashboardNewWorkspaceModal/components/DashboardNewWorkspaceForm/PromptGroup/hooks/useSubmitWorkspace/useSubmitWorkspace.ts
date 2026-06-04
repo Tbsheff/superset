@@ -2,6 +2,7 @@ import { toast } from "@superset/ui/sonner";
 import { useMatchRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback } from "react";
 import { authClient } from "renderer/lib/auth-client";
+import { electronTrpcClient } from "renderer/lib/trpc-client";
 import { useLocalHostService } from "renderer/routes/_authenticated/providers/LocalHostServiceProvider";
 import type { NewWorkspacePromptContextApi } from "renderer/stores/new-workspace-prompt-context";
 import { useWorkspaceCreates } from "renderer/stores/workspace-creates";
@@ -103,6 +104,7 @@ export function useSubmitWorkspace(
 
 		const trimmedPrompt = draft.prompt.trim();
 		const workspaceId = crypto.randomUUID();
+		const runtimeKind = draft.runtimeKind;
 		const snapshot = {
 			id: workspaceId,
 			projectId,
@@ -112,6 +114,7 @@ export function useSubmitWorkspace(
 			baseBranch: draft.baseBranch ?? undefined,
 			taskId: linkedTaskId,
 			agents,
+			runtimeKind,
 			namingPrompt:
 				!isPrCheckout && !wantAgent && trimmedPrompt
 					? trimmedPrompt
@@ -120,6 +123,26 @@ export function useSubmitWorkspace(
 
 		closeAndResetDraft();
 		const { completed } = submit({ hostId, snapshot });
+
+		// Mirror the chosen runtimeKind into the main-process binding store so the
+		// workspace-runtime registry routes terminal ops to the remote runtime.
+		// Local is the registry default, so only a remote choice needs recording;
+		// the binding is keyed by the optimistic id (the host honors the supplied
+		// id, so it stays stable across the create round-trip).
+		if (runtimeKind === "remote") {
+			void electronTrpcClient.workspaces.setRuntimeBinding
+				.mutate({
+					workspaceId,
+					runtimeKind: "remote",
+					organizationId: activeOrganizationId,
+				})
+				.catch((error) => {
+					console.error(
+						"[useSubmitWorkspace] failed to record remote runtime binding",
+						error,
+					);
+				});
+		}
 		void navigate({
 			to: "/v2-workspace/$workspaceId",
 			params: { workspaceId },

@@ -5,6 +5,7 @@ import { createGenerateBranchNameProcedures } from "./procedures/generate-branch
 import { createGitStatusProcedures } from "./procedures/git-status";
 import { createInitProcedures } from "./procedures/init";
 import { createQueryProcedures } from "./procedures/query";
+import { createRuntimeBindingProcedures } from "./procedures/runtime-binding";
 import { createSectionsProcedures } from "./procedures/sections";
 import { createStatusProcedures } from "./procedures/status";
 
@@ -18,6 +19,7 @@ export const createWorkspacesRouter = () => {
 		createInitProcedures(),
 		createSectionsProcedures(),
 		createGenerateBranchNameProcedures(),
+		createRuntimeBindingProcedures(),
 	);
 };
 

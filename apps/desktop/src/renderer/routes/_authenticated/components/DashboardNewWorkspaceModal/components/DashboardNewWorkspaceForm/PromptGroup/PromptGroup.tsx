@@ -37,6 +37,7 @@ import { useV2WorkspaceCreateDefaultsStore } from "renderer/stores/v2-workspace-
 import { useDashboardNewWorkspaceDraft } from "../../../DashboardNewWorkspaceDraftContext";
 import { DevicePicker } from "../components/DevicePicker";
 import { useWorkspaceHostOptions } from "../components/DevicePicker/hooks/useWorkspaceHostOptions";
+import { RuntimeKindPicker } from "../components/RuntimeKindPicker";
 import { AttachmentButtons } from "./components/AttachmentButtons";
 import { CompareBaseBranchPicker } from "./components/CompareBaseBranchPicker";
 import { GitHubIssueLinkCommand } from "./components/GitHubIssueLinkCommand";
@@ -537,6 +538,10 @@ export function PromptGroup({
 							setLastHostId(next);
 							updateDraft({ hostId: next });
 						}}
+					/>
+					<RuntimeKindPicker
+						runtimeKind={draft.runtimeKind}
+						onSelectRuntimeKind={(next) => updateDraft({ runtimeKind: next })}
 					/>
 					<ProjectPickerPill
 						selectedProject={selectedProject}

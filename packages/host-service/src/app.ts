@@ -14,6 +14,7 @@ import type { ModelProviderRuntimeResolver } from "./providers/model-providers";
 import { createRepoScopedTokenMinter } from "./runtime/adapters/daytona";
 import { createGhCliTokenMinter } from "./runtime/adapters/daytona/createGhCliTokenMinter";
 import { ChatRuntimeManager } from "./runtime/chat";
+import { startSandboxReaper } from "./runtime/cleanup/sandboxReaper";
 import {
 	buildRemoteRuntimeResolver,
 	type RemoteRuntimeResolver,
@@ -166,7 +167,6 @@ export function createApp(options: CreateAppOptions): CreateAppResult {
 			return { resolve: (workspaceId) => resolver.resolve(workspaceId) };
 		},
 	});
-	gitWatcher.start();
 	const pullRequestRuntime = new PullRequestRuntimeManager({
 		db,
 		execGh,
@@ -180,7 +180,6 @@ export function createApp(options: CreateAppOptions): CreateAppResult {
 			return resolver.resolve(workspaceId);
 		},
 	});
-	pullRequestRuntime.start();
 	const chatRuntime =
 		options.chatRuntime ??
 		new ChatRuntimeManager({
@@ -213,6 +212,18 @@ export function createApp(options: CreateAppOptions): CreateAppResult {
 	eventBus.start();
 
 	const terminalAgentStore = new TerminalAgentStore();
+
+	// Reap Daytona sandboxes whose workspace was deleted via any client path
+	// (only the host-service cleanup saga spins them down directly). Wired here,
+	// after the ctx's forward-referenced fields (runtime/eventBus/terminalAgentStore)
+	// are initialized, so buildResolverCtx() is safe to call.
+	const sandboxReaper = startSandboxReaper(() => buildResolverCtx());
+
+	// Start the watchers/pollers only now: their first sync calls buildResolverCtx()
+	// (for remote workspaces), which forward-references runtime/eventBus/
+	// terminalAgentStore — undefined until the consts above are initialized.
+	gitWatcher.start();
+	pullRequestRuntime.start();
 
 	// Backfill `kind='main'` v2 workspaces for projects already set up before
 	// this column shipped. Idempotent; runs in the background so it doesn't
@@ -312,6 +323,11 @@ export function createApp(options: CreateAppOptions): CreateAppResult {
 			pullRequestRuntime.stop();
 		} catch (err) {
 			console.warn("[host-service] pullRequestRuntime.stop failed:", err);
+		}
+		try {
+			sandboxReaper.stop();
+		} catch (err) {
+			console.warn("[host-service] sandboxReaper.stop failed:", err);
 		}
 		try {
 			eventBus.close();

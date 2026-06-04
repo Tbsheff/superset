@@ -13,6 +13,15 @@
  * ```
  */
 
+export {
+	clearAllWorkspaceRuntimeKinds,
+	clearWorkspaceRuntimeKind,
+	getWorkspaceOrganizationId,
+	resolveWorkspaceRuntimeKind,
+	setWorkspaceLocal,
+	setWorkspaceRemote,
+} from "./binding";
+export { initRemoteWorkspaceRuntime } from "./initRemoteRuntime";
 export { LocalWorkspaceRuntime } from "./local";
 export {
 	createWorkspaceRuntimeRegistry,

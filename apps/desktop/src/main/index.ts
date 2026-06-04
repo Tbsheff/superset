@@ -49,6 +49,7 @@ import {
 	getTerminalHostClient,
 } from "./lib/terminal-host/client";
 import { disposeTray, initTray } from "./lib/tray";
+import { initRemoteWorkspaceRuntime } from "./lib/workspace-runtime";
 import { startNetworkLogger, stopNetworkLogger } from "./network-logger";
 import { MainWindow } from "./windows/main";
 
@@ -401,6 +402,11 @@ if (!gotTheLock) {
 		}
 
 		await loadWebviewBrowserExtension();
+
+		// Build the workspace runtime registry singleton with remote wiring before
+		// any consumer (daemon reconcile, terminal router) constructs it with the
+		// always-local default.
+		initRemoteWorkspaceRuntime();
 
 		// Must happen before renderer restore runs
 		await reconcileDaemonSessions();

@@ -1,6 +1,7 @@
 import { auth } from "@superset/auth/server";
 import { db } from "@superset/db/client";
 import {
+	accounts,
 	githubInstallations,
 	githubRepositories,
 	members,
@@ -9,6 +10,15 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { githubApp } from "../octokit";
+
+/**
+ * Repo roles that confer push access. GitHub's permission API exposes both a
+ * legacy aggregate `permission` ("admin" | "write" | "read" | "none") and a
+ * granular `role_name` ("admin" | "maintain" | "write" | "triage" | "read" |
+ * custom). "maintain" collapses to "write" in the legacy field, so we accept
+ * either surface reporting one of these roles.
+ */
+const PUSH_ROLES = new Set(["admin", "maintain", "write"]);
 
 /**
  * Scope of the minted installation token: write source, read metadata, nothing
@@ -31,13 +41,89 @@ export interface ScopedTokenResponse {
 }
 
 /**
+ * - `granted`: the caller's GitHub login resolved AND has a push role on the repo.
+ * - `denied`: the caller's GitHub login resolved but lacks push access. Hard 403.
+ * - `unverifiable`: the caller has no linked GitHub account (login can't be
+ *   resolved), so the per-repo check can't run. The route falls back to the
+ *   org-membership boundary already established by the caller.
+ */
+type RepoPushAccess = "granted" | "denied" | "unverifiable";
+
+/**
+ * Resolves the caller's GitHub login from their linked GitHub OAuth account and
+ * checks their permission level on the specific repo. Returns `unverifiable` if
+ * no GitHub account is linked or the login can't be resolved; the caller decides
+ * the fallback policy. Never throws on a denied check — only a hard `denied`.
+ */
+async function verifyRepoPushAccess(args: {
+	userId: string;
+	owner: string;
+	repo: string;
+}): Promise<RepoPushAccess> {
+	const githubAccount = await db.query.accounts.findFirst({
+		where: and(
+			eq(accounts.userId, args.userId),
+			eq(accounts.providerId, "github"),
+		),
+		columns: { accountId: true },
+	});
+
+	const accountId = githubAccount?.accountId
+		? Number(githubAccount.accountId)
+		: Number.NaN;
+	if (!Number.isInteger(accountId)) {
+		return "unverifiable";
+	}
+
+	let username: string;
+	try {
+		const { data: ghUser } = await githubApp.octokit.rest.users.getById({
+			account_id: accountId,
+		});
+		username = ghUser.login;
+	} catch {
+		// Login can't be resolved (deleted account, transient GitHub error).
+		// Treat as unverifiable so the org boundary still applies.
+		return "unverifiable";
+	}
+
+	try {
+		const { data } =
+			await githubApp.octokit.rest.repos.getCollaboratorPermissionLevel({
+				owner: args.owner,
+				repo: args.repo,
+				username,
+			});
+		const granted =
+			PUSH_ROLES.has(data.role_name) || PUSH_ROLES.has(data.permission);
+		return granted ? "granted" : "denied";
+	} catch {
+		// GitHub returns 404 when the user is not a collaborator at all. Either
+		// way, the caller has no push grant on this repo.
+		return "denied";
+	}
+}
+
+/**
  * Mints a short-lived GitHub App installation access token scoped to a SINGLE
  * repository (`contents:write`, `metadata:read`). The host-side Daytona adapter
  * consumes this via its injected `TokenMinter`; the token rides one TLS call and
  * is never persisted on the host or written into a sandbox.
  *
- * Authorization: the caller must be an active member of the Superset org that
- * owns the GitHub installation the repo belongs to. The token is never logged.
+ * Authorization (two gates, both required):
+ *   1. The caller must be an active member of the Superset org that owns the
+ *      GitHub installation the repo belongs to (org boundary).
+ *   2. The caller must hold push access to the SPECIFIC repo. We resolve the
+ *      caller's GitHub login from their linked GitHub OAuth account
+ *      (`accounts` where providerId="github", accountId=GitHub numeric user id)
+ *      via `users.getById`, then check `repos.getCollaboratorPermissionLevel`
+ *      and require a role in {admin, maintain, write}.
+ *
+ * Residual gap: GitHub is one of several sign-in methods (email/password and
+ * Google are also enabled), so a caller may have NO linked GitHub account. When
+ * the GitHub login cannot be resolved, gate 2 cannot run; we fall back to the
+ * org-membership boundary alone (gate 1). This is the strongest check available
+ * for those callers — see `decisionsMade`. The token is never logged.
  */
 export async function POST(request: Request): Promise<Response> {
 	const session = await auth.api.getSession({ headers: request.headers });
@@ -67,6 +153,7 @@ export async function POST(request: Request): Promise<Response> {
 		where: eq(githubRepositories.fullName, fullName),
 		columns: {
 			id: true,
+			owner: true,
 			name: true,
 			organizationId: true,
 			installationId: true,
@@ -106,6 +193,21 @@ export async function POST(request: Request): Promise<Response> {
 		return Response.json(
 			{ error: "GitHub installation unavailable" },
 			{ status: 409 },
+		);
+	}
+
+	const repoAccess = await verifyRepoPushAccess({
+		userId: session.user.id,
+		owner: repository.owner,
+		repo: repository.name,
+	});
+
+	// Same opaque 403 as "repo not accessible": a caller with a linked GitHub
+	// account but no push access learns nothing beyond "not accessible".
+	if (repoAccess === "denied") {
+		return Response.json(
+			{ error: "Repository not accessible" },
+			{ status: 403 },
 		);
 	}
 

@@ -1,4 +1,8 @@
 export { DaytonaRuntimeAdapter } from "./adapter.ts";
+export {
+	type CreateRepoScopedTokenMinterDeps,
+	createRepoScopedTokenMinter,
+} from "./createRepoScopedTokenMinter.ts";
 export { DaytonaActivityLease } from "./DaytonaActivityLease.ts";
 export {
 	DaytonaPtyTransport,

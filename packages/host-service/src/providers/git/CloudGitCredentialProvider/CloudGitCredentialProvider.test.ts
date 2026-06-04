@@ -12,10 +12,8 @@ function trackAskpass(env: Record<string, string>): string {
 	return path ?? "";
 }
 
-async function tokenFromAskpass(askpassPath: string): Promise<string> {
-	const script = await readFile(askpassPath, "utf8");
-	const match = script.match(/echo "([^"]+)" ;;\n?esac/);
-	return match?.[1] ?? "";
+async function askpassBody(askpassPath: string): Promise<string> {
+	return await readFile(askpassPath, "utf8");
 }
 
 afterEach(async () => {
@@ -48,11 +46,53 @@ describe("CloudGitCredentialProvider per-repo cache", () => {
 		expect(pathA).not.toBe(pathB);
 		expect(calls).toEqual([repoA, repoB]);
 
-		const tokenA = await tokenFromAskpass(pathA);
-		const tokenB = await tokenFromAskpass(pathB);
-		expect(tokenA).toBe("token-for-github.com/acme/alpha");
-		expect(tokenB).toBe("token-for-github.com/acme/beta");
-		expect(tokenA).not.toBe(tokenB);
+		const tokenA = "token-for-github.com/acme/alpha";
+		const tokenB = "token-for-github.com/acme/beta";
+		expect(credsA.env.GIT_ASKPASS_TOKEN).toBe(tokenA);
+		expect(credsB.env.GIT_ASKPASS_TOKEN).toBe(tokenB);
+		expect(credsA.env.GIT_ASKPASS_TOKEN).not.toBe(credsB.env.GIT_ASKPASS_TOKEN);
+
+		const bodyA = await askpassBody(pathA);
+		const bodyB = await askpassBody(pathB);
+		expect(bodyA).not.toContain(tokenA);
+		expect(bodyB).not.toContain(tokenB);
+		expect(bodyA).toContain('"$GIT_ASKPASS_TOKEN"');
+	});
+
+	test("token rides the spawned env, never the askpass script body", async () => {
+		const secret = "ghs_supersecrettoken";
+		const provider = new CloudGitCredentialProvider(async () => ({
+			token: secret,
+			expiresAt: Date.now() + HOUR_MS,
+		}));
+
+		const creds = await provider.getCredentials(
+			"https://github.com/acme/alpha.git",
+		);
+		const path = trackAskpass(creds.env);
+
+		expect(creds.env.GIT_ASKPASS_TOKEN).toBe(secret);
+		const body = await askpassBody(path);
+		expect(body).not.toContain(secret);
+		expect(body).toContain('printf \'%s\\n\' "$GIT_ASKPASS_TOKEN"');
+	});
+
+	test("cached entry still carries its token in env on a cache hit", async () => {
+		const provider = new CloudGitCredentialProvider(async () => ({
+			token: "scoped-token",
+			expiresAt: Date.now() + HOUR_MS,
+		}));
+
+		const repo = "https://github.com/acme/alpha.git";
+		const first = await provider.getCredentials(repo);
+		const second = await provider.getCredentials(repo);
+
+		trackAskpass(first.env);
+		trackAskpass(second.env);
+
+		expect(second.env.GIT_ASKPASS_TOKEN).toBe("scoped-token");
+		const body = await askpassBody(second.env.GIT_ASKPASS ?? "");
+		expect(body).not.toContain("scoped-token");
 	});
 
 	test("same repo reuses its cached entry within expiry", async () => {

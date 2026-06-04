@@ -1,11 +1,12 @@
 import { unlink } from "node:fs/promises";
 import type { GitCredentialProvider } from "../../../runtime/git/types";
-import { writeTempAskpass } from "./askpass";
+import { GIT_ASKPASS_TOKEN_ENV, writeTempAskpass } from "./askpass";
 import { repoCacheKey } from "./repoCacheKey";
 
 interface CachedCredential {
 	expiresAt: number;
 	askpassPath: string;
+	token: string;
 }
 
 export class CloudGitCredentialProvider implements GitCredentialProvider {
@@ -37,6 +38,7 @@ export class CloudGitCredentialProvider implements GitCredentialProvider {
 			return {
 				env: {
 					GIT_ASKPASS: cached.askpassPath,
+					[GIT_ASKPASS_TOKEN_ENV]: cached.token,
 					GIT_TERMINAL_PROMPT: "0",
 				},
 			};
@@ -47,13 +49,14 @@ export class CloudGitCredentialProvider implements GitCredentialProvider {
 		}
 
 		const { token, expiresAt } = await this.tokenFetcher(remoteUrl);
-		const askpassPath = await writeTempAskpass(token);
+		const askpassPath = await writeTempAskpass();
 
-		this.cachedCredentials.set(cacheKey, { expiresAt, askpassPath });
+		this.cachedCredentials.set(cacheKey, { expiresAt, askpassPath, token });
 
 		return {
 			env: {
 				GIT_ASKPASS: askpassPath,
+				[GIT_ASKPASS_TOKEN_ENV]: token,
 				GIT_TERMINAL_PROMPT: "0",
 			},
 		};

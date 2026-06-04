@@ -23,8 +23,26 @@ function parsePathish(remoteUrl: string): string {
 		const path = stripLeadingSlash(url.pathname);
 		return `${url.host}/${path}`;
 	} catch {
-		return remoteUrl;
+		return stripUserinfo(remoteUrl);
 	}
+}
+
+/**
+ * Last-resort guard for remotes neither the scp-form regex nor `new URL()`
+ * could parse: drop a leading `userinfo@` (e.g. an embedded token) so a secret
+ * in a malformed remote can never enter the cache key. If an `@` still remains,
+ * the URL is too ambiguous to safely cache by, so reject it.
+ */
+function stripUserinfo(value: string): string {
+	const atIndex = value.indexOf("@");
+	if (atIndex === -1) {
+		return value;
+	}
+	const afterUserinfo = value.slice(atIndex + 1);
+	if (afterUserinfo.includes("@")) {
+		throw new Error("Unparseable remote URL with embedded userinfo");
+	}
+	return afterUserinfo;
 }
 
 function stripLeadingSlash(value: string): string {

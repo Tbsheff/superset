@@ -15,6 +15,7 @@ import { ChatRuntimeManager } from "./runtime/chat";
 import { WorkspaceFilesystemManager } from "./runtime/filesystem";
 import type { GitCredentialProvider } from "./runtime/git";
 import { createGitFactory } from "./runtime/git";
+import { createRepoScopedTokenMinter } from "./runtime/adapters/daytona";
 import { runMainWorkspaceSweep } from "./runtime/main-workspace-sweep";
 import { PullRequestRuntimeManager } from "./runtime/pull-requests";
 import { registerRemoteControlRoute } from "./terminal/remote-control/route";
@@ -91,6 +92,16 @@ export function createApp(options: CreateAppOptions): CreateAppResult {
 			return new Octokit({ auth: token });
 		});
 	const execGh: ExecGh = options.execGh ?? defaultExecGh;
+
+	// Host-side minter for the remote-runtime push path (git.pushRemotePatch).
+	// POSTs to the apps/api /api/github/scoped-token route with this host's
+	// session auth + bound org. The minted token is write-scoped and stays
+	// host-side; the minter never logs or persists it.
+	const mintRepoScopedToken = createRepoScopedTokenMinter({
+		apiBaseUrl: config.cloudApiUrl,
+		authProvider: providers.auth,
+		organizationId: config.organizationId,
+	});
 
 	const filesystem = new WorkspaceFilesystemManager({ db });
 	// GitWatcher is the single source of truth for `.git/` and worktree fs
@@ -196,6 +207,7 @@ export function createApp(options: CreateAppOptions): CreateAppResult {
 					runtime,
 					eventBus,
 					terminalAgentStore,
+					mintRepoScopedToken,
 					organizationId: config.organizationId,
 					isAuthenticated,
 				} as Record<string, unknown>;

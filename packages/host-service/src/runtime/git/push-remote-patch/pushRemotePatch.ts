@@ -1,5 +1,8 @@
 import { rm } from "node:fs/promises";
-import { writeTempAskpass } from "../../../providers/git/CloudGitCredentialProvider/askpass.ts";
+import {
+	GIT_ASKPASS_TOKEN_ENV,
+	writeTempAskpass,
+} from "../../../providers/git/CloudGitCredentialProvider/askpass.ts";
 import type {
 	RepoCoordinates,
 	TokenMinter,
@@ -84,10 +87,14 @@ export async function pushRemotePatch(
 	const git = await deps.git(input.worktreePath);
 	const patchKind = await applyPatch(git, input.patch);
 
-	const askpassPath = await writeTempAskpass(token);
+	const askpassPath = await writeTempAskpass();
 	try {
 		await git
-			.env({ GIT_ASKPASS: askpassPath, GIT_TERMINAL_PROMPT: "0" })
+			.env({
+				GIT_ASKPASS: askpassPath,
+				[GIT_ASKPASS_TOKEN_ENV]: token,
+				GIT_TERMINAL_PROMPT: "0",
+			})
 			.push(["--set-upstream", "origin", `HEAD:refs/heads/${branch}`]);
 	} finally {
 		await rm(askpassPath, { force: true });

@@ -12,6 +12,15 @@ import { WorkspaceNotFoundState } from "./components/WorkspaceNotFoundState";
 import { useRemoteHostStatus } from "./hooks/useRemoteHostStatus";
 import { WorkspaceProvider } from "./providers/WorkspaceProvider";
 
+/**
+ * How long after a create we keep showing the "creating" state for a workspace
+ * whose server row hasn't synced yet, before treating it as genuinely missing.
+ * Generous because the create already succeeded server-side — this only covers
+ * Electric/Neon replication lag, and the creating state offers its own reload
+ * escape hatch after 30s.
+ */
+const PENDING_SYNC_GRACE_MS = 10 * 60 * 1000;
+
 export const Route = createFileRoute("/_authenticated/_dashboard/v2-workspace")(
 	{
 		component: V2WorkspaceLayout,
@@ -49,8 +58,32 @@ function V2WorkspaceLayout() {
 				.where(({ failed }) => eq(failed.id, workspaceId ?? "")),
 		[collections, workspaceId],
 	);
+	// Local state is written the moment a create starts (writeWorkspacePaneLayout)
+	// and removed on delete/failure. Its presence without a synced v2_workspaces
+	// row means "created, awaiting sync" — used below to keep showing the creating
+	// state (instead of "not found") when Electric lags the new row's txid.
+	const { data: localStateEntries } = useLiveQuery(
+		(q) =>
+			q
+				.from({ localState: collections.v2WorkspaceLocalState })
+				.where(({ localState }) =>
+					eq(localState.workspaceId, workspaceId ?? ""),
+				),
+		[collections, workspaceId],
+	);
 	const workspace = workspaces?.[0] ?? null;
 	const failedEntry = failedEntries?.[0] ?? null;
+	const localState = localStateEntries?.[0] ?? null;
+	const localStateCreatedAtMs = localState
+		? new Date(localState.createdAt).getTime()
+		: 0;
+	// A just-created workspace whose row hasn't synced yet is "provisioning", not
+	// "not found". Bound it so a stale local-state row (e.g. a workspace deleted
+	// on another device) still falls through to not-found after the window.
+	const awaitingFirstSync =
+		isCreatePending ||
+		(!!localState &&
+			Date.now() - localStateCreatedAtMs < PENDING_SYNC_GRACE_MS);
 
 	useEffect(() => {
 		if (workspace?.$synced === true && pendingTransaction?.type === "insert") {
@@ -75,6 +108,16 @@ function V2WorkspaceLayout() {
 	if (!workspace) {
 		if (failedEntry) {
 			return <WorkspaceCreateErrorState entry={failedEntry} />;
+		}
+		// Created but the row hasn't streamed in yet (Electric/Neon lag): keep
+		// showing "creating" rather than a false "not found". name/branch live on
+		// the un-synced row, so they fall back to the component's defaults.
+		if (awaitingFirstSync) {
+			return (
+				<WorkspaceCreatingState
+					startedAt={localState ? localStateCreatedAtMs : undefined}
+				/>
+			);
 		}
 		return <WorkspaceNotFoundState workspaceId={workspaceId} />;
 	}

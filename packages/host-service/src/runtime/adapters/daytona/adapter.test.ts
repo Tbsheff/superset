@@ -163,6 +163,17 @@ describe("DaytonaRuntimeAdapter.createInstance", () => {
 		}
 	});
 
+	test("configures pnpm hardlink storage so a big install fits the capped disk", async () => {
+		const { deps, sdk } = makeDeps();
+		const adapter = new DaytonaRuntimeAdapter(deps);
+		const handle = await adapter.createInstance(plan);
+		const commands =
+			sdk.sandboxes.get(handle.externalId)?.calls.executeCommand ?? [];
+		expect(
+			commands.some((c) => c.includes("package-import-method hardlink")),
+		).toBe(true);
+	});
+
 	test("never persists the scoped token into metadataJson", async () => {
 		const { deps, store } = makeDeps();
 		const adapter = new DaytonaRuntimeAdapter(deps);

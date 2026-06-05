@@ -101,24 +101,29 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 					},
 		);
 
-		// A failure after create() must not leak a paid sandbox. The clone and the
-		// agent-auth sync touch disjoint paths (~/workspace vs ~/.codex, ~/.claude),
-		// so they run concurrently — the auth round-trips hide behind the clone.
-		// The trailing `.catch` pins the "auth never masks a clone failure"
-		// invariant at the call site (not just inside syncAgentAuthBestEffort), so
-		// `await authSync` on the teardown path can never reject or replace the
-		// original clone error.
-		let authSync: Promise<void> = Promise.resolve();
+		// A failure after create() must not leak a paid sandbox. The post-create
+		// setup (agent-auth sync + package-manager storage config) touches paths
+		// disjoint from the clone (~/.codex, ~/.claude, pnpm config vs ~/workspace),
+		// so it runs concurrently — its round-trips hide behind the clone. Each step
+		// is best-effort (never rejects); the trailing `.catch` pins that at the call
+		// site, so `await postSetup` on the teardown path can never reject or mask
+		// the original clone error.
+		let postSetup: Promise<void> = Promise.resolve();
 		try {
 			this.persistInstance(plan.workspaceId, sandbox);
-			authSync = this.syncAgentAuthBestEffort(sandbox).catch(() => {});
+			postSetup = Promise.all([
+				this.syncAgentAuthBestEffort(sandbox),
+				this.configureSandboxStorageBestEffort(sandbox),
+			])
+				.then(() => {})
+				.catch(() => {});
 			await this.cloneRepo(sandbox, plan);
 		} catch (error) {
-			await authSync;
+			await postSetup;
 			await this.deleteAfterFailedProvision(sandbox);
 			throw error;
 		}
-		await authSync;
+		await postSetup;
 
 		return new DaytonaWorkspaceRuntime(
 			sandbox as unknown as RuntimeSandbox,
@@ -143,6 +148,36 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 		} catch (error) {
 			console.warn(
 				"[daytona] agent auth sync failed (continuing):",
+				error instanceof Error ? error.message : String(error),
+			);
+		}
+	}
+
+	/**
+	 * Forces pnpm to HARDLINK its store into node_modules instead of copying.
+	 * On the sandbox overlay fs pnpm defaults to copying, which keeps a full
+	 * second copy of every dependency (store + node_modules) and overflows the
+	 * capped sandbox disk on large monorepos. Hardlinking makes node_modules share
+	 * the store's inodes, roughly halving install footprint so it fits the disk.
+	 * Best-effort and pnpm-only: a non-pnpm repo simply never benefits, and a
+	 * failure must not fail an otherwise-provisioned workspace.
+	 */
+	private async configureSandboxStorageBestEffort(
+		sandbox: Sandbox,
+	): Promise<void> {
+		try {
+			const res = await sandbox.process.executeCommand(
+				"pnpm config set --location=global package-import-method hardlink",
+			);
+			if ((res.exitCode ?? 0) !== 0) {
+				console.warn(
+					"[daytona] pnpm hardlink config non-zero exit:",
+					truncateForError(res.result ?? ""),
+				);
+			}
+		} catch (error) {
+			console.warn(
+				"[daytona] sandbox storage config failed (continuing):",
 				error instanceof Error ? error.message : String(error),
 			);
 		}

@@ -159,9 +159,9 @@ describe("destroyWorkspace remote", () => {
 
 		expect(result.success).toBe(true);
 		expect(parts.deleteCalls).toEqual([{ id: REMOTE_WS_ID }]);
-		expect(
-			result.warnings.some((w) => w.includes("sandbox unreachable")),
-		).toBe(true);
+		expect(result.warnings.some((w) => w.includes("sandbox unreachable"))).toBe(
+			true,
+		);
 	});
 
 	test("remote: destroy runs before the cloud delete", async () => {

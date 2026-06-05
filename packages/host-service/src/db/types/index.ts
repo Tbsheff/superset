@@ -1,11 +1,4 @@
 export {
-	asSecret,
-	type JsonScalar,
-	type JsonValue,
-	type RuntimeMetadata,
-	type Secret,
-} from "./secret.ts";
-export {
 	type RuntimeBinding,
 	type RuntimeKind,
 	toRuntimeBinding,
@@ -15,3 +8,10 @@ export {
 	type NormalizedRuntimeStatus,
 	normalizedRuntimeStatusValues,
 } from "./runtime-status.ts";
+export {
+	asSecret,
+	type JsonScalar,
+	type JsonValue,
+	type RuntimeMetadata,
+	type Secret,
+} from "./secret.ts";

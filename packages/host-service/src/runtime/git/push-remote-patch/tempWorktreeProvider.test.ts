@@ -3,9 +3,7 @@ import type { SimpleGit } from "simple-git";
 import type { GitFactory } from "../types.ts";
 import { createTempWorktreeProvider } from "./tempWorktreeProvider.ts";
 
-function makeGitFactory(opts?: {
-	failFirstWorktreeAdd?: boolean;
-}): {
+function makeGitFactory(opts?: { failFirstWorktreeAdd?: boolean }): {
 	git: GitFactory;
 	calls: string[][];
 } {
@@ -91,7 +89,9 @@ describe("createTempWorktreeProvider", () => {
 			"--force",
 			"/tmp/superset-remote-push-abc",
 		]);
-		expect(calls.some((c) => c[0] === "worktree" && c[1] === "prune")).toBe(true);
+		expect(calls.some((c) => c[0] === "worktree" && c[1] === "prune")).toBe(
+			true,
+		);
 	});
 
 	test("release swallows a git failure (best-effort cleanup)", async () => {

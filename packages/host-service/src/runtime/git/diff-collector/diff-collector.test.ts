@@ -57,10 +57,7 @@ describe("collectFileDiff", () => {
 		]);
 
 		await git.raw(["checkout", "-b", "feature"]);
-		await writeFile(
-			join(repo, "shared.ts"),
-			"line1\nBRANCH CHANGED\nline3\n",
-		);
+		await writeFile(join(repo, "shared.ts"), "line1\nBRANCH CHANGED\nline3\n");
 		await git.raw(["commit", "-am", "branch edit"]);
 
 		// Advance the base AFTER fork; merge-base content must NOT include it.

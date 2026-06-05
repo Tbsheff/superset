@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type { SimpleGit } from "simple-git";
 import type { TokenMinter } from "../../adapters/daytona/types.ts";
-import { isRuntimeProviderError } from "../../seam/index.ts";
 import type { WorkspaceRuntime } from "../../seam/index.ts";
+import { isRuntimeProviderError } from "../../seam/index.ts";
 import type { GitFactory } from "../types.ts";
 import type { RepoLookup } from "./assertSameRepoPushTarget.ts";
 import {
@@ -32,7 +32,8 @@ function makeGitFactory(rec: GitRecorder): GitFactory {
 				rec.rawCalls.push(args);
 				return "";
 			},
-			env: (override: Record<string, string>) => makeGit({ ...env, ...override }),
+			env: (override: Record<string, string>) =>
+				makeGit({ ...env, ...override }),
 			push: async (args: string[]) => {
 				rec.pushCalls.push(args);
 				return { pushed: [] } as unknown as Awaited<
@@ -71,8 +72,7 @@ function fakeRuntime(opts: {
 	if (opts.hasExport === false) return base;
 	return {
 		...base,
-		exportPatch:
-			opts.exportPatch ?? (async () => opts.patch ?? PATCH),
+		exportPatch: opts.exportPatch ?? (async () => opts.patch ?? PATCH),
 	};
 }
 
@@ -93,16 +93,17 @@ function makeArgs(overrides?: {
 	const released: string[] = [];
 	const minted: Array<{ owner: string; repo: string }> = [];
 
-	const worktreeProvider: RemoteWorktreeProvider = overrides?.worktreeProvider ?? {
-		acquire: async () => {
-			const worktreePath = "/tmp/remote-wt";
-			acquired.push(worktreePath);
-			return { worktreePath };
-		},
-		release: async (worktreePath) => {
-			released.push(worktreePath);
-		},
-	};
+	const worktreeProvider: RemoteWorktreeProvider =
+		overrides?.worktreeProvider ?? {
+			acquire: async () => {
+				const worktreePath = "/tmp/remote-wt";
+				acquired.push(worktreePath);
+				return { worktreePath };
+			},
+			release: async (worktreePath) => {
+				released.push(worktreePath);
+			},
+		};
 
 	const octokit: RepoLookup = overrides?.octokit ?? {
 		repos: {
@@ -193,7 +194,9 @@ describe("exportAndPushRemote", () => {
 		// A fork target makes pushRemotePatch throw CROSS_REPO_PUSH after acquire.
 		const octokit: RepoLookup = {
 			repos: {
-				get: async () => ({ data: { fork: true, permissions: { push: true } } }),
+				get: async () => ({
+					data: { fork: true, permissions: { push: true } },
+				}),
 			},
 		};
 		const { args } = makeArgs({ worktreeProvider, octokit });

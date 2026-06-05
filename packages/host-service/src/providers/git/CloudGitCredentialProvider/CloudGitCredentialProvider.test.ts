@@ -1,5 +1,5 @@
-import { readFile, unlink } from "node:fs/promises";
 import { afterEach, describe, expect, test } from "bun:test";
+import { readFile, unlink } from "node:fs/promises";
 import { CloudGitCredentialProvider } from "./CloudGitCredentialProvider";
 import { repoCacheKey } from "./repoCacheKey";
 
@@ -74,7 +74,7 @@ describe("CloudGitCredentialProvider per-repo cache", () => {
 		expect(creds.env.GIT_ASKPASS_TOKEN).toBe(secret);
 		const body = await askpassBody(path);
 		expect(body).not.toContain(secret);
-		expect(body).toContain('printf \'%s\\n\' "$GIT_ASKPASS_TOKEN"');
+		expect(body).toContain("printf '%s\\n' \"$GIT_ASKPASS_TOKEN\"");
 	});
 
 	test("cached entry still carries its token in env on a cache hit", async () => {

@@ -1,9 +1,9 @@
 import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
-import { eq } from "drizzle-orm";
 import * as schema from "./schema.ts";
 import { toRuntimeBinding } from "./types/index.ts";
 
@@ -67,7 +67,8 @@ describe("host-service migrations", () => {
 			.all();
 
 		expect(row).toBeDefined();
-		expect(toRuntimeBinding(row!)).toEqual({
+		if (!row) throw new Error("expected ws-2 workspace row");
+		expect(toRuntimeBinding(row)).toEqual({
 			kind: "local",
 			worktreePath: "/tmp/repo",
 		});
@@ -173,9 +174,7 @@ describe("host-service migrations", () => {
 			})
 			.run();
 
-		db.delete(schema.workspaces)
-			.where(eq(schema.workspaces.id, "ws-5"))
-			.run();
+		db.delete(schema.workspaces).where(eq(schema.workspaces.id, "ws-5")).run();
 
 		const remaining = db
 			.select()

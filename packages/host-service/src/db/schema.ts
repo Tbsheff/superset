@@ -7,7 +7,10 @@ import {
 	text,
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
-import type { NormalizedRuntimeStatus, RuntimeMetadata } from "./types/index.ts";
+import type {
+	NormalizedRuntimeStatus,
+	RuntimeMetadata,
+} from "./types/index.ts";
 
 export const terminalSessions = sqliteTable(
 	"terminal_sessions",

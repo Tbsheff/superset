@@ -13,8 +13,8 @@ import {
 	LocalWorktreeAdapter,
 } from "../adapters/localWorktree/index.ts";
 import type { GitFactory } from "../git/types.ts";
-import { RuntimeProviderError } from "../seam/index.ts";
 import type { RuntimeAdapter } from "../seam/index.ts";
+import { RuntimeProviderError } from "../seam/index.ts";
 
 /** v1 runtime kinds: `local` worktrees and `remote` Daytona sandboxes. */
 export type RuntimeKind = "local" | "remote";
@@ -80,5 +80,7 @@ export function getRuntimeAdapter(
 			mintRepoScopedToken,
 		});
 	}
-	throw new Error(`No runtime adapter for kind: ${runtimeKind satisfies never}`);
+	throw new Error(
+		`No runtime adapter for kind: ${runtimeKind satisfies never}`,
+	);
 }

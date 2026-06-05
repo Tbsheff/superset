@@ -16,7 +16,7 @@ export async function writeTempAskpass(): Promise<string> {
 	const script = `#!/bin/sh
 case "$1" in
   Username*) echo "x-access-token" ;;
-  *) printf '%s\\n' "\$${GIT_ASKPASS_TOKEN_ENV}" ;;
+  *) printf '%s\\n' "$${GIT_ASKPASS_TOKEN_ENV}" ;;
 esac
 `;
 	await writeFile(filePath, script);

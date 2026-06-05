@@ -55,6 +55,12 @@ export const workspaceRunTerminalStateSchema = z.object({
 export const workspaceLocalStateSchema = z.object({
 	workspaceId: z.string().uuid(),
 	createdAt: persistedDateSchema,
+	// Snapshot of the workspace's name/branch captured at create time. Lets the
+	// "creating" UI show the real name before the v2_workspaces row has synced
+	// (the optimistic row rolls back on an Electric txid timeout). Optional —
+	// older rows and non-create inserts won't have them.
+	name: z.string().optional(),
+	branch: z.string().optional(),
 	sidebarState: z.object({
 		projectId: z.string().uuid(),
 		tabOrder: z.number().int().default(0),

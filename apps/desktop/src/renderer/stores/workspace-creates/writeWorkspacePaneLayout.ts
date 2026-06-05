@@ -22,7 +22,7 @@ type HostWorkspacesCreateResult = NonNullable<
  */
 export function writeWorkspacePaneLayout(
 	collections: AppCollections,
-	workspace: { id: string; projectId: string },
+	workspace: { id: string; projectId: string; name?: string; branch?: string },
 	terminals: HostWorkspacesCreateResult["terminals"],
 	agents: HostWorkspacesCreateResult["agents"],
 ): void {
@@ -38,6 +38,8 @@ export function writeWorkspacePaneLayout(
 	if (existing) {
 		collections.v2WorkspaceLocalState.update(workspace.id, (draft) => {
 			draft.paneLayout = paneLayout;
+			if (workspace.name !== undefined) draft.name = workspace.name;
+			if (workspace.branch !== undefined) draft.branch = workspace.branch;
 		});
 		return;
 	}
@@ -59,6 +61,8 @@ export function writeWorkspacePaneLayout(
 	collections.v2WorkspaceLocalState.insert({
 		workspaceId: workspace.id,
 		createdAt: new Date(),
+		name: workspace.name,
+		branch: workspace.branch,
 		sidebarState: {
 			projectId,
 			tabOrder: getPrependTabOrder(topLevelItems),

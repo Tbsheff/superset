@@ -123,7 +123,12 @@ export function useWorkspaceCreates(): UseWorkspaceCreatesApi {
 			trackWorkspaceTransaction(workspaceId, transaction);
 			writeWorkspacePaneLayout(
 				collections,
-				{ id: workspaceId, projectId: args.snapshot.projectId },
+				{
+					id: workspaceId,
+					projectId: args.snapshot.projectId,
+					name: optimisticRow.name,
+					branch: optimisticRow.branch,
+				},
 				[],
 				[],
 			);

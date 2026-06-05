@@ -110,11 +110,13 @@ function V2WorkspaceLayout() {
 			return <WorkspaceCreateErrorState entry={failedEntry} />;
 		}
 		// Created but the row hasn't streamed in yet (Electric/Neon lag): keep
-		// showing "creating" rather than a false "not found". name/branch live on
-		// the un-synced row, so they fall back to the component's defaults.
+		// showing "creating" rather than a false "not found", using the name/branch
+		// snapshotted on the local-state row at create time.
 		if (awaitingFirstSync) {
 			return (
 				<WorkspaceCreatingState
+					name={localState?.name}
+					branch={localState?.branch}
 					startedAt={localState ? localStateCreatedAtMs : undefined}
 				/>
 			);

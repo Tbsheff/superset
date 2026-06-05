@@ -158,6 +158,9 @@ export async function createRemoteWorkspace(
 	};
 
 	try {
+		// Idempotent: a create retried after a partial first attempt (e.g. the
+		// renderer rolled back on an Electric txid timeout and re-issued) resolves
+		// to the same cloud id, so upsert instead of failing on the existing row.
 		ctx.db
 			.insert(workspaces)
 			.values({
@@ -166,6 +169,15 @@ export async function createRemoteWorkspace(
 				worktreePath: REMOTE_WORKTREE_SENTINEL,
 				branch,
 				runtimeKind: "remote",
+			})
+			.onConflictDoUpdate({
+				target: workspaces.id,
+				set: {
+					projectId: localProject.id,
+					worktreePath: REMOTE_WORKTREE_SENTINEL,
+					branch,
+					runtimeKind: "remote",
+				},
 			})
 			.run();
 	} catch (err) {

@@ -35,6 +35,8 @@ function makeDeps(overrides?: Partial<DaytonaAdapterDeps>): {
 		git,
 		mintRepoScopedToken,
 		now: () => 1_000,
+		// No-op so the unit tests never read the host keychain / ~/.codex.
+		syncAgentAuth: async () => ({ synced: [], skipped: [] }),
 		...overrides,
 	};
 	return { deps, sdk, store, minted };
@@ -72,21 +74,25 @@ describe("DaytonaRuntimeAdapter.createInstance", () => {
 		expect(row?.status).toBe("running"); // started -> running
 	});
 
-	test("clones with a single-repo-scoped token as x-access-token", async () => {
+	test("clones SHALLOW with the scoped token passed via env, never argv", async () => {
 		const { deps, sdk, minted } = makeDeps();
 		const adapter = new DaytonaRuntimeAdapter(deps);
 		const handle = await adapter.createInstance(plan);
 		expect(minted).toEqual([{ owner: "superset", repo: "demo" }]);
 		const sandbox = sdk.sandboxes.get(handle.externalId);
-		expect(sandbox?.calls.clone).toHaveLength(1);
-		const clone = sandbox?.calls.clone[0];
-		expect(clone?.username).toBe("x-access-token");
-		expect(clone?.password).toBe("ghs_scoped_secret_token");
-		expect(clone?.branch).toBe("main");
-		expect(clone?.url).toBe(REPO_URL);
+		const clone = sandbox?.calls.exec.find((c) =>
+			c.command.includes("--depth=1"),
+		);
+		expect(clone).toBeDefined();
+		expect(clone?.command).toContain("--single-branch");
+		expect(clone?.command).toContain("--branch 'main'");
+		expect(clone?.command).toContain(REPO_URL);
+		// The token rides the ENV, not the command string.
+		expect(clone?.env?.SUPERSET_CLONE_TOKEN).toBe("ghs_scoped_secret_token");
+		expect(clone?.command).not.toContain("ghs_scoped_secret_token");
 	});
 
-	test("clones anonymously when no token is minted (public repo)", async () => {
+	test("clones anonymously (no credential helper, no env) for a public repo", async () => {
 		const { deps, sdk } = makeDeps({
 			mintRepoScopedToken: async () => ({
 				token: "",
@@ -95,10 +101,66 @@ describe("DaytonaRuntimeAdapter.createInstance", () => {
 		});
 		const adapter = new DaytonaRuntimeAdapter(deps);
 		const handle = await adapter.createInstance(plan);
-		const clone = sdk.sandboxes.get(handle.externalId)?.calls.clone[0];
-		expect(clone?.username).toBeUndefined();
-		expect(clone?.password).toBeUndefined();
-		expect(clone?.url).toBe(REPO_URL);
+		const clone = sdk.sandboxes
+			.get(handle.externalId)
+			?.calls.exec.find((c) => c.command.includes("--depth=1"));
+		expect(clone).toBeDefined();
+		expect(clone?.command.startsWith("git clone")).toBe(true);
+		expect(clone?.command).not.toContain("credential.helper");
+		expect(clone?.env).toBeUndefined();
+		expect(clone?.command).toContain(REPO_URL);
+	});
+
+	test("creates the workspace branch after the shallow clone", async () => {
+		const { deps, sdk } = makeDeps();
+		const adapter = new DaytonaRuntimeAdapter(deps);
+		const handle = await adapter.createInstance({
+			...plan,
+			repo: { ...plan.repo, createBranch: "feature/x" },
+		});
+		const commands =
+			sdk.sandboxes.get(handle.externalId)?.calls.executeCommand ?? [];
+		expect(commands).toContain("git checkout -b 'feature/x'");
+	});
+
+	test("fails (and tears down) when the shallow clone exits non-zero", async () => {
+		const { deps, sdk } = makeDeps();
+		sdk.cloneExitCode = 128; // every sandbox this sdk creates fails its clone
+		const adapter = new DaytonaRuntimeAdapter(deps);
+		await expect(adapter.createInstance(plan)).rejects.toThrow(
+			"git clone failed",
+		);
+		const created = [...sdk.sandboxes.values()];
+		expect(created[0]?.calls.deleted).toBe(1);
+	});
+
+	test("a clone failure surfaces the clone error even if auth sync rejects mid-flight", async () => {
+		// Auth runs concurrently with the clone; a rejecting auth sync must never
+		// mask the clone error nor cause a double teardown.
+		const { deps, sdk } = makeDeps({
+			syncAgentAuth: async () => {
+				await Promise.resolve();
+				throw new Error("auth boom");
+			},
+		});
+		sdk.cloneExitCode = 128;
+		const adapter = new DaytonaRuntimeAdapter(deps);
+		await expect(adapter.createInstance(plan)).rejects.toThrow(
+			"git clone failed",
+		);
+		const created = [...sdk.sandboxes.values()];
+		expect(created[0]?.calls.deleted).toBe(1);
+	});
+
+	test("never leaks the scoped token into any executed command string", async () => {
+		const { deps, sdk } = makeDeps();
+		const adapter = new DaytonaRuntimeAdapter(deps);
+		const handle = await adapter.createInstance(plan);
+		const commands =
+			sdk.sandboxes.get(handle.externalId)?.calls.executeCommand ?? [];
+		for (const command of commands) {
+			expect(command).not.toContain("ghs_scoped_secret_token");
+		}
 	});
 
 	test("never persists the scoped token into metadataJson", async () => {

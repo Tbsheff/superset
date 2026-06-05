@@ -2,6 +2,7 @@ import type { Daytona, Sandbox } from "@daytonaio/sdk";
 import type { RuntimeMetadata } from "../../../db/types/index.ts";
 import type { GitFactory } from "../../git/types.ts";
 import type { NormalizedRuntimeStatus } from "../../status.ts";
+import type { syncAgentAuthToSandbox } from "./syncAgentAuth.ts";
 
 /**
  * The minimal `Daytona` surface the adapter uses. Pinning to a `Pick` (rather
@@ -67,6 +68,12 @@ export interface DaytonaAdapterDeps {
 	store: DaytonaInstanceStore;
 	/** Injectable clock so lease/timestamp tests are deterministic. */
 	now?: () => number;
+	/**
+	 * Uploads the host user's agent credentials into the sandbox. Injectable so a
+	 * unit test substitutes a no-op and never reads the host keychain / ~/.codex.
+	 * Defaults to the real {@link syncAgentAuthToSandbox}.
+	 */
+	syncAgentAuth?: typeof syncAgentAuthToSandbox;
 }
 
 /** Parsed `owner/repo` from a clone url; the token scope depends on it. */

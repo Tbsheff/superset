@@ -203,11 +203,14 @@ describe("createRemoteWorkspace", () => {
 		});
 
 		const sandbox = sdk.sandboxes.get("sbx-1");
-		expect(sandbox?.calls.clone).toHaveLength(1);
-		expect(sandbox?.calls.clone[0]?.url).toBe(REPO_URL);
-		// The base ref is cloned (undefined => the repo's default branch); the
+		const clone = sandbox?.calls.exec.find((c) =>
+			c.command.includes("--depth=1"),
+		);
+		expect(clone).toBeDefined();
+		expect(clone?.command).toContain(REPO_URL);
+		// No base ref given => the repo's default branch is cloned (no --branch); the
 		// workspace branch is created in-sandbox after the clone, not cloned.
-		expect(sandbox?.calls.clone[0]?.branch).toBeUndefined();
+		expect(clone?.command).not.toContain("--branch");
 		expect(sandbox?.calls.executeCommand).toContain(
 			"git checkout -b 'feature/remote'",
 		);

@@ -10,6 +10,7 @@ import {
 	RuntimeProviderError,
 	type RuntimeRole,
 } from "../../seam/index.ts";
+import { buildShallowCloneCommand, CLONE_TOKEN_ENV } from "./cloneCommand.ts";
 import {
 	DaytonaWorkspaceRuntime,
 	type RuntimeSandbox,
@@ -44,6 +45,12 @@ function resolveSnapshotId(): string | null {
 	return DEFAULT_DAYTONA_SNAPSHOT;
 }
 
+/** Caps clone/checkout failure output so an error message stays bounded. */
+function truncateForError(output: string, max = 500): string {
+	const trimmed = output.trim();
+	return trimmed.length > max ? `${trimmed.slice(0, max)}…` : trimmed;
+}
+
 /**
  * First remote `RuntimeAdapter`. Maps the seam's provider-neutral lifecycle onto
  * the Daytona SDK:
@@ -59,9 +66,11 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 	readonly descriptor = DAYTONA_DESCRIPTOR;
 
 	private readonly now: () => number;
+	private readonly syncAgentAuth: typeof syncAgentAuthToSandbox;
 
 	constructor(private readonly deps: DaytonaAdapterDeps) {
 		this.now = deps.now ?? Date.now;
+		this.syncAgentAuth = deps.syncAgentAuth ?? syncAgentAuthToSandbox;
 	}
 
 	async createInstance<R extends RuntimeRole>(
@@ -92,20 +101,40 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 					},
 		);
 
-		// A failure after create() must not leak a paid sandbox.
+		// A failure after create() must not leak a paid sandbox. The clone and the
+		// agent-auth sync touch disjoint paths (~/workspace vs ~/.codex, ~/.claude),
+		// so they run concurrently — the auth round-trips hide behind the clone.
+		// The trailing `.catch` pins the "auth never masks a clone failure"
+		// invariant at the call site (not just inside syncAgentAuthBestEffort), so
+		// `await authSync` on the teardown path can never reject or replace the
+		// original clone error.
+		let authSync: Promise<void> = Promise.resolve();
 		try {
 			this.persistInstance(plan.workspaceId, sandbox);
+			authSync = this.syncAgentAuthBestEffort(sandbox).catch(() => {});
 			await this.cloneRepo(sandbox, plan);
 		} catch (error) {
+			await authSync;
 			await this.deleteAfterFailedProvision(sandbox);
 			throw error;
 		}
+		await authSync;
 
-		// Best-effort: upload the host user's agent credentials so the in-sandbox
-		// CLIs authenticate. A cred problem (missing/locked) must not fail an
-		// otherwise-provisioned workspace, and the warning carries no secret.
+		return new DaytonaWorkspaceRuntime(
+			sandbox as unknown as RuntimeSandbox,
+			{ store: this.deps.store, now: this.now },
+			WORKDIR,
+		) as unknown as RuntimeHandleFor<R>;
+	}
+
+	/**
+	 * Uploads the host user's agent credentials into the sandbox, swallowing any
+	 * failure. A missing/locked credential must never fail an otherwise-provisioned
+	 * workspace, and neither the log line nor the result carries a secret.
+	 */
+	private async syncAgentAuthBestEffort(sandbox: Sandbox): Promise<void> {
 		try {
-			const result = await syncAgentAuthToSandbox(
+			const result = await this.syncAgentAuth(
 				sandbox as unknown as Parameters<typeof syncAgentAuthToSandbox>[0],
 			);
 			console.info(
@@ -117,12 +146,6 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 				error instanceof Error ? error.message : String(error),
 			);
 		}
-
-		return new DaytonaWorkspaceRuntime(
-			sandbox as unknown as RuntimeSandbox,
-			{ store: this.deps.store, now: this.now },
-			WORKDIR,
-		) as unknown as RuntimeHandleFor<R>;
 	}
 
 	private async deleteAfterFailedProvision(sandbox: Sandbox): Promise<void> {
@@ -154,11 +177,15 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 	}
 
 	/**
-	 * Clones via a short-lived single-repo-scoped token passed straight to the
-	 * Daytona host git API. The token rides ONE TLS call as the `password` arg
-	 * with username `x-access-token`; it is `contents:write`/`metadata:read`
-	 * scoped to ONE repo, TTL <= 1h, and is never persisted, logged, or written
-	 * into metadataJson.
+	 * Clones the repo SHALLOW (one commit, single branch, no tags) so a large
+	 * monorepo neither overflows the sandbox disk nor pays the full-history
+	 * transfer. The SDK's `git.clone` can only do a full clone, so this drops to a
+	 * raw `git clone` via `executeCommand` to reach `--depth`/`--single-branch`.
+	 *
+	 * The short-lived single-repo-scoped token (`contents:write`/`metadata:read`,
+	 * TTL <= 1h) is passed via the command's ENVIRONMENT, never argv: an inline
+	 * credential helper reads `$CLONE_TOKEN_ENV` at clone time, so the token never
+	 * appears in the command string, a command log, or metadataJson.
 	 */
 	private async cloneRepo(
 		sandbox: Sandbox,
@@ -169,28 +196,40 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 		// Clone the BASE ref (empty => the repo's default branch). The workspace
 		// branch usually does not exist on the remote yet, so it is created in the
 		// sandbox after the clone (createBranch) rather than cloned directly.
-		const baseRef = plan.repo.ref || undefined;
-		// An empty token means no auth (e.g. a public repo): clone anonymously.
-		// Sending "x-access-token" with an empty password makes GitHub reject the
-		// clone ("Password authentication is not supported").
-		if (!token) {
-			await sandbox.git.clone(plan.repo.cloneUrl, WORKDIR, baseRef);
-		} else {
-			await sandbox.git.clone(
-				plan.repo.cloneUrl,
-				WORKDIR,
-				baseRef,
-				undefined,
-				"x-access-token",
-				token,
+		const command = buildShallowCloneCommand({
+			url: plan.repo.cloneUrl,
+			workdir: WORKDIR,
+			baseRef: plan.repo.ref || undefined,
+			// An empty token means no auth (e.g. a public repo): clone anonymously.
+			// Sending "x-access-token" with an empty password makes GitHub reject the
+			// clone ("Password authentication is not supported").
+			authenticated: Boolean(token),
+		});
+		const cloneResult = await sandbox.process.executeCommand(
+			command,
+			undefined,
+			token ? { [CLONE_TOKEN_ENV]: token } : undefined,
+		);
+		if ((cloneResult.exitCode ?? 0) !== 0) {
+			throw new Error(
+				`git clone failed (exit ${cloneResult.exitCode ?? 0}): ${truncateForError(
+					cloneResult.result ?? "",
+				)}`,
 			);
 		}
 		if (plan.repo.createBranch) {
 			const safeBranch = plan.repo.createBranch.replace(/'/g, "'\\''");
-			await sandbox.process.executeCommand(
+			const checkoutResult = await sandbox.process.executeCommand(
 				`git checkout -b '${safeBranch}'`,
 				WORKDIR,
 			);
+			if ((checkoutResult.exitCode ?? 0) !== 0) {
+				throw new Error(
+					`git checkout -b failed (exit ${checkoutResult.exitCode ?? 0}): ${truncateForError(
+						checkoutResult.result ?? "",
+					)}`,
+				);
+			}
 		}
 	}
 

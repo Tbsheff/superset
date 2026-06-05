@@ -25,6 +25,11 @@ export class FakeSandbox {
 		refreshData: 0,
 		createPty: [] as string[],
 		executeCommand: [] as string[],
+		exec: [] as Array<{
+			command: string;
+			cwd?: string;
+			env?: Record<string, string>;
+		}>,
 		clone: [] as Array<{
 			url: string;
 			path: string;
@@ -44,9 +49,13 @@ export class FakeSandbox {
 	/** When set, the next updateNetworkSettings rejects (tier-gating). */
 	tierGated = false;
 
-	constructor(id: string, state = "started") {
+	/** When non-zero, the shallow `git clone` reports this exit code. */
+	cloneExitCode = 0;
+
+	constructor(id: string, state = "started", cloneExitCode = 0) {
 		this.id = id;
 		this.state = state;
+		this.cloneExitCode = cloneExitCode;
 	}
 
 	readonly git = {
@@ -105,8 +114,21 @@ export class FakeSandbox {
 		): Promise<PtyHandle> => {
 			return this.process.createPty({ id: sessionId, ...options });
 		},
-		executeCommand: async (command: string, _cwd?: string) => {
+		executeCommand: async (
+			command: string,
+			_cwd?: string,
+			env?: Record<string, string>,
+		) => {
 			this.calls.executeCommand.push(command);
+			this.calls.exec.push({ command, cwd: _cwd, env });
+			if (command.includes("--depth=1")) {
+				return this.cloneExitCode === 0
+					? { exitCode: 0, result: "" }
+					: {
+							exitCode: this.cloneExitCode,
+							result: "fatal: simulated clone failure",
+						};
+			}
 			if (command.includes("git status --porcelain")) {
 				// Real `git status` reports a file with EITHER staged OR unstaged
 				// changes, so the path stays visible after `git add`. The InMemoryFs
@@ -168,6 +190,9 @@ export class FakeDaytonaSdk {
 	readonly sandboxes = new Map<string, FakeSandbox>();
 	private seq = 0;
 
+	/** When non-zero, every sandbox this sdk creates fails its shallow clone. */
+	cloneExitCode = 0;
+
 	readonly lastCreate: {
 		snapshot?: string;
 		language?: string;
@@ -182,7 +207,7 @@ export class FakeDaytonaSdk {
 		networkAllowList?: string;
 	}) => {
 		const id = `sbx-${++this.seq}`;
-		const sandbox = new FakeSandbox(id, "started");
+		const sandbox = new FakeSandbox(id, "started", this.cloneExitCode);
 		this.sandboxes.set(id, sandbox);
 		this.lastCreate.snapshot = params?.snapshot;
 		this.lastCreate.language = params?.language;

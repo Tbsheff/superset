@@ -21,17 +21,21 @@ Legend: **[you]** = a setting/ops action only you can do · **[me]** = a code ch
 Already shipped this round: a txid-timeout after a successful mutation no longer hard-fails or abandons the sandbox, and re-submits can't orphan a sandbox.
 
 * * *
-## Blocker 2 — Sandbox disk is too small for real work
-**Symptom:** even with the shallow clone, the bonaparte working tree fills the **10 GB** snapshot to ~0 free. `bun install` / builds / agents will hit `No space left on device`.
+## Blocker 2 — Sandbox disk — RESOLVED (commit `9aeea0b22`), not a bigger snapshot
+**What we thought:** the 10 GB sandbox was too small and we needed a bigger-disk snapshot.
 
-**Root cause:** `CreateSandboxFromSnapshotParams` can't set disk size — only **image creation** can (`resources.disk`).
+**What it actually was (measured live):**
 
-**Fix:**
-
-- **[me]** Build a Daytona **image with a bigger disk** (~40–60 GB) carrying the same tooling (Codex/Claude/gh/node), snapshot it, and point `DEFAULT_DAYTONA_SNAPSHOT` / the `DAYTONA_SNAPSHOT` env at it. I can script this with the Daytona SDK. _(Effort: M — mostly a build + verify loop)_
+- A bigger snapshot is **impossible to self-serve** — Daytona caps sandbox disk at **10 GB** (16 GB on enzo); `snapshot.create` with disk>10 returns `400 "exceeds maximum allowed per sandbox"`. Raising it needs a request to [support@daytona.io](mailto:support@daytona.io).
+  
+- The 10 GB was **never the real shortfall**: a fresh sandbox has the full 10 GB writable (the 2.2 GB base image is read-only overlay layers); a bonaparte shallow clone is only **~0.35 GB**.
+  
+- **Real cause:** bonaparte uses **pnpm**, which _copies_ its store into `node_modules` on the overlay fs — two full copies (store 4.4 GB + tree 3.8 GB) → ENOSPC during install (huge native dep `react-native-skia`).
   
 
-Without this, agents can provision but can't actually do work — so this gates the core value.
+**Fix (shipped):** force pnpm to **hardlink** so `node_modules` shares the store's inodes. A best-effort post-create step runs `pnpm config set --location=global package-import-method hardlink` in the sandbox (`adapter.ts` → `configureSandboxStorageBestEffort`). A full `pnpm install --frozen-lockfile` then lands at **7.5 GB used / 2.6 GB free** — verified live on a real `enzo-health/bonaparte` clone. No snapshot rebuild, no volume.
+
+**Daytona volumes:** evaluated and **not used** — FUSE/S3-backed (2-5× slower for git + many small files), and unnecessary once the footprint fits 10 GB.
 
 * * *
 ## Blocker 3 — Agents launch detached, not in the visible pane
@@ -61,18 +65,16 @@ The two uncommitted dev hacks (`apps/api/next.config.ts` Electric proxy, `apps/d
 
 * * *
 ## Recommended sequence
-1. **[you] Neon autosuspend off** — instant, makes create work today.
+1. ✅ **Disk (Blocker 2)** — DONE. pnpm hardlink fix; installs fit 10 GB. (No bigger snapshot — impossible to self-serve.)
   
-2. **[me] Bigger-disk snapshot** — unblocks real agent work (the core value).
+2. **[you] Neon autosuspend off** — instant; makes create confirm fast (Blocker 1; code half shipped, plus the local-Postgres switch sidesteps it).
   
-3. **[me] Agent-launch-into-pane** — makes the create-with-prompt flow feel right.
+3. **[me] Agent-launch-into-pane (Blocker 3)** — makes the create-with-prompt flow feel right.
   
-4. **[me] Preview header** — unblocks web/dev-server workflows.
-  
-5. **[me] Provisioning/syncing UX** — polish on top of #1.
+4. **[me] Preview header (Blocker 4)** — unblocks web/dev-server workflows.
   
 
-A usable MVP is **1 + 2 + 3**. #4 matters for web dev specifically.
+Remaining for daily-usable: **3** (and **4** for web dev). Disk + create reliability are handled.
 
 * * *
 ## Smaller follow-ups (not blockers)

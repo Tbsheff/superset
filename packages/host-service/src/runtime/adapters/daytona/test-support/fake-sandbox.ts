@@ -43,6 +43,8 @@ export class FakeSandbox {
 		}>,
 		killedPtys: [] as string[],
 		started: 0,
+		/** Timeout (seconds) passed to each `start()`; -1 means none was given. */
+		startTimeouts: [] as number[],
 		deleted: 0,
 	};
 
@@ -51,6 +53,16 @@ export class FakeSandbox {
 
 	/** When non-zero, the shallow `git clone` reports this exit code. */
 	cloneExitCode = 0;
+
+	/** When >0, the next N `start()` calls throw (then decrement). */
+	startFailuresRemaining = 0;
+
+	/**
+	 * When true, a failing `start()` also flips state to `started` — modeling a
+	 * concurrent caller that resumed the sandbox while our start was failing, so
+	 * the retry path sees it already running.
+	 */
+	setRunningOnFailedStart = false;
 
 	constructor(id: string, state = "started", cloneExitCode = 0) {
 		this.id = id;
@@ -179,7 +191,13 @@ export class FakeSandbox {
 		this.calls.updateNetworkSettings.push(settings);
 	}
 
-	async start(): Promise<void> {
+	async start(timeout?: number): Promise<void> {
+		this.calls.startTimeouts.push(timeout ?? -1);
+		if (this.startFailuresRemaining > 0) {
+			this.startFailuresRemaining -= 1;
+			if (this.setRunningOnFailedStart) this.state = "started";
+			throw new Error("fake-sdk: simulated start failure");
+		}
 		this.calls.started += 1;
 		this.state = "started";
 	}

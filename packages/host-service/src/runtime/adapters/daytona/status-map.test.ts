@@ -40,6 +40,21 @@ describe("mapDaytonaState", () => {
 		expect(status.kind === "stopped" && status.resumable).toBe(true);
 	});
 
+	test("stopped/stopping are NOT archived (fast resume, disk retained)", () => {
+		for (const state of ["stopped", "stopping"]) {
+			const status = mapDaytonaState(state);
+			expect(status.kind === "stopped" && status.archived).toBe(false);
+		}
+	});
+
+	test("archived/archiving carry the archived flag (slow cold-storage restore)", () => {
+		for (const state of ["archived", "archiving"]) {
+			const status = mapDaytonaState(state);
+			expect(status.kind === "stopped" && status.resumable).toBe(true);
+			expect(status.kind === "stopped" && status.archived).toBe(true);
+		}
+	});
+
 	test("error carries the raw state as the failure reason", () => {
 		const status = mapDaytonaState("build_failed");
 		expect(status).toEqual({ kind: "failed", reason: "build_failed" });

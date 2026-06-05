@@ -18,7 +18,8 @@ export type SandboxStateValue = string;
  *   creating / starting / restoring / pulling_snapshot / pending_build /
  *     building_snapshot / forking  -> creating  (bring-up, not yet usable)
  *   started / resizing                         -> running
- *   stopping / stopped / archiving / archived  -> stopped (resumable: disk kept)
+ *   stopping / stopped                         -> stopped (disk kept, fast resume)
+ *   archiving / archived                       -> stopped + archived (cold restore)
  *   snapshotting                               -> running (still alive)
  *   destroying / destroyed                     -> destroyed
  *   error / build_failed                       -> failed
@@ -42,9 +43,10 @@ export function mapDaytonaState(
 			return { kind: "running" };
 		case "stopping":
 		case "stopped":
+			return { kind: "stopped", resumable: true, archived: false };
 		case "archiving":
 		case "archived":
-			return { kind: "stopped", resumable: true };
+			return { kind: "stopped", resumable: true, archived: true };
 		case "destroying":
 		case "destroyed":
 			return { kind: "destroyed" };

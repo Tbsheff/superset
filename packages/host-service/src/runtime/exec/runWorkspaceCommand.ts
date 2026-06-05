@@ -7,7 +7,11 @@ import {
 	getRuntimeAdapter,
 	type RuntimeAdapterDeps,
 } from "../registry/index.ts";
-import type { ShellHandle, WorkspaceRuntime } from "../seam/index.ts";
+import type {
+	NormalizedRuntimeStatus,
+	ShellHandle,
+	WorkspaceRuntime,
+} from "../seam/index.ts";
 import { RuntimeInstanceStore } from "../store/index.ts";
 
 /**
@@ -29,6 +33,14 @@ const DEFAULT_ROWS = 32;
  */
 export interface RemoteRuntimeResolver {
 	resolve(workspaceId: string): Promise<WorkspaceRuntime>;
+	/**
+	 * Reports the live provider status of a workspace's sandbox WITHOUT resuming
+	 * it (unlike `resolve`, which starts a stopped sandbox). Read-only: the
+	 * renderer polls this to decide whether to show a "waking" state and to
+	 * distinguish a fast stopped resume from a slow archived restore. Returns
+	 * `{ kind: "destroyed" }` when the workspace has no live runtime instance.
+	 */
+	status(workspaceId: string): Promise<NormalizedRuntimeStatus>;
 }
 
 /**
@@ -65,6 +77,12 @@ export async function buildRemoteRuntimeResolver(
 			}
 			const adapter = getRuntimeAdapter("remote", deps);
 			return adapter.reconnect(record.externalId);
+		},
+		async status(workspaceId: string): Promise<NormalizedRuntimeStatus> {
+			const record = store.getByWorkspaceId(workspaceId);
+			if (!record?.externalId) return { kind: "destroyed" };
+			const adapter = getRuntimeAdapter("remote", deps);
+			return adapter.getStatus(record.externalId);
 		},
 	};
 }

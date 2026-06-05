@@ -287,6 +287,71 @@ describe("DaytonaRuntimeAdapter.reconnect / getStatus / config", () => {
 		expect(sandbox?.calls.started).toBe(0);
 	});
 
+	test("reconnect resumes a STOPPED sandbox with the fast (120s) timeout", async () => {
+		const { deps, sdk } = makeDeps();
+		const adapter = new DaytonaRuntimeAdapter(deps);
+		const handle = await adapter.createInstance(plan);
+		const sandbox = sdk.sandboxes.get(handle.externalId);
+		if (sandbox) sandbox.state = "stopped";
+		await adapter.reconnect(handle.externalId);
+		expect(sandbox?.calls.startTimeouts).toEqual([120]);
+	});
+
+	test("reconnect resumes an ARCHIVED sandbox with the slow (300s) timeout", async () => {
+		const { deps, sdk } = makeDeps();
+		const adapter = new DaytonaRuntimeAdapter(deps);
+		const handle = await adapter.createInstance(plan);
+		const sandbox = sdk.sandboxes.get(handle.externalId);
+		if (sandbox) sandbox.state = "archived";
+		await adapter.reconnect(handle.externalId);
+		expect(sandbox?.calls.startTimeouts).toEqual([300]);
+	});
+
+	test("reconnect retries start ONCE on a transient failure", async () => {
+		const { deps, sdk } = makeDeps();
+		const adapter = new DaytonaRuntimeAdapter(deps);
+		const handle = await adapter.createInstance(plan);
+		const sandbox = sdk.sandboxes.get(handle.externalId);
+		if (sandbox) {
+			sandbox.state = "stopped";
+			sandbox.startFailuresRemaining = 1; // first start throws, retry succeeds
+		}
+		await adapter.reconnect(handle.externalId);
+		expect(sandbox?.calls.startTimeouts).toHaveLength(2); // one fail + one retry
+		expect(sandbox?.calls.started).toBe(1); // only the retry succeeded
+	});
+
+	test("reconnect treats a race-to-running as success (no redundant start)", async () => {
+		const { deps, sdk } = makeDeps();
+		const adapter = new DaytonaRuntimeAdapter(deps);
+		const handle = await adapter.createInstance(plan);
+		const sandbox = sdk.sandboxes.get(handle.externalId);
+		if (sandbox) {
+			sandbox.state = "stopped";
+			sandbox.startFailuresRemaining = 1;
+			sandbox.setRunningOnFailedStart = true; // another caller resumed it
+		}
+		await adapter.reconnect(handle.externalId);
+		// First start threw but left it running; the retry path sees running and
+		// does NOT call start again, so no start ever "succeeds" via our path.
+		expect(sandbox?.calls.startTimeouts).toHaveLength(1);
+		expect(sandbox?.calls.started).toBe(0);
+	});
+
+	test("reconnect rethrows when both start attempts fail", async () => {
+		const { deps, sdk } = makeDeps();
+		const adapter = new DaytonaRuntimeAdapter(deps);
+		const handle = await adapter.createInstance(plan);
+		const sandbox = sdk.sandboxes.get(handle.externalId);
+		if (sandbox) {
+			sandbox.state = "stopped";
+			sandbox.startFailuresRemaining = 2; // both attempts throw
+		}
+		await expect(adapter.reconnect(handle.externalId)).rejects.toThrow(
+			/simulated start failure/,
+		);
+	});
+
 	test("getStatus maps the live sandbox state", async () => {
 		const { deps, sdk } = makeDeps();
 		const adapter = new DaytonaRuntimeAdapter(deps);

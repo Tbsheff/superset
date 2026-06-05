@@ -23,6 +23,21 @@ import type { DaytonaAdapterDeps, Sandbox } from "./types.ts";
 const WORKDIR = "workspace";
 
 /**
+ * Timeout (seconds) for resuming a STOPPED sandbox — disk is retained, so the
+ * start is fast. Above the SDK's 60s default to absorb a busy provider without
+ * hard-failing a resume that would have completed in a few more seconds.
+ */
+const STOPPED_START_TIMEOUT_SEC = 120;
+
+/**
+ * Timeout (seconds) for resuming an ARCHIVED sandbox — its disk was evicted to
+ * cold storage and must be restored, which takes far longer and scales with
+ * size. Generous on purpose: a hard-fail here strands the workspace, and the
+ * renderer already shows a "restoring from cold storage" state while we wait.
+ */
+const ARCHIVED_START_TIMEOUT_SEC = 300;
+
+/**
  * Prebuilt snapshot every remote workspace is created from. It already ships the
  * agent CLIs (Codex, Claude) so a sandbox is runnable as soon as the repo is
  * cloned and auth is synced. Bump this id to roll forward to a new snapshot.
@@ -302,15 +317,48 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 
 	async reconnect(externalId: string): Promise<RuntimeHandleFor<RuntimeRole>> {
 		const sandbox = await this.deps.sdk.get(externalId);
-		// A stopped sandbox keeps its disk but must be started before use.
-		if (mapDaytonaState(sandbox.state).kind === "stopped") {
-			await sandbox.start();
+		// A stopped sandbox keeps its disk but must be started before use; an
+		// archived one restores from cold storage (slower). Size the timeout off
+		// the mapped state and retry once so a slow resume doesn't strand the
+		// workspace on the SDK's 60s default.
+		const status = mapDaytonaState(sandbox.state);
+		if (status.kind === "stopped") {
+			await this.resumeSandbox(externalId, sandbox, status.archived === true);
 		}
 		return new DaytonaWorkspaceRuntime(
 			sandbox as unknown as RuntimeSandbox,
 			{ store: this.deps.store, now: this.now },
 			this.workdirFor(externalId),
 		);
+	}
+
+	/**
+	 * Resumes a stopped/archived sandbox with a state-sized timeout, retrying
+	 * ONCE on a fresh handle. Before the retry it re-reads state: if another
+	 * caller already raced the sandbox to `running`, that is success — not an
+	 * error from a redundant `start()`. Re-throws the FIRST error on a genuine
+	 * second failure so the caller sees the original cause.
+	 */
+	private async resumeSandbox(
+		externalId: string,
+		sandbox: Sandbox,
+		archived: boolean,
+	): Promise<void> {
+		const timeoutSec = archived
+			? ARCHIVED_START_TIMEOUT_SEC
+			: STOPPED_START_TIMEOUT_SEC;
+		try {
+			await sandbox.start(timeoutSec);
+			return;
+		} catch (firstError) {
+			const fresh = await this.deps.sdk.get(externalId);
+			if (mapDaytonaState(fresh.state).kind === "running") return;
+			try {
+				await fresh.start(timeoutSec);
+			} catch {
+				throw firstError;
+			}
+		}
 	}
 
 	async getStatus(externalId: string): Promise<NormalizedRuntimeStatus> {

@@ -156,7 +156,10 @@ function runtimeWith(
 }
 
 function resolverFor(runtime: WorkspaceRuntime): RemoteRuntimeResolver {
-	return { resolve: mock(async () => runtime) };
+	return {
+		resolve: mock(async () => runtime),
+		status: async () => ({ kind: "running" }) as const,
+	};
 }
 
 describe("RemotePtySession", () => {
@@ -359,6 +362,7 @@ describe("RemotePtySession", () => {
 			resolve: mock(async () => {
 				throw new Error("no live runtime instance");
 			}),
+			status: async () => ({ kind: "running" }) as const,
 		};
 		const session = new RemotePtySession(socket, resolver, WS_ID);
 

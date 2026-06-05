@@ -12,8 +12,15 @@ import type {
 } from "../adapters/daytona/index.ts";
 import { DaytonaWorkspaceRuntime } from "../adapters/daytona/index.ts";
 import { FakeSandbox } from "../adapters/daytona/test-support/fake-sandbox.ts";
-import type { WorkspaceRuntime } from "../seam/index.ts";
+import type {
+	NormalizedRuntimeStatus,
+	WorkspaceRuntime,
+} from "../seam/index.ts";
 import { RuntimeInstanceStore } from "../store/index.ts";
+
+/** Read-only status stub for resolver fakes that only exercise `resolve`. */
+const stubStatus = (): Promise<NormalizedRuntimeStatus> =>
+	Promise.resolve({ kind: "running" });
 
 // Mock the daemon-backed local terminal so the local routing arm never spawns a
 // real PTY. The remote arm uses a real DaytonaWorkspaceRuntime over a fake
@@ -139,6 +146,7 @@ describe("runWorkspaceCommand", () => {
 			resolve: mock(async () => {
 				throw new Error("remote resolver must not be called for a local ws");
 			}),
+			status: stubStatus,
 		};
 
 		const result = await runWorkspaceCommand({
@@ -180,7 +188,7 @@ describe("runWorkspaceCommand", () => {
 			ctx: { db, eventBus: {} } as never,
 			workspaceId: REMOTE_WS_ID,
 			command: "codex 'do the thing'",
-			remoteResolver: { resolve: async () => runtime },
+			remoteResolver: { resolve: async () => runtime, status: stubStatus },
 		});
 
 		if ("error" in result) throw new Error(`unexpected error: ${result.error}`);
@@ -216,7 +224,7 @@ describe("runWorkspaceCommand", () => {
 			ctx: { db, eventBus: {} } as never,
 			workspaceId: REMOTE_WS_ID,
 			command: "npm test",
-			remoteResolver: { resolve: async () => runtime },
+			remoteResolver: { resolve: async () => runtime, status: stubStatus },
 		});
 
 		expect(writes).toEqual(["npm test\n"]);
@@ -243,7 +251,7 @@ describe("runWorkspaceCommand", () => {
 			ctx: { db, eventBus: {} } as never,
 			workspaceId: REMOTE_WS_ID,
 			command: "ls\n",
-			remoteResolver: { resolve: async () => runtime },
+			remoteResolver: { resolve: async () => runtime, status: stubStatus },
 		});
 
 		expect(writes).toEqual(["ls\n"]);
@@ -259,6 +267,7 @@ describe("runWorkspaceCommand", () => {
 				resolve: async () => {
 					throw new Error("no live runtime instance");
 				},
+				status: stubStatus,
 			},
 		});
 
@@ -288,7 +297,7 @@ describe("runWorkspaceCommand", () => {
 			ctx: { db, eventBus: {} } as never,
 			workspaceId: REMOTE_WS_ID,
 			command: "echo hi",
-			remoteResolver: { resolve: async () => runtime },
+			remoteResolver: { resolve: async () => runtime, status: stubStatus },
 		});
 
 		expect(result).toEqual({ error: "pty write failed" });
@@ -320,7 +329,7 @@ describe("runWorkspaceCommand remote shell streams sandbox output", () => {
 			workspaceId: REMOTE_WS_ID,
 			// `echo hello` is interpreted by the fake sandbox's shell model.
 			command: "echo hello",
-			remoteResolver: { resolve: async () => runtime },
+			remoteResolver: { resolve: async () => runtime, status: stubStatus },
 		});
 
 		if ("error" in result) throw new Error(`unexpected error: ${result.error}`);

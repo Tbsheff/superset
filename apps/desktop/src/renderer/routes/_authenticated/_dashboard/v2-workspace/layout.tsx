@@ -9,7 +9,9 @@ import { WorkspaceCreateErrorState } from "./components/WorkspaceCreateErrorStat
 import { WorkspaceCreatingState } from "./components/WorkspaceCreatingState";
 import { WorkspaceHostIncompatibleState } from "./components/WorkspaceHostIncompatibleState";
 import { WorkspaceNotFoundState } from "./components/WorkspaceNotFoundState";
+import { WorkspaceWakingState } from "./components/WorkspaceWakingState";
 import { useRemoteHostStatus } from "./hooks/useRemoteHostStatus";
+import { useRemoteRuntimeStatus } from "./hooks/useRemoteRuntimeStatus";
 import { WorkspaceProvider } from "./providers/WorkspaceProvider";
 
 /**
@@ -100,6 +102,7 @@ function V2WorkspaceLayout() {
 	}, [ensureWorkspaceInSidebar, workspace]);
 
 	const hostStatus = useRemoteHostStatus(workspace);
+	const runtimePhase = useRemoteRuntimeStatus(workspace);
 
 	if (!workspaceId || !workspaces || (!workspace && !isReady)) {
 		return <div className="flex h-full w-full" />;
@@ -145,6 +148,36 @@ function V2WorkspaceLayout() {
 	}
 	if (hostStatus.status === "loading") {
 		return <div className="flex h-full w-full" />;
+	}
+
+	// Gate the Outlet on the remote sandbox being live. A cold sandbox (idle
+	// auto-stop / archive) is resumed here BEFORE the terminal/Files panes mount,
+	// so they never connect to a stopped sandbox (which would otherwise leave the
+	// terminal permanently "Disconnected"). Local workspaces report "ready".
+	if (runtimePhase.phase === "loading") {
+		return <div className="flex h-full w-full" />;
+	}
+	if (runtimePhase.phase === "restarting") {
+		return (
+			<WorkspaceWakingState
+				status="restarting"
+				archived={runtimePhase.archived}
+				name={workspace.name}
+			/>
+		);
+	}
+	if (runtimePhase.phase === "failed") {
+		return (
+			<WorkspaceWakingState
+				status="failed"
+				name={workspace.name}
+				reason={runtimePhase.reason}
+				onRetry={runtimePhase.retry}
+			/>
+		);
+	}
+	if (runtimePhase.phase === "destroyed") {
+		return <WorkspaceWakingState status="destroyed" name={workspace.name} />;
 	}
 
 	return (

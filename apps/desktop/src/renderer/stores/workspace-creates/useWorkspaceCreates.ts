@@ -128,24 +128,38 @@ export function useWorkspaceCreates(): UseWorkspaceCreatesApi {
 				[],
 			);
 
+			const applySuccess = (
+				result: NonNullable<WorkspaceCreateMutationMetadata["result"]>,
+			): SubmitOutcome => {
+				writeWorkspacePaneLayout(
+					collections,
+					result.workspace,
+					result.terminals,
+					result.agents,
+				);
+				if (result.workspace.id !== workspaceId) {
+					deleteWorkspaceLocalState(workspaceId);
+				}
+				return { ok: true, workspaceId: result.workspace.id };
+			};
+
 			const completed = transaction.isPersisted.promise
 				.then<SubmitOutcome>(() => {
 					const result = metadata.result;
-					if (!result) {
-						return { ok: true, workspaceId };
-					}
-					writeWorkspacePaneLayout(
-						collections,
-						result.workspace,
-						result.terminals,
-						result.agents,
-					);
-					if (result.workspace.id !== workspaceId) {
-						deleteWorkspaceLocalState(workspaceId);
-					}
-					return { ok: true, workspaceId: result.workspace.id };
+					return result ? applySuccess(result) : { ok: true, workspaceId };
 				})
 				.catch<SubmitOutcome>((error: unknown) => {
+					// The mutation already returned a result, so the cloud row was
+					// written and (for remote) the sandbox provisioned. A rejection
+					// here is Electric not streaming the txid before the wait timed
+					// out — a replication-liveness lag, not a create failure. Keep the
+					// workspace; it appears once sync catches up. Treating it as failed
+					// would also tempt a "Try again" that provisions a DUPLICATE
+					// sandbox, leaking the first.
+					const result = metadata.result;
+					if (result) {
+						return applySuccess(result);
+					}
 					const message =
 						error instanceof Error ? error.message : String(error);
 					deleteWorkspaceLocalState(workspaceId);

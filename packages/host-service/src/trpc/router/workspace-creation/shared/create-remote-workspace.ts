@@ -29,7 +29,7 @@ const REMOTE_WORKTREE_SENTINEL = "";
  * `createInstance` needs its `getByExternalId` read helper.
  */
 export interface RemoteRuntime {
-	store: Pick<RuntimeInstanceStore, "getByExternalId">;
+	store: Pick<RuntimeInstanceStore, "getByExternalId" | "getByWorkspaceId">;
 	getAdapter: () => ReturnType<typeof getRuntimeAdapter>;
 }
 
@@ -186,6 +186,23 @@ export async function createRemoteWorkspace(
 			code: "INTERNAL_SERVER_ERROR",
 			message: `Failed to persist workspace locally: ${err instanceof Error ? err.message : String(err)}`,
 		});
+	}
+
+	// Idempotent provisioning: a re-submit for the same workspace id (e.g. a
+	// double-submit, or a create the renderer retried) may already have a live
+	// sandbox. Tear it down before provisioning a new one so the previous sandbox
+	// is never left orphaned as an unreferenced paid resource. A failure here is
+	// logged, not fatal — the reaper still reconciles true orphans.
+	const stale = runtime.store.getByWorkspaceId(cloudRow.id);
+	if (stale?.externalId) {
+		try {
+			await adapter.destroy(stale.externalId, { kind: "delete" });
+		} catch (err) {
+			console.warn(
+				"[createRemoteWorkspace] failed to destroy stale runtime before re-provision",
+				{ workspaceId: cloudRow.id, err },
+			);
+		}
 	}
 
 	let handle: { externalId: string };

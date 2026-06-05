@@ -6,7 +6,10 @@ import { drizzle } from "drizzle-orm/bun-sqlite";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import type { HostDb } from "../../../../db/index";
 import * as schema from "../../../../db/schema";
-import { FakeDaytonaSdk } from "../../../../runtime/adapters/daytona/test-support/fake-sandbox";
+import {
+	FakeDaytonaSdk,
+	FakeSandbox,
+} from "../../../../runtime/adapters/daytona/test-support/fake-sandbox";
 import type { TokenMinter } from "../../../../runtime/adapters/daytona/types";
 import {
 	getRuntimeAdapter,
@@ -214,6 +217,68 @@ describe("createRemoteWorkspace", () => {
 		expect(sandbox?.calls.executeCommand).toContain(
 			"git checkout -b 'feature/remote'",
 		);
+	});
+
+	test("tears down a stale sandbox before re-provisioning (no orphan on retry)", async () => {
+		const localProject = seedProject(db, REPO_URL);
+		const { ctx } = makeCtx(db, calls);
+		const store = new RuntimeInstanceStore(db);
+		const sdk = new FakeDaytonaSdk();
+		const deps: RuntimeAdapterDeps = {
+			db,
+			git: (async () => ({}) as never) as RuntimeAdapterDeps["git"],
+			sdk: sdk as never,
+			store,
+			mintRepoScopedToken,
+		};
+		const runtime: RemoteRuntime = {
+			store,
+			getAdapter: () => getRuntimeAdapter("remote", deps),
+		};
+
+		// A previous attempt for this workspace already provisioned a sandbox.
+		db.insert(schema.workspaces)
+			.values({
+				id: WORKSPACE_ID,
+				projectId: PROJECT_ID,
+				worktreePath: "",
+				branch: "feature/remote",
+				runtimeKind: "remote",
+			})
+			.run();
+		db.insert(schema.runtimeInstances)
+			.values({
+				id: "ri-stale",
+				workspaceId: WORKSPACE_ID,
+				provider: "daytona",
+				role: "workspace",
+				externalId: "sbx-stale",
+				status: "running",
+				createdAt: 1_000,
+				destroyedAt: null,
+			})
+			.run();
+		const staleSandbox = new FakeSandbox("sbx-stale");
+		sdk.sandboxes.set("sbx-stale", staleSandbox);
+
+		await createRemoteWorkspace({
+			ctx,
+			localProject,
+			id: WORKSPACE_ID,
+			name: "Remote WS",
+			branch: "feature/remote",
+			taskId: undefined,
+			hostPromise: Promise.resolve({ machineId: "host-1" }),
+			runtime,
+		});
+
+		// The stale sandbox was destroyed, and a fresh one provisioned in its place.
+		expect(staleSandbox.calls.deleted).toBe(1);
+		expect(sdk.sandboxes.has("sbx-1")).toBe(true);
+		const staleRow = db.query.runtimeInstances
+			.findFirst({ where: eq(schema.runtimeInstances.id, "ri-stale") })
+			.sync();
+		expect(staleRow?.destroyedAt).not.toBeNull();
 	});
 
 	test("rejects a project with no GitHub url before writing any row", async () => {

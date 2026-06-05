@@ -8,14 +8,27 @@ import { eq } from "drizzle-orm";
 import type { HostDb } from "../../db/index.ts";
 import { projects, workspaces } from "../../db/schema.ts";
 import type { WorkspaceRuntime } from "../seam/index.ts";
+import { RuntimeInstanceStore } from "../store/index.ts";
 import { DaytonaFsService } from "./DaytonaFsService.ts";
 
 /**
- * Sandbox-relative directory the remote repo is cloned into. Doubles as the
- * `runtimeRoot` the renderer treats as the filesystem root for a remote
- * workspace (mirrors `DaytonaWorkspaceRuntime`'s `workdir` default).
+ * Fallback clone dir for a remote workspace whose runtime instance predates the
+ * repo-name workdir (or has none recorded). New sandboxes clone into the repo
+ * NAME and persist it on `runtime_instances.metadataJson.workdir`.
  */
 export const REMOTE_SANDBOX_ROOT = "workspace";
+
+/**
+ * The sandbox-relative dir a remote workspace's repo lives in (the repo name),
+ * read from the live runtime instance's `metadataJson.workdir`. Falls back to
+ * {@link REMOTE_SANDBOX_ROOT} for older sandboxes. This is the one place the fs
+ * service, the workspace router, and the watch poller agree on the root.
+ */
+export function resolveRemoteWorkdir(db: HostDb, workspaceId: string): string {
+	const wd = new RuntimeInstanceStore(db).getByWorkspaceId(workspaceId)
+		?.metadataJson?.workdir;
+	return typeof wd === "string" && wd.length > 0 ? wd : REMOTE_SANDBOX_ROOT;
+}
 
 export interface WorkspaceFilesystemManagerOptions {
 	db: HostDb;
@@ -98,7 +111,7 @@ export class WorkspaceFilesystemManager {
 			service = new DaytonaFsService(
 				() => resolve(workspaceId),
 				workspaceId,
-				REMOTE_SANDBOX_ROOT,
+				resolveRemoteWorkdir(this.db, workspaceId),
 			);
 			this.remoteServiceCache.set(workspaceId, service);
 		}

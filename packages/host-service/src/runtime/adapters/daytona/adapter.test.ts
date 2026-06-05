@@ -174,6 +174,35 @@ describe("DaytonaRuntimeAdapter.createInstance", () => {
 		).toBe(true);
 	});
 
+	test("clones into the repo-name dir (not 'workspace') and records it", async () => {
+		const { deps, sdk, store } = makeDeps();
+		const adapter = new DaytonaRuntimeAdapter(deps);
+		const handle = await adapter.createInstance({
+			...plan,
+			repo: { ...plan.repo, createBranch: "feature/x" },
+		});
+		const exec = sdk.sandboxes.get(handle.externalId)?.calls.exec ?? [];
+		const clone = exec.find((c) => c.command.includes("--depth=1"));
+		expect(clone?.command).toContain("'demo'"); // repo name, from .../superset/demo.git
+		expect(clone?.command).not.toContain("'workspace'");
+		const checkout = exec.find((c) => c.command.includes("git checkout -b"));
+		expect(checkout?.cwd).toBe("demo");
+		// persisted so reconnect/fs/router resolve the same dir
+		expect(store.get(handle.externalId)?.metadataJson?.workdir).toBe("demo");
+	});
+
+	test("reconnect runs git in the recorded repo-name workdir", async () => {
+		const { deps, sdk } = makeDeps();
+		const adapter = new DaytonaRuntimeAdapter(deps);
+		const handle = await adapter.createInstance(plan);
+		const resumed = await adapter.reconnect(handle.externalId);
+		await resumed.getDiff();
+		const status = sdk.sandboxes
+			.get(handle.externalId)
+			?.calls.exec.find((c) => c.command.includes("git status --porcelain"));
+		expect(status?.cwd).toBe("demo");
+	});
+
 	test("never persists the scoped token into metadataJson", async () => {
 		const { deps, store } = makeDeps();
 		const adapter = new DaytonaRuntimeAdapter(deps);

@@ -4,7 +4,10 @@ import { promisify } from "node:util";
 import type { FsWatchEvent } from "@superset/workspace-fs/host";
 import type { HostDb } from "../db/index.ts";
 import { workspaces } from "../db/schema.ts";
-import type { WorkspaceFilesystemManager } from "../runtime/filesystem/index.ts";
+import {
+	resolveRemoteWorkdir,
+	type WorkspaceFilesystemManager,
+} from "../runtime/filesystem/index.ts";
 import {
 	type RemoteRuntimeResolverLike,
 	RemoteWatchPoller,
@@ -119,6 +122,8 @@ export class GitWatcher {
 		this.remotePoller = options.resolveRemoteRuntime
 			? new RemoteWatchPoller({
 					resolveRuntime: options.resolveRemoteRuntime,
+					resolveWorkdir: (workspaceId) =>
+						resolveRemoteWorkdir(this.db, workspaceId),
 					emit: {
 						gitChanged: (workspaceId) => this.emitGitChanged({ workspaceId }),
 						fsChanged: (workspaceId) => this.emitFsChanged({ workspaceId }),

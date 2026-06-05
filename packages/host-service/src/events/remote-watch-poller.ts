@@ -22,8 +22,12 @@ export interface RemoteWatchPollerOptions {
 	emit: RemoteWatchEmit;
 	/** Poll cadence per remote workspace. Defaults to 4s. */
 	intervalMs?: number;
-	/** Sandbox-relative repo root listed for the fs signature. */
-	workdir?: string;
+	/**
+	 * Resolves the sandbox-relative repo root (clone dir) to list for the fs
+	 * signature, per workspace — the repo name differs across workspaces. Defaults
+	 * to {@link DEFAULT_WORKDIR}.
+	 */
+	resolveWorkdir?: (workspaceId: string) => string;
 }
 
 const DEFAULT_INTERVAL_MS = 4_000;
@@ -64,7 +68,7 @@ export class RemoteWatchPoller {
 	private readonly resolveRuntime: () => Promise<RemoteRuntimeResolverLike>;
 	private readonly emit: RemoteWatchEmit;
 	private readonly intervalMs: number;
-	private readonly workdir: string;
+	private readonly resolveWorkdir: (workspaceId: string) => string;
 	private readonly polls = new Map<string, WorkspacePoll>();
 	private closed = false;
 
@@ -72,7 +76,7 @@ export class RemoteWatchPoller {
 		this.resolveRuntime = options.resolveRuntime;
 		this.emit = options.emit;
 		this.intervalMs = options.intervalMs ?? DEFAULT_INTERVAL_MS;
-		this.workdir = options.workdir ?? DEFAULT_WORKDIR;
+		this.resolveWorkdir = options.resolveWorkdir ?? (() => DEFAULT_WORKDIR);
 	}
 
 	/** Begin polling a remote workspace. No-op if already polling or closed. */
@@ -157,7 +161,7 @@ export class RemoteWatchPoller {
 	): Promise<void> {
 		const fs = runtime.runtimeFs?.();
 		if (!fs) return;
-		const entries = await fs.listFiles(this.workdir);
+		const entries = await fs.listFiles(this.resolveWorkdir(workspaceId));
 		const signature = hash(
 			entries
 				.map((e) => `${e.name}:${e.isDir ? "d" : "f"}:${e.size}:${e.modTime}`)

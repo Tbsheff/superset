@@ -52,6 +52,25 @@ function truncateForError(output: string, max = 500): string {
 }
 
 /**
+ * Sandbox-relative directory the repo clones into: the repo NAME (so the
+ * terminal opens in e.g. `~/bonaparte`, not `~/workspace`). Falls back to
+ * {@link WORKDIR} when the url can't be parsed or yields an unusable name. The
+ * chosen dir is persisted on the runtime instance (`metadataJson.workdir`) so
+ * reconnect, the filesystem service, and the workspace router all resolve the
+ * same dir for an existing sandbox.
+ */
+function resolveCloneDir(cloneUrl: string): string {
+	try {
+		const safe = parseRepoCoordinates(cloneUrl)
+			.repo.replace(/[^A-Za-z0-9._-]/g, "-")
+			.replace(/^[.-]+|-+$/g, "");
+		return safe.length > 0 ? safe : WORKDIR;
+	} catch {
+		return WORKDIR;
+	}
+}
+
+/**
  * First remote `RuntimeAdapter`. Maps the seam's provider-neutral lifecycle onto
  * the Daytona SDK:
  *   - createInstance: deny-all egress sandbox + scoped-token clone (Step 4/9).
@@ -82,6 +101,7 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 		// tier-gated, so it cannot express a GitHub hostname allowlist, and locking
 		// it down at create time breaks cloning.
 		const snapshotId = resolveSnapshotId();
+		const workdir = resolveCloneDir(plan.repo.cloneUrl);
 		const sandbox = await this.deps.sdk.create(
 			snapshotId
 				? {
@@ -110,14 +130,14 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 		// the original clone error.
 		let postSetup: Promise<void> = Promise.resolve();
 		try {
-			this.persistInstance(plan.workspaceId, sandbox);
+			this.persistInstance(plan.workspaceId, sandbox, workdir);
 			postSetup = Promise.all([
 				this.syncAgentAuthBestEffort(sandbox),
 				this.configureSandboxStorageBestEffort(sandbox),
 			])
 				.then(() => {})
 				.catch(() => {});
-			await this.cloneRepo(sandbox, plan);
+			await this.cloneRepo(sandbox, plan, workdir);
 		} catch (error) {
 			await postSetup;
 			await this.deleteAfterFailedProvision(sandbox);
@@ -128,7 +148,7 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 		return new DaytonaWorkspaceRuntime(
 			sandbox as unknown as RuntimeSandbox,
 			{ store: this.deps.store, now: this.now },
-			WORKDIR,
+			workdir,
 		) as unknown as RuntimeHandleFor<R>;
 	}
 
@@ -183,6 +203,12 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 		}
 	}
 
+	/** The clone dir recorded for a sandbox (repo name); WORKDIR for older rows. */
+	private workdirFor(externalId: string): string {
+		const wd = this.deps.store.get(externalId)?.metadataJson?.workdir;
+		return typeof wd === "string" && wd.length > 0 ? wd : WORKDIR;
+	}
+
 	private async deleteAfterFailedProvision(sandbox: Sandbox): Promise<void> {
 		try {
 			await this.deps.sdk.delete(sandbox, 60);
@@ -192,9 +218,14 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 		this.deps.store.markDestroyed(sandbox.id, this.now());
 	}
 
-	private persistInstance(workspaceId: string, sandbox: Sandbox): void {
+	private persistInstance(
+		workspaceId: string,
+		sandbox: Sandbox,
+		workdir: string,
+	): void {
 		// metadataJson holds only NON-secret provider extras. The scoped token is
-		// never written here (or anywhere persisted) — see cloneRepo.
+		// never written here (or anywhere persisted) — see cloneRepo. `workdir` is
+		// the sandbox-relative clone dir (repo name); reconnect/fs/router read it.
 		this.deps.store.insert({
 			id: randomUUID(),
 			workspaceId,
@@ -204,7 +235,7 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 			status: toStoredStatus(mapDaytonaState(sandbox.state)),
 			previewUrl: null,
 			lastActivityAt: this.now(),
-			metadataJson: { target: sandbox.target ?? null },
+			metadataJson: { target: sandbox.target ?? null, workdir },
 			createdAt: this.now(),
 			destroyedAt: null,
 			failureReason: null,
@@ -225,6 +256,7 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 	private async cloneRepo(
 		sandbox: Sandbox,
 		plan: RuntimePlan<RuntimeRole>,
+		workdir: string,
 	): Promise<void> {
 		const { owner, repo } = parseRepoCoordinates(plan.repo.cloneUrl);
 		const { token } = await this.deps.mintRepoScopedToken({ owner, repo });
@@ -233,7 +265,7 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 		// sandbox after the clone (createBranch) rather than cloned directly.
 		const command = buildShallowCloneCommand({
 			url: plan.repo.cloneUrl,
-			workdir: WORKDIR,
+			workdir,
 			baseRef: plan.repo.ref || undefined,
 			// An empty token means no auth (e.g. a public repo): clone anonymously.
 			// Sending "x-access-token" with an empty password makes GitHub reject the
@@ -256,7 +288,7 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 			const safeBranch = plan.repo.createBranch.replace(/'/g, "'\\''");
 			const checkoutResult = await sandbox.process.executeCommand(
 				`git checkout -b '${safeBranch}'`,
-				WORKDIR,
+				workdir,
 			);
 			if ((checkoutResult.exitCode ?? 0) !== 0) {
 				throw new Error(
@@ -277,7 +309,7 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 		return new DaytonaWorkspaceRuntime(
 			sandbox as unknown as RuntimeSandbox,
 			{ store: this.deps.store, now: this.now },
-			WORKDIR,
+			this.workdirFor(externalId),
 		);
 	}
 
@@ -305,7 +337,7 @@ export class DaytonaRuntimeAdapter implements RuntimeAdapter {
 		const handle = new DaytonaWorkspaceRuntime(
 			sandbox as unknown as RuntimeSandbox,
 			{ store: this.deps.store, now: this.now },
-			WORKDIR,
+			this.workdirFor(externalId),
 		);
 		await handle.releaseResources();
 		// delete() timeout is in SECONDS (SDK convention), not milliseconds.

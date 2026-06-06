@@ -147,6 +147,12 @@ export const githubPullRequests = pgTable(
 
 		// Review status
 		reviewDecision: text("review_decision"), // "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null
+		// GitHub logins explicitly requested to review (from the
+		// review_requested / review_request_removed webhook events). Powers an
+		// accurate "needs my review" filter rather than the aggregate decision.
+		requestedReviewers: jsonb("requested_reviewers")
+			.$type<string[]>()
+			.default([]),
 
 		// CI/CD checks
 		checksStatus: text("checks_status").notNull().default("none"), // "none" | "pending" | "success" | "failure"

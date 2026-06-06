@@ -12,6 +12,9 @@ import type {
 	SelectGithubRepository,
 	SelectIntegrationConnection,
 	SelectInvitation,
+	SelectKanbanBoard,
+	SelectKanbanCard,
+	SelectKanbanColumn,
 	SelectMember,
 	SelectOrganization,
 	SelectProject,
@@ -163,6 +166,9 @@ export interface OrgCollections {
 	chatSessions: Collection<SelectChatSession>;
 	githubRepositories: Collection<SelectGithubRepository>;
 	githubPullRequests: Collection<SelectGithubPullRequest>;
+	kanbanBoards: Collection<SelectKanbanBoard>;
+	kanbanColumns: Collection<SelectKanbanColumn>;
+	kanbanCards: Collection<SelectKanbanCard>;
 	automations: Collection<SelectAutomation>;
 	automationRuns: Collection<SelectAutomationRun>;
 	v2SidebarProjects: Collection<
@@ -751,6 +757,110 @@ function createOrgCollections(organizationId: string): OrgCollections {
 		}),
 	);
 
+	const kanbanBoards = createPersistedElectricCollection(
+		electricCollectionOptions<SelectKanbanBoard>({
+			id: `kanban_boards-${organizationId}`,
+			shapeOptions: {
+				url: electricUrl,
+				params: {
+					table: "kanban_boards",
+					organizationId,
+				},
+				headers: electricHeaders,
+				columnMapper,
+				onError: handleElectricSyncError,
+			},
+			getKey: (item) => item.id,
+		}),
+	);
+
+	const kanbanColumns = createPersistedElectricCollection(
+		electricCollectionOptions<SelectKanbanColumn>({
+			id: `kanban_columns-${organizationId}`,
+			shapeOptions: {
+				url: electricUrl,
+				params: {
+					table: "kanban_columns",
+					organizationId,
+				},
+				headers: electricHeaders,
+				columnMapper,
+				onError: handleElectricSyncError,
+			},
+			getKey: (item) => item.id,
+			onInsert: async ({ transaction }) => {
+				const item = transaction.mutations[0].modified;
+				const result = await apiClient.kanban.column.create.mutate({
+					id: item.id,
+					boardId: item.boardId,
+					name: item.name,
+					position: item.position,
+				});
+				return electricTxidMatch(result.txid);
+			},
+			onUpdate: async ({ transaction }) => {
+				const { original, changes } = transaction.mutations[0];
+				const result = await apiClient.kanban.column.update.mutate({
+					id: original.id,
+					name: changes.name,
+					position: changes.position,
+				});
+				return electricTxidMatch(result.txid);
+			},
+			onDelete: async ({ transaction }) => {
+				const item = transaction.mutations[0].original;
+				const result = await apiClient.kanban.column.delete.mutate(item.id);
+				return electricTxidMatch(result.txid);
+			},
+		}),
+	);
+	kanbanColumns.createIndex((column) => column.boardId, basicIndexConfig);
+
+	const kanbanCards = createPersistedElectricCollection(
+		electricCollectionOptions<SelectKanbanCard>({
+			id: `kanban_cards-${organizationId}`,
+			shapeOptions: {
+				url: electricUrl,
+				params: {
+					table: "kanban_cards",
+					organizationId,
+				},
+				headers: electricHeaders,
+				columnMapper,
+				onError: handleElectricSyncError,
+			},
+			getKey: (item) => item.id,
+			onInsert: async ({ transaction }) => {
+				const item = transaction.mutations[0].modified;
+				const result = await apiClient.kanban.card.create.mutate({
+					id: item.id,
+					boardId: item.boardId,
+					columnId: item.columnId,
+					githubPullRequestId: item.githubPullRequestId,
+					position: item.position,
+				});
+				return electricTxidMatch(result.txid);
+			},
+			onUpdate: async ({ transaction }) => {
+				const { original, changes } = transaction.mutations[0];
+				const result = await apiClient.kanban.card.update.mutate({
+					id: original.id,
+					columnId: changes.columnId,
+					position: changes.position,
+				});
+				return electricTxidMatch(result.txid);
+			},
+			onDelete: async ({ transaction }) => {
+				const item = transaction.mutations[0].original;
+				const result = await apiClient.kanban.card.delete.mutate(item.id);
+				return electricTxidMatch(result.txid);
+			},
+		}),
+	);
+	kanbanCards.createIndex((card) => card.boardId, basicIndexConfig);
+	kanbanCards.createIndex((card) => card.columnId, basicIndexConfig);
+	kanbanCards.createIndex((card) => card.githubPullRequestId, basicIndexConfig);
+
 	const automations = createPersistedElectricCollection(
 		electricCollectionOptions<SelectAutomation>({
 			id: `automations-${organizationId}`,
@@ -901,6 +1011,9 @@ function createOrgCollections(organizationId: string): OrgCollections {
 		chatSessions,
 		githubRepositories,
 		githubPullRequests,
+		kanbanBoards,
+		kanbanColumns,
+		kanbanCards,
 		automations,
 		automationRuns,
 		v2SidebarProjects,

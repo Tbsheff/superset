@@ -13,6 +13,7 @@ import {
 	LuClock,
 	LuFolderInput,
 	LuFolderPlus,
+	LuGitPullRequest,
 	LuLayers,
 	LuPlus,
 } from "react-icons/lu";
@@ -73,6 +74,7 @@ export function DashboardSidebarHeader({
 	const isWorkspacesListOpen = !!matchRoute({ to: "/v2-workspaces" });
 	const isTasksOpen = !!matchRoute({ to: "/tasks", fuzzy: true });
 	const isAutomationsOpen = !!matchRoute({ to: "/automations", fuzzy: true });
+	const isReviewsOpen = !!matchRoute({ to: "/reviews", fuzzy: true });
 
 	const {
 		tab: lastTab,
@@ -88,6 +90,10 @@ export function DashboardSidebarHeader({
 
 	const handleAutomationsClick = () => {
 		navigate({ to: "/automations" });
+	};
+
+	const handleReviewsClick = () => {
+		navigate({ to: "/reviews" });
 	};
 
 	const handleTasksClick = () => {
@@ -162,6 +168,24 @@ export function DashboardSidebarHeader({
 						</button>
 					</TooltipTrigger>
 					<TooltipContent side="right">Tasks & PRs</TooltipContent>
+				</Tooltip>
+
+				<Tooltip delayDuration={300}>
+					<TooltipTrigger asChild>
+						<button
+							type="button"
+							onClick={handleReviewsClick}
+							className={cn(
+								"flex size-8 items-center justify-center rounded-md transition-colors",
+								isReviewsOpen
+									? "bg-accent text-foreground"
+									: "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+							)}
+						>
+							<LuGitPullRequest className="size-4" />
+						</button>
+					</TooltipTrigger>
+					<TooltipContent side="right">Reviews</TooltipContent>
 				</Tooltip>
 
 				<Tooltip delayDuration={300}>
@@ -267,6 +291,20 @@ export function DashboardSidebarHeader({
 			>
 				<HiOutlineClipboardDocumentList className="size-4 shrink-0" />
 				<span className="flex-1 text-left">Tasks & PRs</span>
+			</button>
+
+			<button
+				type="button"
+				onClick={handleReviewsClick}
+				className={cn(
+					"flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors",
+					isReviewsOpen
+						? "bg-accent text-foreground"
+						: "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+				)}
+			>
+				<LuGitPullRequest className="size-4 shrink-0" />
+				<span className="flex-1 text-left">Reviews</span>
 			</button>
 
 			<div className="flex items-center gap-0">

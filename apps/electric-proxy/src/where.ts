@@ -8,6 +8,9 @@ import {
 	githubRepositories,
 	integrationConnections,
 	invitations,
+	kanbanBoards,
+	kanbanCards,
+	kanbanColumns,
 	members,
 	organizations,
 	projects,
@@ -149,6 +152,15 @@ export function buildWhereClause(
 				githubPullRequests.organizationId,
 				organizationId,
 			);
+
+		case "kanban_boards":
+			return build(kanbanBoards, kanbanBoards.organizationId, organizationId);
+
+		case "kanban_columns":
+			return build(kanbanColumns, kanbanColumns.organizationId, organizationId);
+
+		case "kanban_cards":
+			return build(kanbanCards, kanbanCards.organizationId, organizationId);
 
 		case "automations":
 			return build(automations, automations.organizationId, organizationId);

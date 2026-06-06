@@ -9,6 +9,7 @@ import {
 import { and, eq } from "drizzle-orm";
 
 import { env } from "@/env";
+import { extractRequestedReviewers } from "./extractRequestedReviewers";
 
 export const webhooks = new Webhooks({ secret: env.GH_WEBHOOK_SECRET });
 
@@ -141,11 +142,13 @@ function upsertPullRequest(
 		additions?: number;
 		deletions?: number;
 		changed_files?: number;
+		requested_reviewers?: unknown;
 		merged_at: string | null;
 		closed_at: string | null;
 		updated_at: string;
 	},
 ) {
+	const requestedReviewers = extractRequestedReviewers(pr.requested_reviewers);
 	const upstreamUpdatedAt = new Date(pr.updated_at);
 	return db
 		.insert(githubPullRequests)
@@ -166,6 +169,7 @@ function upsertPullRequest(
 			additions: pr.additions ?? 0,
 			deletions: pr.deletions ?? 0,
 			changedFiles: pr.changed_files ?? 0,
+			requestedReviewers,
 			checksStatus: "none",
 			mergedAt: pr.merged_at ? new Date(pr.merged_at) : null,
 			closedAt: pr.closed_at ? new Date(pr.closed_at) : null,
@@ -184,6 +188,7 @@ function upsertPullRequest(
 				additions: pr.additions ?? 0,
 				deletions: pr.deletions ?? 0,
 				changedFiles: pr.changed_files ?? 0,
+				requestedReviewers,
 				mergedAt: pr.merged_at ? new Date(pr.merged_at) : null,
 				closedAt: pr.closed_at ? new Date(pr.closed_at) : null,
 				lastSyncedAt: new Date(),
@@ -200,6 +205,8 @@ webhooks.on(
 		"pull_request.reopened",
 		"pull_request.ready_for_review",
 		"pull_request.converted_to_draft",
+		"pull_request.review_requested",
+		"pull_request.review_request_removed",
 	],
 	async ({
 		payload,
@@ -210,6 +217,8 @@ webhooks.on(
 		| "pull_request.reopened"
 		| "pull_request.ready_for_review"
 		| "pull_request.converted_to_draft"
+		| "pull_request.review_requested"
+		| "pull_request.review_request_removed"
 	>) => {
 		const { pull_request: pr, repository } = payload;
 

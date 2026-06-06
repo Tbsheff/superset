@@ -39,6 +39,55 @@ export const githubRouter = router({
 			return data;
 		}),
 
+	getPRDiff: protectedProcedure
+		.input(
+			z.object({
+				owner: z.string(),
+				repo: z.string(),
+				pullNumber: z.number(),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const octokit = await ctx.github();
+			// The `diff` media type makes `pulls.get` return the full unified
+			// diff as text rather than the PR JSON — one request for the whole
+			// PR, ready to hand straight to @pierre/diffs <PatchDiff>.
+			const response = await octokit.pulls.get({
+				owner: input.owner,
+				repo: input.repo,
+				pull_number: input.pullNumber,
+				mediaType: { format: "diff" },
+			});
+			return response.data as unknown as string;
+		}),
+
+	getPRFiles: protectedProcedure
+		.input(
+			z.object({
+				owner: z.string(),
+				repo: z.string(),
+				pullNumber: z.number(),
+				perPage: z.number().min(1).max(100).default(100),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const octokit = await ctx.github();
+			const data = await octokit.paginate(octokit.pulls.listFiles, {
+				owner: input.owner,
+				repo: input.repo,
+				pull_number: input.pullNumber,
+				per_page: input.perPage,
+			});
+			return data.map((file) => ({
+				filename: file.filename,
+				previousFilename: file.previous_filename ?? null,
+				status: file.status,
+				additions: file.additions,
+				deletions: file.deletions,
+				changes: file.changes,
+			}));
+		}),
+
 	listPRs: protectedProcedure
 		.input(
 			z.object({
